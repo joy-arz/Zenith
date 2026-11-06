@@ -1,3 +1,7 @@
+# Zenith identity
+
+Zenith retains the original dark tile and violet horizon palette, with a Z replacing the H. The SVG masters and generated platform icons are maintained by joy-arz. Original Horizon attribution is retained under MIT.
+
 # Horizon's mark and icons
 
 **The mark.** An H whose crossbar is the horizon: the line runs edge to edge in Horizon's violet,

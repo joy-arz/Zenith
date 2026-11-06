@@ -1,4 +1,4 @@
-//! Horizon launcher: installs Horizon builds, prepares them from the player's own Minecraft,
+//! Zenith: installs Horizon builds, prepares them from the player's own Minecraft,
 //! and starts the client or a dedicated server.
 
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
@@ -1608,7 +1608,7 @@ impl Launcher {
         for home in homes {
             match backend::switch_from_auto(&home, api) {
                 Ok(changed) => switched |= changed,
-                Err(e) => eprintln!("Horizon launcher: could not switch to {label}: {e}"),
+                Err(e) => eprintln!("Zenith: could not switch to {label}: {e}"),
             }
         }
         switched.then_some(label)
@@ -3394,7 +3394,7 @@ impl Launcher {
                 &[("version", &version)],
             ),
             Some(true) => trf(
-                "Not prepared. Horizon can download Minecraft {version} from Mojang for your account, or use your own install.",
+                "Not prepared. Zenith can download Minecraft {version} from Mojang for your account, or use your own install.",
                 &[("version", &version)],
             ),
             Some(false) => trf(
@@ -3470,7 +3470,7 @@ impl Launcher {
             || {
                 div()
                     .child(if owner {
-                        tr("None needed: Horizon downloads Minecraft from Mojang for your account.")
+                        tr("None needed: Zenith downloads Minecraft from Mojang for your account.")
                     } else {
                         tr("Not found. Choose the folder where your launcher keeps Minecraft.")
                     })
@@ -4084,7 +4084,7 @@ impl Launcher {
                             n + 11,
                             tr("Applications menu"),
                             Some(plain(if self.settings.desktop_entry() {
-                                "Horizon and its icon are in your desktop's menu."
+                                "Zenith and its icon are in your desktop's menu."
                             } else {
                                 "Not in your desktop's menu."
                             })),
@@ -4571,7 +4571,7 @@ impl Launcher {
             }
             Some(SignInState::Done(Err(e))) => div().text_color(t.danger).child(e.clone()),
             None if self.accounts.accounts.is_empty() => div().child(tr(
-                "Horizon needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
+                "Zenith needs a Microsoft account that owns Minecraft: Java Edition, like other launchers. It also plays online servers with your name and skin.",
             )),
             None => div().child(tr("Add another account.")),
         };
@@ -5830,7 +5830,7 @@ fn main() {
                     titlebar: Some(titlebar::options()),
                     #[cfg(target_os = "linux")]
                     window_decorations: Some(gpui::WindowDecorations::Client),
-                    app_id: Some("horizon-launcher".into()),
+                    app_id: Some("zenith-launcher".into()),
                     // GPUI draws a window without focus at most every 33 ms to save energy. A
                     // benchmark's window often starts without it (KDE keeps focus from windows
                     // a background process opens), and it measures drawing, not that limit.

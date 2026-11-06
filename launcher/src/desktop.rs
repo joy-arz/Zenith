@@ -1,5 +1,5 @@
 //! Linux: the launcher puts itself in the applications menu. It writes
-//! `applications/horizon-launcher.desktop` (pointing at wherever the binary is now) and Horizon's
+//! `applications/zenith-launcher.desktop` (pointing at wherever the binary is now) and Horizon's
 //! icon into the `hicolor` theme, under `$XDG_DATA_HOME` (`~/.local/share` by default), so no root
 //! is needed; `horizon.desktop` (hidden from menus) gives the game's window its icon on Wayland.
 //! A release build writes it when it starts only if there is no entry yet or the one there starts
@@ -90,7 +90,7 @@ pub fn launcher_entry(exe: &Path) -> String {
          Icon=zenith\n\
          Terminal=false\n\
          Categories=Game;\n\
-         StartupWMClass=horizon-launcher\n",
+         StartupWMClass=zenith-launcher\n",
         quote(exe),
         exe.display(),
         minecraft = horizon_core::VANILLA_VERSION,

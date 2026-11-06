@@ -594,8 +594,8 @@ mod tests {
             PathBuf::from(r"C:\Games\Zenith")
         );
         assert_eq!(
-            folder_for(Path::new(r"C:\Games\horizon launcher")),
-            PathBuf::from(r"C:\Games\horizon launcher")
+            folder_for(Path::new(r"C:\Games\zEnItH")),
+            PathBuf::from(r"C:\Games\zEnItH")
         );
     }
 

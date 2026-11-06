@@ -71,6 +71,8 @@ jobs:
     env:
       HORIZON_LAUNCHER_VERSION: ${{ needs.version.outputs.version }}
       HORIZON_LAUNCHER_TAG: ${{ needs.version.outputs.tag }}
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
       CARGO_PROFILE_RELEASE_DEBUG: '0'
       CARGO_PROFILE_RELEASE_LTO: 'false'
       RUSTFLAGS: ${{ startsWith(matrix.os, 'windows-') && '-C target-feature=+crt-static' || '' }}
@@ -86,6 +88,7 @@ jobs:
         with:
           workspaces: launcher
           shared-key: fork-launcher-${{ matrix.platform }}
+          cache-on-failure: true
       - name: Install Linux build libraries
         if: runner.os == 'Linux'
         run: |

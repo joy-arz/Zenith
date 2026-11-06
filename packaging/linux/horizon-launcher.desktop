@@ -7,4 +7,4 @@ Exec=horizon-launcher
 Icon=zenith
 Terminal=false
 Categories=Game;
-StartupWMClass=horizon-launcher
+StartupWMClass=zenith-launcher

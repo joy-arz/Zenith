@@ -503,7 +503,7 @@ mod tests {
             ),
             release(
                 "launcher@0.2.37",
-                "Horizon launcher 0.2.37",
+                "Zenith 0.2.37",
                 "2026-11-02",
                 false,
                 "### Fixed\n- Launcher fix",
