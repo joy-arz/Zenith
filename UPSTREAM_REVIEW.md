@@ -57,3 +57,5 @@ Reviewed the MIT-licensed Horizon forks [Domaman202/horizon-crack at ad038ae2d7d
 Reviewed documentation only for [Mecso2/prism-launcher-crack at aa353ff513c4d07fcc7795893b5179a194f2a08e](https://github.com/Mecso2/prism-launcher-crack/tree/aa353ff513c4d07fcc7795893b5179a194f2a08e) (no license declared) and [Diegiwg/PrismLauncher-Cracked at 4916ceeb72022b275c9bae8b94518e7c2236027a](https://github.com/Diegiwg/PrismLauncher-Cracked/tree/4916ceeb72022b275c9bae8b94518e7c2236027a) (GPL-3.0). Their implementation was not read or copied under this repository's contribution rules.
 
 The release runner for Apple Silicon is now `macos-26`, a supported standard ARM64 runner, after repeated macOS 15 capacity cancellations prevented publication. The app's architecture and package names remain unchanged.
+
+The live offline bootstrap also exposed first-use Java detection on macOS: Mojang downloads a `jre.bundle`, while preparation tried the outer component directory. Both Java installation paths now share runtime-home normalization, with a regression test for macOS bundles and flat Windows/Linux layouts.

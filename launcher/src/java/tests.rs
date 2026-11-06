@@ -133,3 +133,18 @@ fn a_typed_java_is_a_major_or_a_component() {
         .unwrap_err()
         .contains("Known: 8 (jre-legacy)"));
 }
+
+#[test]
+fn a_newly_downloaded_runtime_is_usable_in_flat_and_macos_bundle_layouts() {
+    for (name, relative) in [
+        ("download-flat", ""),
+        ("download-bundle", "jre.bundle/Contents/Home"),
+    ] {
+        let root = scratch(name);
+        let expected = fake_home(&root.join(relative), "25.0.1");
+        let found = runtime(runtime_home(&root), Source::Mojang).unwrap();
+        assert_eq!(found.home, expected);
+        assert_eq!(found.major, 25);
+        fs::remove_dir_all(root).unwrap();
+    }
+}

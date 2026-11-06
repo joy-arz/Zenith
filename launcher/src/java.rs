@@ -261,13 +261,18 @@ pub fn install(need: &Need, log: &dyn Fn(String)) -> Result<Runtime, String> {
         &mojang::CANCEL,
         log,
     )?;
-    let home = ["jre.bundle/Contents/Home", ""]
-        .iter()
-        .map(|sub| home.join(sub))
-        .find(|h| h.join("release").is_file())
-        .unwrap_or(home);
+    let home = runtime_home(&home);
     runtime(home, Source::Mojang)
         .ok_or_else(|| format!("Mojang's {} has no usable java", need.component))
+}
+
+/// Normalize Mojang's macOS bundle and the flat Windows/Linux runtime layouts.
+pub(crate) fn runtime_home(home: &Path) -> PathBuf {
+    ["jre.bundle/Contents/Home", ""]
+        .iter()
+        .map(|sub| home.join(sub))
+        .find(|candidate| candidate.join("release").is_file())
+        .unwrap_or_else(|| home.to_path_buf())
 }
 
 #[cfg(test)]
