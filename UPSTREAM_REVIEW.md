@@ -13,7 +13,7 @@ The five commits through `a1ff75a4a525b6a9e1ed68f74cf9d54161596370` merged witho
 | [PR #10173](https://github.com/horizon-rust/horizon/pull/10173), addresses [#10071](https://github.com/horizon-rust/horizon/issues/10071) | Automatic content-mod updates re-enable disabled mods. Explicit installs now enable a mod; automatic updates retain its existing state. | Eight registry auto-update tests pass, including real fixture packages, disabled/enabled transitions and concurrent removal. The appended test was adapted to the current test file. |
 | [PR #9974](https://github.com/horizon-rust/horizon/pull/9974), addresses [#9969](https://github.com/horizon-rust/horizon/issues/9969) | GUI game updates accumulate obsolete Nightly installations. Automatically installed Nightlies are marked and pruned with separate retention limits. | Five pruning tests and four Nightly tests pass. Selected, pinned, running, manual and legacy installations retain their existing protections. |
 
-These backports are staged on `zenith/essential-upstream-fixes` for promotion after the baseline Zenith release passes.
+The baseline Zenith 0.3.0 release passed all five platform jobs and signature verification. These two backports are included in the 0.3.1 update.
 
 ## Reviewed but not imported
 
@@ -37,3 +37,5 @@ This review made no comments, claims, issue closures or merges in the upstream r
 ## Local validation
 
 The complete launcher suite passes: 752 tests, with eight existing opt-in tests ignored. Clippy passes with warnings denied. All eight Python tests affected by the five-commit upstream sync pass. Tests and smoke runs use isolated temporary data directories.
+
+Baseline release: [Zenith 0.3.0](https://github.com/joy-arz/horizon/releases/tag/launcher%400.3.0), built from `830207112c5edf6c042a34d7bb4675e598d2168c`.
