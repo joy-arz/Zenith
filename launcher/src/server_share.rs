@@ -4,7 +4,8 @@ use std::fs;
 use std::net::{IpAddr, Ipv6Addr};
 use std::path::Path;
 
-const PREFIX: &str = "horizon://server/";
+const PREFIX: &str = "zenith://server/";
+const LEGACY_PREFIX: &str = "horizon://server/";
 const FILE: &str = "horizon-share-address.txt";
 
 /// Validate without DNS, network access, URL decoding, or credentials.
@@ -52,10 +53,13 @@ pub fn link(input: &str) -> Result<String, String> {
 /// Ordinary game addresses (including invite codes and SRV names) retain their existing behavior.
 pub fn resolve(input: &str) -> Result<String, String> {
     let input = input.trim();
-    match input.strip_prefix(PREFIX) {
+    match input
+        .strip_prefix(PREFIX)
+        .or_else(|| input.strip_prefix(LEGACY_PREFIX))
+    {
         Some(endpoint) => address(endpoint),
         None if input.contains("://") => {
-            Err("Use a horizon://server/HOST:PORT link or a game server address.".into())
+            Err("Use a zenith://server/HOST:PORT link or a game server address.".into())
         }
         None => Ok(input.to_string()),
     }
@@ -98,6 +102,14 @@ mod tests {
         }
         assert_eq!(resolve("play.example.com").unwrap(), "play.example.com");
         assert_eq!(resolve("friend:ABC").unwrap(), "friend:ABC");
+        assert_eq!(
+            link("play.example.com:25570").unwrap(),
+            "zenith://server/play.example.com:25570"
+        );
+        assert_eq!(
+            resolve("horizon://server/play.example.com:25570").unwrap(),
+            "play.example.com:25570"
+        );
     }
 
     #[test]

@@ -464,7 +464,7 @@ impl Launcher {
                     0,
                     tr("Applications menu"),
                     note(if self.settings.desktop_entry() {
-                        "Horizon and its icon are in your desktop's menu."
+                        "Zenith and its icon are in your desktop's menu."
                     } else {
                         "Not in your desktop's menu."
                     }),
