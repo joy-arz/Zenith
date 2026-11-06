@@ -212,3 +212,12 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
+## Horizon launcher backports in Zenith
+
+Zenith adapts these MIT-licensed Horizon contributions, retaining the original Horizon copyright in LICENSE:
+
+- MSedgeMC, [PR #10173](https://github.com/horizon-rust/horizon/pull/10173), selected head `4b8abba21c7fe288d53fc96f496e48e9088be86f`: preserve a disabled content mod's state during automatic updates. Production changes were retained; its regression test was appended to the current fixture test module.
+- daniliammo, [PR #9974](https://github.com/horizon-rust/horizon/pull/9974), selected head `86c0211c35d0775de516d2b4fd207df8b581e76e`: identify and prune automatically installed obsolete Nightlies while preserving manual and protected installations.
+
+Both source revisions' LICENSE files were checked as MIT. No code from the other reviewed forks was copied.

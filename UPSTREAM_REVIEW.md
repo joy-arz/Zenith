@@ -1,0 +1,39 @@
+# Zenith upstream review
+
+Reviewed 6 November 2026 for joy-arz. Priorities: data integrity, reliable updates, offline multiplayer and local hosting. Source licenses were checked before considering code for reuse.
+
+## Upstream synchronization
+
+The five commits through `a1ff75a4a525b6a9e1ed68f74cf9d54161596370` merged without conflicts. They preserve caller-selected harness work directories and consolidate mass nightly-audit failures into one report. All eight affected Python tests passed. Upstream commit IDs and contributor attribution are preserved.
+
+## Selected fixes
+
+| Source | Problem | Validation |
+| --- | --- | --- |
+| [PR #10173](https://github.com/horizon-rust/horizon/pull/10173), addresses [#10071](https://github.com/horizon-rust/horizon/issues/10071) | Automatic content-mod updates re-enable disabled mods. Explicit installs now enable a mod; automatic updates retain its existing state. | Eight registry auto-update tests pass, including real fixture packages, disabled/enabled transitions and concurrent removal. The appended test was adapted to the current test file. |
+| [PR #9974](https://github.com/horizon-rust/horizon/pull/9974), addresses [#9969](https://github.com/horizon-rust/horizon/issues/9969) | GUI game updates accumulate obsolete Nightly installations. Automatically installed Nightlies are marked and pruned with separate retention limits. | Five pruning tests and four Nightly tests pass. Selected, pinned, running, manual and legacy installations retain their existing protections. |
+
+These backports are staged on `zenith/essential-upstream-fixes` for promotion after the baseline Zenith release passes.
+
+## Reviewed but not imported
+
+- [Issue #9217](https://github.com/horizon-rust/horizon/issues/9217): the path-traversal half is already fixed by merged [PR #9254](https://github.com/horizon-rust/horizon/pull/9254) and present in this fork. The remaining digest check needs the cosmetic service's hash contract; the report states that some live hashes do not match truncated SHA-256. No guessed digest rule was added.
+- [Gateway prototype #6668](https://github.com/horizon-rust/horizon/pull/6668): adds a hostname-routing gateway. Zenith already supports owner-managed port forwarding; this prototype adds infrastructure beyond that request.
+- Mass nightly parity reports were checked against their reported compiler/runner failures. Those reports alone do not establish separate gameplay regressions; the five-commit sync includes the upstream reporting fix.
+- Mobile, web, large native-hook and older-protocol proposals expand platform or protocol scope and need dedicated compatibility validation.
+
+## Fork inventory
+
+The public fork inventory included the leading Android, iOS, offline, Switch and web forks. The relevant desktop/offline branches were compared with upstream; no entire fork was merged.
+
+| Fork | Exact reviewed head | License | Decision |
+| --- | --- | --- | --- |
+| [0CYBER/horizon-free](https://github.com/0CYBER/horizon-free) | `f2e70e9630e0c3457ce2d8437a9c857950963dce` | MIT | Its main focus overlaps Zenith's offline access and fork updating. Its branch is substantially behind current upstream; no code imported. |
+| [bunchy7s/horizon-offline](https://github.com/bunchy7s/horizon-offline) | `fb28b692962b7690e69bab41f6984f022f4333df` | MIT | Offline access, packaging and synchronization changes overlap the implemented features; no code imported. |
+| [arismoko/horizon](https://github.com/arismoko/horizon) | `36210b2b50ed05202dc47699eded0359d7c9173a` | MIT | Compared branch metadata and changed-file inventory. No independently necessary desktop fix selected. |
+
+This review made no comments, claims, issue closures or merges in the upstream repository.
+
+## Local validation
+
+The complete launcher suite passes: 752 tests, with eight existing opt-in tests ignored. Clippy passes with warnings denied. All eight Python tests affected by the five-commit upstream sync pass. Tests and smoke runs use isolated temporary data directories.
