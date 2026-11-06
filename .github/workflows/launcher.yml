@@ -65,6 +65,7 @@ env:
 
 jobs:
   decide:
+    if: github.repository == 'horizon-rust/horizon'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:

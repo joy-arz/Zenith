@@ -70,6 +70,12 @@ impl Launcher {
         // server's tabs (as before the glass look, under the page's actions).
         page = page.children(self.glass_sculk(cx));
         if let Some(dir) = &open {
+            let port = self
+                .servers
+                .setting("server", "port")
+                .and_then(Value::as_u64)
+                .unwrap_or(25565) as u16;
+            page = page.child(self.forwarding_panel(port, cx));
             page = page.child(self.glass_server_tabs(dir, &status, cx));
         }
         page

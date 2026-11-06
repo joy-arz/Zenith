@@ -69,14 +69,17 @@ enum ServersCmd {
         difficulty: String,
         #[arg(long, default_value_t = 10)]
         max_players: u32,
+        /// Local TCP game port (default: first available port from 25565)
+        #[arg(long, value_parser = clap::value_parser!(u16).range(1024..))]
+        port: Option<u16>,
         /// Let anyone in (no whitelist)
         #[arg(long)]
         open: bool,
         /// Do not check players' Minecraft accounts (offline mode: anyone can use any name)
         #[arg(long)]
         offline: bool,
-        /// Kept for old scripts: account checking is now the default
-        #[arg(long, hide = true, conflicts_with = "offline")]
+        /// Require Microsoft authentication instead of allowing local offline profiles
+        #[arg(long, conflicts_with = "offline")]
         check_accounts: bool,
         /// Who may join (repeatable); the first becomes an operator
         #[arg(long = "player")]
@@ -99,6 +102,13 @@ enum ServersCmd {
         server: String,
         #[arg(last = true, required = true)]
         args: Vec<String>,
+    },
+    /// Save or show a share link for a manually forwarded public address
+    Share {
+        server: String,
+        /// Public IP or DNS name, with your external TCP port (for example play.example.com:25570)
+        #[arg(long)]
+        address: Option<String>,
     },
     /// Take a server off the list (its folder stays)
     Forget { server: String },
@@ -128,7 +138,7 @@ enum AccountCmd {
     },
     /// Play as this account, or as one of your offline names
     Select { who: String },
-    /// Play offline (LAN, offline-mode servers) beside a signed-in account that owns the game:
+    /// Play with a local offline profile (LAN and offline-mode servers):
     /// as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game
     /// made up
     Offline { name: Option<String> },
@@ -741,7 +751,7 @@ enum Cmd {
         #[arg(long)]
         version: Option<String>,
     },
-    /// Start the client (needs a signed-in Microsoft account that owns Minecraft: Java Edition)
+    /// Start the client using a local offline profile or a signed-in Microsoft account
     Play {
         #[arg(long)]
         version: Option<String>,
@@ -1004,7 +1014,7 @@ pub fn command() -> clap::Command {
 pub const AI_COMMANDS: [&str; 2] = ["mcp", "agent-config"];
 
 /// The keys `settings` sets.
-const SETTING_KEYS: [&str; 15] = [
+const SETTING_KEYS: [&str; 16] = [
     "selected-version",
     "minecraft-dir",
     "server-dir",
@@ -1020,6 +1030,7 @@ const SETTING_KEYS: [&str; 15] = [
     "background",
     "native-profile",
     "native-cache-gib",
+    "offline-access",
 ];
 
 fn on_off(value: &str) -> Result<bool, String> {
@@ -1033,6 +1044,10 @@ fn on_off(value: &str) -> Result<bool, String> {
 fn set_setting(s: &mut backend::Settings, key: &str, value: &str) -> Result<(), String> {
     let folder = |value: &str| (value != "default").then(|| PathBuf::from(value));
     match key {
+        "offline-access" => {
+            s.offline_access = Some(on_off(value)?);
+            s.dev_offline = false;
+        }
         "selected-version" => s.selected = Some(backend::resolve_version(Some(value))?),
         "minecraft-dir" => s.minecraft_dir = folder(value),
         "server-dir" => s.server_dir = folder(value),
@@ -1153,6 +1168,7 @@ fn settings_json(s: &backend::Settings) -> serde_json::Value {
         "background": horizon_launcher::themes::background(&backend::data_dir(), s.background.as_deref()),
         "native_profile": native_mods::Profile::chosen(s).name(),
         "native_cache_gib": s.native_cache_gib.unwrap_or(native_mods::DEFAULT_CACHE_GIB),
+        "offline_access": s.offline_enabled(),
         "no_ai": backend::no_ai(),
     })
 }
@@ -1534,6 +1550,7 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             if let Some(server) = server {
                 let list = server_list::List::load(&instance.home);
                 let ip = server_list::find(&list, &server).map_or(server, |(_, s)| s.ip);
+                let ip = horizon_launcher::server_share::resolve(&ip)?;
                 cmd.arg("--server").arg(ip);
             }
             if creative {
@@ -1930,8 +1947,8 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 }));
             } else if accounts.accounts.is_empty() && accounts.offline.is_empty() {
                 println!(
-                    "No Microsoft account signed in. Play needs one that owns Minecraft: Java \
-                     Edition: horizon-launcher account sign-in"
+                    "No account selected. Create a local profile: horizon-launcher account offline NAME. \
+                     Microsoft sign-in is optional for offline servers."
                 );
             } else {
                 for a in &accounts.accounts {
@@ -2044,7 +2061,11 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 ),
                 (None, None) => return Err(find(&accounts, &who).unwrap_err()),
             };
-            accounts.play_as(account::store(), player)?;
+            accounts.play_as_with(
+                account::store(),
+                player,
+                backend::Settings::load().offline_enabled(),
+            )?;
             accounts.save()?;
             println!("The game plays as {name}.");
         }
@@ -2053,7 +2074,11 @@ fn account_command(action: AccountCmd, as_json: bool) -> Result<(), String> {
                 Some(n) => account::Player::Offline(n),
                 None => account::Player::GameName,
             };
-            accounts.play_as(account::store(), player)?;
+            accounts.play_as_with(
+                account::store(),
+                player,
+                backend::Settings::load().offline_enabled(),
+            )?;
             accounts.save()?;
             match accounts.name_arg() {
                 Some(n) => println!("The game plays offline as {n}."),
@@ -2242,9 +2267,10 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
             mode,
             difficulty,
             max_players,
+            port,
             open,
             offline,
-            check_accounts: _,
+            check_accounts,
             players,
             version,
             accept_eula,
@@ -2260,8 +2286,10 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
                 game_mode: mode,
                 difficulty,
                 max_players,
+                port,
                 friends_only: !open,
-                check_accounts: !offline,
+                check_accounts: check_accounts
+                    || (!offline && !backend::Settings::load().offline_enabled()),
                 players,
                 eula: accept_eula,
             };
@@ -2290,6 +2318,21 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
             if !status.success() {
                 return Err(format!("horizon-server exited with {status}"));
+            }
+        }
+        ServersCmd::Share { server, address } => {
+            let entry = find(&server)?;
+            let address = match address {
+                Some(address) => horizon_launcher::server_share::save(&entry.dir, &address)?,
+                None => horizon_launcher::server_share::load(&entry.dir)?
+                    .ok_or("Set your public address with --address HOST:PORT first.")?,
+            };
+            let link = horizon_launcher::server_share::link(&address)?;
+            if as_json {
+                json(serde_json::json!({ "address": address, "link": link }));
+            } else {
+                println!("{link}");
+                eprintln!("Forward your external TCP port to this server's game port. Reachability has not been verified.");
             }
         }
         ServersCmd::Forget { server } => {

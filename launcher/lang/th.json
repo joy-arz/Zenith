@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "การสร้างขั้นตอนหลังการสร้างของ {name}",
   "In use": "ในการใช้งาน",
   "Prepare": "เตรียมตัว",
-  "Developer options": "ตัวเลือกสำหรับนักพัฒนา",
   "{online} of {max} players": "{online} จาก {max} ผู้เล่น",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (รุ่น Java) เล่นดาวน์โหลดจาก Mojang สำหรับบัญชีของคุณในครั้งแรก โดยมี Java ที่ต้องการ",
   "Close": "ปิด",
@@ -172,7 +171,6 @@
   "about a minute left": "เหลือเวลาอีกประมาณหนึ่งนาที",
   "Cancel": "ยกเลิก",
   "Add to {client}": "เพิ่มใน {client}",
-  "Skin…": "ผิว...",
   "Environment": "สิ่งแวดล้อม",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "พวกเขามักจะยังทำงานร่วมกัน หากบิลด์ล้มเหลว ให้ติดตั้งเวอร์ชันที่สร้างขึ้นสำหรับ Nightly เดียวกัน",
   "Import an instance folder…": "นำเข้าโฟลเดอร์อินสแตนซ์...",
@@ -372,7 +370,6 @@
   "Move to Trash": "ย้ายไปที่ถังขยะ",
   "Start from": "เริ่มจาก",
   "Asking Mojang for its versions…": "กำลังถาม Mojang สำหรับเวอร์ชันของมัน...",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "PNG สกินขนาด 64×64 (หรือ 64×32) และ PNG แหลมขนาด 64×32 ซึ่งเก็บไว้โดยตัวเรียกใช้งานและมอบให้กับเกมเมื่อชื่อนี้เล่น เกมดังกล่าวจะดึงสกินเริ่มต้นออกมาในตอนนี้ มันใช้สิ่งเหล่านี้เมื่อทำได้ สกินและผ้าคลุมของบัญชี Microsoft: เร็วๆ นี้",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "เล่นแบบออฟไลน์โดยใช้ชื่ออื่น และสลับจากแถบด้านบน เซิร์ฟเวอร์ออนไลน์ไม่ใช้ชื่อออฟไลน์",
   "Report on Discord": "รายงานเรื่อง Discord",
   "Export": "ส่งออก",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "ไม่ได้รวม {name}: ต้องใช้ {other} ซึ่งไม่ได้รวมไว้",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "สร้างบน Horizon ที่คุณเล่นไม่ได้ ({code}): การสร้างจะไม่รวมไว้จนกว่าผู้สร้างจะอัปเดต",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "ในพื้นที่ของคุณ ชุดผู้ก่อตั้งต้องรับผ่านการชำระเงินฟรีบน playhorizon.dev รับได้จากร้านค้า: ร้านค้าจะเปิดหน้าชำระเงินให้คุณ",
-  "The founder set can't be claimed from your country.": "ไม่สามารถรับชุดผู้ก่อตั้งจากประเทศของคุณได้"
+  "The founder set can't be claimed from your country.": "ไม่สามารถรับชุดผู้ก่อตั้งจากประเทศของคุณได้",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

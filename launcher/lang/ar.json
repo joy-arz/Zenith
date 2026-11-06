@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "خطوة ما بعد البناء لـ {name}",
   "In use": "قيد الاستخدام",
   "Prepare": "تحضير",
-  "Developer options": "خيارات المطور",
   "{online} of {max} players": "{online} من {max} لاعبين",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "ماين كرافت {version} (إصدار جافا). يقوم الزر \"تشغيل\" بتنزيلها من موجانج لحسابك في المرة الأولى، مع إصدار جافا الذي تحتاجه.",
   "Close": "إغلاق",
@@ -172,7 +171,6 @@
   "about a minute left": "متبقي حوالي دقيقة",
   "Cancel": "إلغاء",
   "Add to {client}": "إضافة إلى {client}",
-  "Skin…": "المظهر (Skin)…",
   "Environment": "البيئة",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "غالبًا ما تستمر في العمل معًا. إذا فشل البناء، قم بتثبيت الإصدارات المصنوعة لنفس نسخة Nightly.",
   "Import an instance folder…": "استيراد مجلد نسخة…",
@@ -372,7 +370,6 @@
   "Move to Trash": "نقل إلى سلة المهملات",
   "Start from": "البدء من",
   "Asking Mojang for its versions…": "جاري طلب الإصدارات من موجانج…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "صورة مظهر (Skin) بصيغة PNG بدقة 64×64 (أو 64×32) وصورة رداء (Cape) بدقة 64×32، يتم الاحتفاظ بهما بواسطة المشغل وتمريرهما للعبة عند اللعب بهذا الاسم. ترسم اللعبة المظاهر الافتراضية في الوقت الحالي؛ وستستخدم هذه المظاهر فور إمكانية ذلك. مظهر ورداء حساب مايكروسوفت: قريباً.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "العب بلا اتصال تحت اسم آخر، وقم بالتبديل من الشريط العلوي. لا تقبل خوادم الإنترنت الأسماء غير المتصلة.",
   "Report on Discord": "الإبلاغ على ديسكورد",
   "Export": "تصدير",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "تم استبعاد {name}: يحتاج إلى {other}، الذي تم استبعاده",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "لا يُبنى على إصدار Horizon الذي تلعبه ({code}): يستبعده البناء حتى يحدّثه مؤلفه",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "في بلدك، يُستلَم طقم المؤسسين عبر عملية دفع مجانية على playhorizon.dev. استلمه من المتجر: سيفتح لك صفحة الدفع.",
-  "The founder set can't be claimed from your country.": "لا يمكن استلام طقم المؤسسين من بلدك."
+  "The founder set can't be claimed from your country.": "لا يمكن استلام طقم المؤسسين من بلدك.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

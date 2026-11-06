@@ -1,5 +1,4 @@
-//! The owner gate from the outside: with no account that owns Minecraft: Java Edition in the
-//! launcher, neither `horizon-launcher play` nor the MCP server's play starts the game.
+//! Opting out of offline access restores the owner gate for both CLI and MCP play.
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -18,6 +17,11 @@ fn home(name: &str) -> PathBuf {
     std::fs::write(
         root.join("launcher/accounts.json"),
         r#"{"accounts":[],"selected":null,"offline":["Builder_1"],"offline_selected":"Builder_1"}"#,
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("launcher/settings.json"),
+        r#"{"offline_access":false}"#,
     )
     .unwrap();
     root
@@ -86,4 +90,16 @@ fn the_mcp_server_refuses_to_play_without_an_owner() {
     let said = reply["result"]["content"][0]["text"].as_str().unwrap();
     assert!(said.contains(REFUSED), "{said}");
     let _ = std::fs::remove_dir_all(&root);
+}
+
+#[test]
+fn default_offline_access_reaches_preparation_without_an_owner() {
+    let root = home("offline");
+    std::fs::remove_file(root.join("launcher/settings.json")).unwrap();
+    let out = launcher(&root, &["play"]).output().unwrap();
+    let said = text(&out);
+    assert!(!out.status.success(), "unprepared game must not start");
+    assert!(!said.contains(REFUSED), "{said}");
+    assert!(said.contains("not prepared yet"), "{said}");
+    let _ = std::fs::remove_dir_all(root);
 }

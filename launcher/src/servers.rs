@@ -521,11 +521,13 @@ pub struct NewServer {
     pub game_mode: String,
     pub difficulty: String,
     pub max_players: u32,
+    /// Requested game port, or automatic allocation when unset.
+    pub port: Option<u16>,
     /// Only listed players (and operators) may join.
     pub friends_only: bool,
-    /// Check players' Minecraft accounts: they must sign in with Microsoft. On by default; an offline
-    /// server is a security risk, so it is turned off only per server (`--offline`, or the server's
-    /// settings page).
+    /// Check players' Minecraft accounts: they must sign in with Microsoft. Offline
+    /// identities are not authenticated. This fork defaults to offline hosting; account checks
+    /// can be enabled per server.
     pub check_accounts: bool,
     /// Who may join first (whitelisted), and the first of them becomes an operator.
     pub players: Vec<String>,
@@ -542,8 +544,9 @@ impl Default for NewServer {
             game_mode: "survival".into(),
             difficulty: "normal".into(),
             max_players: 10,
+            port: None,
             friends_only: true,
-            check_accounts: true,
+            check_accounts: false,
             players: Vec::new(),
             eula: false,
         }
@@ -648,6 +651,9 @@ pub fn settings_args(spec: &NewServer, panel_port: u16) -> Vec<String> {
 /// Creates a server: its folder, the world (a copy when asked), `init` and the settings, then adds it to
 /// the list. `tag` is the installed version whose programs and game files it uses when none are set up.
 pub fn create(spec: &NewServer, tag: Option<&str>, log: &dyn Fn(String)) -> Result<Entry, Problem> {
+    if spec.port.is_some_and(|port| port < 1024) {
+        return Err(Problem::plain("Use a game port from 1024 to 65535."));
+    }
     if !spec.eula {
         return Err(Problem {
             message: "Running a server needs your agreement to the Minecraft EULA.".into(),
@@ -692,8 +698,9 @@ pub fn create(spec: &NewServer, tag: Option<&str>, log: &dyn Fn(String)) -> Resu
             world
         }
     };
-    let taken = ports_taken();
-    let port = free_port(25565, &taken);
+    let mut taken = ports_taken();
+    let port = spec.port.unwrap_or_else(|| free_port(25565, &taken));
+    taken.push(port);
     let panel = free_port(8130, &taken);
     let undo = |p: Problem| {
         let _ = fs::remove_dir_all(&dir);

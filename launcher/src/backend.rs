@@ -10,6 +10,8 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 pub const REPO: &str = "horizon-rust/horizon";
+/// This fork publishes launcher updates independently of the upstream game.
+pub const LAUNCHER_REPO: &str = "joy-arz/horizon";
 pub const README_URL: &str = "https://github.com/horizon-rust/horizon/blob/main/launcher/README.md";
 /// The players' page on connecting an AI agent (the website's docs/agents.md).
 pub const AGENT_DOCS_URL: &str = "https://playhorizon.dev/docs/agents";
@@ -779,8 +781,12 @@ fn game_releases_with(
 /// a day, so the newest launcher release can be older than all of those: then the newest
 /// `launcher@` and `launcher-v` tags are looked up one by one (a draft's tag is skipped: it has no
 /// public release).
-fn launcher_releases_in(list: &serde_json::Value) -> Vec<Release> {
-    launcher_releases_in_with(list, |url| crate::github::json(&url))
+fn launcher_releases_in(_upstream_list: &serde_json::Value) -> Vec<Release> {
+    let fork = crate::github::json(&format!(
+        "https://api.github.com/repos/{LAUNCHER_REPO}/releases?per_page=100"
+    ))
+    .unwrap_or_else(|_| serde_json::json!([]));
+    launcher_releases_in_with(&fork, |url| crate::github::json(&url))
 }
 
 fn launcher_releases_in_with(
@@ -791,7 +797,7 @@ fn launcher_releases_in_with(
     if found.iter().any(|r| r.asset.is_some()) {
         return found;
     }
-    let api = format!("https://api.github.com/repos/{REPO}");
+    let api = format!("https://api.github.com/repos/{LAUNCHER_REPO}");
     let mut tags = Vec::new();
     for prefix in [LAUNCHER_TAG_PREFIX, OLD_LAUNCHER_TAG_PREFIX] {
         // Every `launcher@` tag is newer than every `launcher-v` one: those only when there is none.
@@ -1104,12 +1110,12 @@ pub(crate) fn fetch_small(url: &str) -> Result<Option<Vec<u8>>, String> {
 
 /// The SHA-256 the release's signed checksums give for `asset`, or why it must not be installed.
 fn signed_digest(tag: &str, asset: &str) -> Result<String, String> {
-    crate::signed::digest(
-        tag,
-        asset,
-        &horizon_release_sign::trusted_keys(),
-        fetch_small,
-    )
+    let keys = if is_launcher_tag(tag) {
+        crate::signed::launcher_keys()?
+    } else {
+        horizon_release_sign::trusted_keys()
+    };
+    crate::signed::digest(tag, asset, &keys, fetch_small)
 }
 
 /// Downloads `url` into `to`; the file is kept only if its SHA-256 is `sha256`, the signed (or
@@ -3106,7 +3112,8 @@ pub fn client_as(tag: &str, who: Option<&account::Player>) -> Result<Command, St
         return Err(error);
     }
     let session = match who {
-        None => account::session_for_game(&game_home(), false).map_err(|e| e.to_string()),
+        None => account::session_for_game(&game_home(), Settings::load().offline_enabled())
+            .map_err(|e| e.to_string()),
         Some(who) => account::session_for_game_as(&game_home(), who),
     }
     .map_err(|refused| format!("{refused} {}", crate::i18n::tr(SIGN_IN_HINT)))?;
@@ -3274,7 +3281,7 @@ fn launcher_update_from(releases: &[Release], own: &str) -> Option<Release> {
         .cloned()
 }
 
-/// Load the game's release list and both update kinds from the same GitHub response.
+/// Load the upstream game releases and this fork's independent launcher releases.
 /// Publish the game releases before any fallback lookups for older launcher tags, so those
 /// lookups cannot hold up the release pages or opening animation. A list error reaches both.
 pub fn releases_and_updates(
@@ -3459,7 +3466,7 @@ fn launcher_asset_running_from(appimage: bool) -> Option<&'static str> {
     }
 }
 
-/// Development builds and `HORIZON_LAUNCHER_NO_SELF_UPDATE` never replace themselves.
+/// Release builds update from this fork; development builds never replace themselves.
 pub fn self_update_allowed() -> bool {
     !cfg!(debug_assertions) && std::env::var_os("HORIZON_LAUNCHER_NO_SELF_UPDATE").is_none()
 }
@@ -4429,9 +4436,16 @@ pub struct Settings {
     /// comes from the player's own install. Off by default, and absent from the file while off.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub dev_offline: bool,
+    /// Permit local offline profiles. Unset is on in this fork.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub offline_access: Option<bool>,
 }
 
 impl Settings {
+    pub fn offline_enabled(&self) -> bool {
+        self.offline_access.unwrap_or(true) || self.dev_offline
+    }
+
     pub fn load() -> Self {
         Self::parse(&fs::read_to_string(data_dir().join("settings.json")).unwrap_or_default())
     }
@@ -4554,6 +4568,19 @@ mod tests {
     use super::*;
     use std::cmp::Ordering::*;
     use std::ffi::OsStr;
+
+    #[test]
+    fn offline_access_defaults_on_and_keeps_an_explicit_choice() {
+        assert!(Settings::default().offline_enabled());
+        let mut settings = Settings::parse(r#"{"offline_access":false}"#);
+        assert!(!settings.offline_enabled());
+        settings.offline_access = Some(true);
+        let saved = serde_json::to_string(&settings).unwrap();
+        assert!(Settings::parse(&saved).offline_enabled());
+        assert!(
+            Settings::parse(r#"{"dev_offline":true,"offline_access":false}"#).offline_enabled()
+        );
+    }
 
     fn pe_architecture(bytes: &[u8]) -> Option<GameArchitecture> {
         if bytes.get(..2)? != b"MZ" {

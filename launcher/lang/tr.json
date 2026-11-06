@@ -109,7 +109,6 @@
   "A name, 3 to 16 letters": "3 ila 16 harf arası bir ad",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Başka bir adla çevrimdışı oynayın ve üst çubuktan geçiş yapın. Çevrimiçi sunucular çevrimdışı adları kabul etmez.",
   "Add": "Ekle",
-  "Skin…": "Dış görünüm…",
   "Forget": "Unut",
   "{name}'s skin": "{name} adlı kişinin dış görünümü",
   "{name}'s skin is kept.": "{name} adlı kişinin dış görünümü saklanıyor.",
@@ -121,7 +120,6 @@
   "Choose a cape…": "Bir pelerin seç…",
   "No cape": "Pelerin yok",
   "Default": "Varsayılan",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "Başlatıcı tarafından saklanan ve bu adla oynandığında oyuna aktarılan 64×64 (veya 64×32) dış görünüm PNG'si ve 64×32 pelerin PNG'si. Oyun şimdilik varsayılan dış görünüşleri çizer; imkan bulduğunda bunları kullanacaktır. Microsoft hesabının dış görünümü ve pelerini: yakında.",
   "Accent colour": "Vurgu rengi",
   "Horizon's violet by default. Every colour keeps text as easy to read.": "Varsayılan olarak Horizon moru. Her renk, metnin kolayca okunabilmesini sağlar.",
   "Choose": "Seç",
@@ -549,7 +547,6 @@
   "Unsigned": "İmzasız",
   "Verified": "Doğrulandı",
   "What changed in each release, newest first.": "Her sürümde neyin değiştiği, en yeniden eskiye.",
-  "Developer options": "Developer options",
   "Close": "Close",
   "No servers yet: add one here or in the game's Multiplayer screen.": "No servers yet: add one here or in the game's Multiplayer screen.",
   ", {count} listed by their Modrinth download": ", {count} listed by their Modrinth download",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} dışarıda bırakıldı: dışarıda bırakılan {other} gerekiyor",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Oynadığın Horizon'da derlenmiyor ({code}): yazarı güncelleyene kadar derleme onu dışarıda bırakır",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Bulunduğun yerde kurucu seti playhorizon.dev üzerinde ücretsiz bir ödeme ile alınır. Mağaza'dan al: ödemeyi senin için açar.",
-  "The founder set can't be claimed from your country.": "Kurucu seti ülkenden alınamaz."
+  "The founder set can't be claimed from your country.": "Kurucu seti ülkenden alınamaz.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

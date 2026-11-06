@@ -25,7 +25,7 @@ impl Launcher {
     pub(super) fn play_as(&mut self, who: Player) {
         let mut accounts = Accounts::load();
         let done = accounts
-            .play_as_with(account::store(), who, self.settings.dev_offline)
+            .play_as_with(account::store(), who, self.settings.offline_enabled())
             .and_then(|()| accounts.save());
         match done {
             Ok(()) => self.accounts = accounts,
@@ -200,7 +200,7 @@ impl Launcher {
             }
             let dressed = name.clone();
             actions = actions.child(
-                button(format!("offline-skin-{i}"), "Skin…", Kind::Ghost, &t).on_click(
+                button(format!("offline-skin-{i}"), "Custom skin…", Kind::Ghost, &t).on_click(
                     cx.listener(move |this, _: &ClickEvent, _, cx| {
                         this.open_skin(dressed.clone());
                         cx.notify();

@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Bouw {name}'s post-bouwstap",
   "In use": "In gebruuk",
   "Prepare": "Veurbereide",
-  "Developer options": "Ontwikkelaorsopties",
   "{online} of {max} players": "{online} vaan {max} speulers",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Edition). Play downloadt ‘t de ierste kier vaan Mojang veur eur account, mit de Java dee ‘t nuudig heet.",
   "Close": "Sluite",
@@ -172,7 +171,6 @@
   "about a minute left": "ongeveer un minuut euver",
   "Cancel": "Annulere",
   "Add to {client}": "Voeg toe aan {client}",
-  "Skin…": "Huid…",
   "Environment": "Milieu",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Ze wèrke dèks nog altied same. Es de build misluk, installeer dan versies die veur dezelfde Nightly zien gemaak.",
   "Import an instance folder…": "Importeer un exemplaarmap…",
@@ -372,7 +370,6 @@
   "Move to Trash": "Verplaots nao de prullebak",
   "Start from": "Begin vaan",
   "Asking Mojang for its versions…": "Vraog Mojang veur de versies…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "‘n 64×64 (of 64×32) skin PNG en ‘n 64×32 cape PNG, behawwe door de launcher en gegeve aon ‘t spel es deze naam weert gesjpeeld. ‘t Sjpel teikent veurlopig de standaardskins; ‘t gebruuk dees es ‘t kin. De huid en de cape vaan ‘n Microsoft account: binnekort.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Speel offline oonder ‘n aandere naam en schakel vaanaof de baoveste balk. Online servers numme gein offline naome.",
   "Report on Discord": "Rapport op Discord",
   "Export": "Export",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} is weggelaote: 't haet {other} nóddig, wat weggelaote is",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Bouwt neet op de Horizon die se speuls ({code}): 'ne bouw laot 't weg tot de maker 't biewerk",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Wo se bis, wurt de oprichtersset geclaimd via 'n gratis betaling op playhorizon.dev. Claim 'm in de Winkel: dae maak de betaling veur dich aope.",
-  "The founder set can't be claimed from your country.": "De oprichtersset kin neet oet dien land geclaimd waere."
+  "The founder set can't be claimed from your country.": "De oprichtersset kin neet oet dien land geclaimd waere.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

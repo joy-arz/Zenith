@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Compilando el paso posterior a la compilación de {name}",
   "In use": "En uso",
   "Prepare": "Preparar",
-  "Developer options": "Opciones de desarrollador",
   "{online} of {max} players": "{online} de {max} jugadores",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Edition). La primera vez, Jugar lo descarga de Mojang para tu cuenta, junto con el Java que necesita.",
   "Close": "Cerrar",
@@ -172,7 +171,6 @@
   "about a minute left": "queda un minuto aprox.",
   "Cancel": "Cancelar",
   "Add to {client}": "Añadir a {client}",
-  "Skin…": "Aspecto…",
   "Environment": "Entorno",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "A menudo funcionan juntos de todos modos. Si la compilación falla, instala versiones hechas para la misma Nightly.",
   "Import an instance folder…": "Importar una carpeta de instancia…",
@@ -372,7 +370,6 @@
   "Move to Trash": "Mover a la papelera",
   "Start from": "Empezar desde",
   "Asking Mojang for its versions…": "Pidiendo a Mojang sus versiones…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "Un PNG de aspecto de 64×64 (o 64×32) y un PNG de capa de 64×32, guardados por el lanzador y proporcionados al juego cuando juega con este nombre. Por ahora el juego muestra los aspectos por defecto; usará estos en cuanto sea posible. El aspecto y capa de una cuenta de Microsoft estarán disponibles pronto.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Juega sin conexión con otro nombre y cámbialo desde la barra superior. Los servidores en línea no aceptan nombres sin conexión.",
   "Report on Discord": "Reportar en Discord",
   "Export": "Exportar",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "Se dejó fuera {name}: necesita {other}, que se dejó fuera",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "No se compila en el Horizon que juegas ({code}): la compilación lo deja fuera hasta que su autor lo actualice",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Donde estás, el set fundador se reclama con un pago gratuito en playhorizon.dev. Reclámalo desde la Tienda: te abre el pago.",
-  "The founder set can't be claimed from your country.": "El set fundador no se puede reclamar desde tu país."
+  "The founder set can't be claimed from your country.": "El set fundador no se puede reclamar desde tu país.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

@@ -1855,8 +1855,8 @@ pub fn launch(
     }
 }
 
-/// The owner gate before the game starts. With the window's hidden developer option
-/// (`backend::Settings::dev_offline`, `offline_without_owner`) no owner is no refusal: the game
+/// With offline access enabled, an offline profile starts without authentication requests.
+/// Without an owner the game
 /// starts offline, without a session and without an `owner`. Downloads never come through here:
 /// `backend::download_for_owner` asks [`launch`] itself, so the option never downloads the game.
 pub fn launch_for_game(
@@ -1866,6 +1866,9 @@ pub fn launch_for_game(
     accounts: &mut Accounts,
     offline_without_owner: bool,
 ) -> Result<Launch, NoOwner> {
+    if offline_without_owner && accounts.selected().is_none() {
+        return Ok(Launch::default());
+    }
     match launch(ep, client_id, store, accounts) {
         Err(NoOwner) if offline_without_owner => Ok(Launch::default()),
         pass => pass,

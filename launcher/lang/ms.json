@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Membina langkah pasca binaan {name}",
   "In use": "Sedang digunakan",
   "Prepare": "Sediakan",
-  "Developer options": "Pilihan pemaju",
   "{online} of {max} players": "{online} daripada {max} pemain",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Edisi Java). Main muat turunnya daripada Mojang untuk akaun anda buat kali pertama, dengan Java yang diperlukannya.",
   "Close": "tutup",
@@ -172,7 +171,6 @@
   "about a minute left": "lebih kurang seminit lagi",
   "Cancel": "Batal",
   "Add to {client}": "Tambahkan pada {client}",
-  "Skin…": "Kulit…",
   "Environment": "Persekitaran",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Mereka sering masih bekerjasama. Jika binaan gagal, pasang versi yang dibuat untuk Nightly yang sama.",
   "Import an instance folder…": "Import folder contoh…",
@@ -371,7 +369,6 @@
   "Move to Trash": "Beralih ke Sampah",
   "Start from": "Mulakan dari",
   "Asking Mojang for its versions…": "Meminta Mojang untuk versinya…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "PNG kulit 64×64 (atau 64×32) dan PNG jubah 64×32, disimpan oleh pelancar dan diberikan kepada permainan apabila nama ini dimainkan. Permainan ini melukis kulit lalai buat masa ini; ia menggunakan ini sebaik sahaja ia boleh. Kulit dan tanjung akaun Microsoft: akan datang tidak lama lagi.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Main di luar talian di bawah nama lain dan beralih dari bar atas. Pelayan dalam talian tidak menggunakan nama luar talian.",
   "Report on Discord": "Laporan mengenai Discord",
   "Export": "Eksport",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} ditinggalkan: ia memerlukan {other}, yang ditinggalkan",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Tidak dibina pada Horizon yang anda mainkan ({code}): binaan meninggalkannya sehingga pengarangnya mengemas kininya",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Di tempat anda, set pengasas dituntut melalui pembayaran percuma di playhorizon.dev. Tuntut dari Kedai: ia membuka pembayaran untuk anda.",
-  "The founder set can't be claimed from your country.": "Set pengasas tidak boleh dituntut dari negara anda."
+  "The founder set can't be claimed from your country.": "Set pengasas tidak boleh dituntut dari negara anda.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

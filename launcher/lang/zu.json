@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Isinyathelo sokwakha {name} sika-post-build",
   "In use": "Iyasetshenziswa",
   "Prepare": "Lungiselela",
-  "Developer options": "Izinketho zonjiniyela",
   "{online} of {max} players": "{online} kwabadlali abangu-{max}",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Uhlelo). I-Play iyilanda ku-Mojang ku-akhawunti yakho okokuqala ngqa, nge-Java eyidingayo.",
   "Close": "Vala",
@@ -172,7 +171,6 @@
   "about a minute left": "cishe umzuzu osele",
   "Cancel": "Khansela",
   "Add to {client}": "Engeza kokuthi {client}",
-  "Skin…": "Isikhumba...",
   "Environment": "Imvelo",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Ngokuvamile basasebenza ndawonye. Uma isakhiwo sihluleka, faka izinguqulo ezenzelwe I-Nightly efanayo.",
   "Import an instance folder…": "Ngenisa ifolda yesibonelo...",
@@ -371,7 +369,6 @@
   "Move to Trash": "Hambisa Kudoti",
   "Start from": "Qala kusuka",
   "Asking Mojang for its versions…": "Ibuza Mojang ngezinguqulo zayo…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "I-PNG yesikhumba engu-64×64 (noma 64×32) kanye ne-64×32 cape PNG, egcinwe yisiqalisi futhi inikezwe igeyimu uma leli gama lidlala. Umdlalo udonsa izikhumba ezizenzakalelayo okwamanje; isebenzisa lezi uma ikwazi. Isikhumba se-akhawunti Microsoft nekhepi: kuyeza maduze.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Dlala ungaxhunyiwe ku-inthanethi ngaphansi kwelinye igama, bese ushintsha ibha ephezulu. Amaseva aku-inthanethi awathathi amagama angaxhunyiwe ku-inthanethi.",
   "Report on Discord": "Bika kokuthi Discord",
   "Export": "Thekelisa",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "I-{name} ishiywe ngaphandle: idinga i-{other}, eshiywe ngaphandle",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Ayakhiwa ku-Horizon oyidlalayo ({code}): ukwakha kuyayishiya ngaphandle kuze kube umbhali wayo uyayibuyekeza",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Lapho ukhona, isethi yabasunguli ithathwa ngokukhokha mahhala ku-playhorizon.dev. Yithathe esitolo: sizokuvulela ukukhokha.",
-  "The founder set can't be claimed from your country.": "Isethi yabasunguli ayikwazi ukuthathwa ezweni lakho."
+  "The founder set can't be claimed from your country.": "Isethi yabasunguli ayikwazi ukuthathwa ezweni lakho.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

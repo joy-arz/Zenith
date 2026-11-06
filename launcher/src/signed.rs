@@ -4,12 +4,24 @@
 //! with the SHA-256 pinned for it in legacy-releases.txt (a rollback). Anything else is refused
 //! with a message saying why.
 
-use crate::backend::REPO;
+use crate::backend::{LAUNCHER_REPO, REPO};
 use horizon_release_sign::{PublicKey, SIGNATURE, SIGNATURE_V2, SUMS};
 
 /// Where a release's attached file downloads from (GitHub's fixed address for it).
 pub fn asset_url(tag: &str, name: &str) -> String {
-    format!("https://github.com/{REPO}/releases/download/{tag}/{name}")
+    let repo = if tag.starts_with(crate::backend::LAUNCHER_TAG_PREFIX)
+        || tag.starts_with(crate::backend::OLD_LAUNCHER_TAG_PREFIX)
+    {
+        LAUNCHER_REPO
+    } else {
+        REPO
+    };
+    format!("https://github.com/{repo}/releases/download/{tag}/{name}")
+}
+
+/// Launcher signatures use this fork's key; game releases retain upstream trust.
+pub fn launcher_keys() -> Result<Vec<PublicKey>, String> {
+    horizon_release_sign::parse_keys(include_str!("../release-keys.txt"))
 }
 
 /// The signed SHA-256 of `asset` in release `tag`, fetching its SHA256SUMS and SHA256SUMS.sig
@@ -58,6 +70,23 @@ pub fn nightly_digest(
 mod tests {
     use super::*;
     use horizon_release_sign::{sha256_hex, sums_file, SigningKey};
+
+    #[test]
+    fn fork_launcher_and_upstream_game_have_separate_update_roots() {
+        assert_eq!(
+            asset_url("launcher@0.2.1", SUMS),
+            "https://github.com/joy-arz/horizon/releases/download/launcher@0.2.1/SHA256SUMS"
+        );
+        assert_eq!(
+            asset_url("v0.2.1", SUMS),
+            "https://github.com/horizon-rust/horizon/releases/download/v0.2.1/SHA256SUMS"
+        );
+        let keys = launcher_keys().unwrap();
+        assert!(!keys.is_empty());
+        assert!(keys
+            .iter()
+            .all(|key| !horizon_release_sign::trusted_keys().contains(key)));
+    }
 
     #[test]
     fn the_launcher_ships_with_a_release_key() {

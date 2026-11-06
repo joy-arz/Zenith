@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Konstruado de la postkonstrua paŝo de {name}",
   "In use": "En uzo",
   "Prepare": "Preparu",
-  "Developer options": "Opcioj por programistoj",
   "{online} of {max} players": "{online} el {max} ludantoj",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Eldono). Play elŝutas ĝin de Mojang por via konto la unuan fojon, kun la Java kiun ĝi bezonas.",
   "Close": "Fermu",
@@ -172,7 +171,6 @@
   "about a minute left": "restas proksimume minuto",
   "Cancel": "Nuligi",
   "Add to {client}": "Aldoni al {client}",
-  "Skin…": "Haŭto…",
   "Environment": "Medio",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Ili ofte ankoraŭ laboras kune. Se la konstruo malsukcesas, instalu versiojn faritajn por la sama Nokto.",
   "Import an instance folder…": "Importi kazon-dosierujon...",
@@ -371,7 +369,6 @@
   "Move to Trash": "Movu al Rubujo",
   "Start from": "Komencu de",
   "Asking Mojang for its versions…": "Demandante Mojang pri ĝiaj versioj...",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "64×64 (aŭ 64×32) haŭto PNG kaj 64×32 kabo PNG, konservita de la lanĉilo kaj donita al la ludo kiam ĉi tiu nomo ludas. La ludo desegnas la defaŭltajn haŭtojn nuntempe; ĝi uzas ĉi tiujn unufoje ĝi povas. Haŭto kaj kabo de Microsoft konto: baldaŭ venos.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Ludu eksterrete sub alia nomo, kaj ŝanĝu de la supra trinkejo. Retaj serviloj ne prenas eksterretajn nomojn.",
   "Report on Discord": "Raportu pri Discord",
   "Export": "Eksporto",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} estis preterlasita: ĝi bezonas {other}, kiu estis preterlasita",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Ne konstruiĝas sur la Horizon, kiun vi ludas ({code}): konstruo preterlasas ĝin ĝis ĝia aŭtoro ĝisdatigos ĝin",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Kie vi estas, la fondinta aro estas postulata per senpaga pago ĉe playhorizon.dev. Postulu ĝin en la Vendejo: ĝi malfermas la pagon por vi.",
-  "The founder set can't be claimed from your country.": "La fondinta aro ne povas esti postulata el via lando."
+  "The founder set can't be claimed from your country.": "La fondinta aro ne povas esti postulata el via lando.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

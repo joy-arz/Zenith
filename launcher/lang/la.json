@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Aedificium{name}'S post-gradus constructum",
   "In use": "in usu",
   "Prepare": "para",
-  "Developer options": "Elit optiones",
   "{online} of {max} players": "{online}of *{max}histriones",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version}(JavaEditio). Ludere downloads ex eoMojangprimum ad rationem vestram, cumJavaindiget.",
   "Close": "Close",
@@ -172,7 +171,6 @@
   "about a minute left": "de momento sinistram",
   "Cancel": "Cancel",
   "Add to {client}": "Add to{client}",
-  "Skin…": "Pellis…",
   "Environment": "Environment",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Saepe tamen cooperantur. Si aedificatio deficiat, versiones ad easdem Nocturnas faciendas institue.",
   "Import an instance folder…": "Exemplum folder importare ...",
@@ -371,7 +369,6 @@
   "Move to Trash": "Movere ad Quisquilias",
   "Start from": "Incipit a",
   "Asking Mojang for its versions…": "RogansMojangad eius versiones…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "A 64×64 (vel 64×32) pellis PNG et 64×32 promunturium PNG, custoditum a deductore et ludo datum cum hoc nomine ludit. Praeda trahit defaltam pellibus pro nunc; his uti semel potest. AMicrosoftob pellis et cape: cito venio.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Ludere offline sub alio nomine, et a summo vecte transi. Online servers non nomina online.",
   "Report on Discord": "Report onDiscord",
   "Export": "Exportare",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} omissus est: {other} eget, qui omissus est",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "In Horizonte quo ludis non construitur ({code}): constructio eum omittit donec auctor eum renovet",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Ubi es, copia conditorum per solutionem gratuitam in playhorizon.dev petitur. Pete eam ex Taberna: ea solutionem tibi aperit.",
-  "The founder set can't be claimed from your country.": "Copia conditorum ex patria tua peti non potest."
+  "The founder set can't be claimed from your country.": "Copia conditorum ex patria tua peti non potest.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

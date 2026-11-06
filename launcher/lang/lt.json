@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "{name} kūrimo žingsnis po kūrimo",
   "In use": "Naudojamas",
   "Prepare": "Pasiruoškite",
-  "Developer options": "Kūrėjo parinktys",
   "{online} of {max} players": "{online} iš {max} žaidėjų",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "„Minecraft“ {version} („Java“ leidimas). „Play“ pirmą kartą atsisiunčia jį iš „Mojang“ jūsų paskyrai su jai reikalinga „Java“.",
   "Close": "Uždaryti",
@@ -172,7 +171,6 @@
   "about a minute left": "liko maždaug minutė",
   "Cancel": "Atšaukti",
   "Add to {client}": "Pridėti prie {client}",
-  "Skin…": "Oda…",
   "Environment": "Aplinka",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Jie dažnai vis dar dirba kartu. Jei kūrimas nepavyksta, įdiekite tam pačiam Nightly sukurtas versijas.",
   "Import an instance folder…": "Importuoti egzempliorių aplanką…",
@@ -372,7 +370,6 @@
   "Move to Trash": "Perkelti į šiukšliadėžę",
   "Start from": "Pradėkite nuo",
   "Asking Mojang for its versions…": "Klausimas Mojang jo versijų…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "64 × 64 (arba 64 × 32) odos PNG ir 64 × 32 PNG, kuriuos saugo paleidimo priemonė ir suteikia žaidimui, kai žaidžiamas šis pavadinimas. Žaidimas šiuo metu piešia numatytuosius apvalkalus; jas naudoja, kai tik gali. „Microsoft“ paskyros apvalkalas: netrukus.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Žaiskite neprisijungę kitu pavadinimu ir perjunkite iš viršutinės juostos. Internetiniai serveriai neprisijungus pavadinimų nepriima.",
   "Report on Discord": "Report on Discord",
   "Export": "Eksportuoti",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} praleistas: jam reikia {other}, kuris praleistas",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Nesukompiliuojamas tavo žaidžiamame Horizon ({code}): kompiliavimas jį praleidžia, kol autorius jo neatnaujins",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Ten, kur esate, įkūrėjų rinkinys gaunamas per nemokamą apmokėjimą playhorizon.dev svetainėje. Gaukite jį Parduotuvėje: ji atidarys apmokėjimą už jus.",
-  "The founder set can't be claimed from your country.": "Įkūrėjų rinkinio negalima gauti iš jūsų šalies."
+  "The founder set can't be claimed from your country.": "Įkūrėjų rinkinio negalima gauti iš jūsų šalies.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

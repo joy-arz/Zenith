@@ -109,7 +109,6 @@
   "A name, 3 to 16 letters": "Um nome de 3 a 16 caracteres",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Jogue offline com outro nome e alterne entre eles pela barra superior. Servidores online não aceitam nomes offline.",
   "Add": "Adicionar",
-  "Skin…": "Skin…",
   "Forget": "Remover",
   "{name}'s skin": "Skin de {name}",
   "{name}'s skin is kept.": "A skin de {name} será mantida.",
@@ -121,7 +120,6 @@
   "Choose a cape…": "Escolher uma capa…",
   "No cape": "Sem capa",
   "Default": "Padrão",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "Uma imagem PNG de skin nos formatos 64×64 (ou 64×32) e uma imagem PNG de capa no formato 64×32. Os arquivos ficam armazenados no launcher e são enviados ao jogo quando esse nome é utilizado. Por enquanto, o jogo continua exibindo as skins padrão; utilizará essas imagens assim que possível. Suporte às skins e capas de contas Microsoft: em breve.",
   "Accent colour": "Cor de destaque",
   "Horizon's violet by default. Every colour keeps text as easy to read.": "Violeta do Horizon por padrão. Todas as cores mantêm os textos fáceis de ler.",
   "Choose": "Escolher",
@@ -549,7 +547,6 @@
   "Unsigned": "Não assinada",
   "Verified": "Verificada",
   "What changed in each release, newest first.": "O que mudou em cada versão, da mais recente para a mais antiga.",
-  "Developer options": "Opções de desenvolvedor",
   "Close": "Fechar",
   "No servers yet: add one here or in the game's Multiplayer screen.": "Nenhum servidor ainda: adicione um aqui ou na tela Multijogador do jogo.",
   ", {count} listed by their Modrinth download": ", {count} listados pelo download do Modrinth",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} ficou de fora: precisa de {other}, que ficou de fora",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Não compila no Horizon que você joga ({code}): a compilação o deixa de fora até que o autor o atualize",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Onde você está, o conjunto fundador é resgatado por um checkout gratuito em playhorizon.dev. Resgate na Loja: ela abre o checkout para você.",
-  "The founder set can't be claimed from your country.": "O conjunto fundador não pode ser resgatado no seu país."
+  "The founder set can't be claimed from your country.": "O conjunto fundador não pode ser resgatado no seu país.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

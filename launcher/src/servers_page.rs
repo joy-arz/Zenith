@@ -38,6 +38,7 @@ pub(super) enum Field {
     AddPlayer,
     Motd,
     Port,
+    PublicAddress,
     Token,
     Email,
     /// The instance dialog's (`instances_page.rs`).
@@ -69,7 +70,7 @@ pub(super) enum Field {
 }
 
 impl Field {
-    const ALL: [Field; 25] = [
+    const ALL: [Field; 26] = [
         Field::Name,
         Field::Seed,
         Field::Players,
@@ -77,6 +78,7 @@ impl Field {
         Field::AddPlayer,
         Field::Motd,
         Field::Port,
+        Field::PublicAddress,
         Field::Token,
         Field::Email,
         Field::InstanceName,
@@ -408,6 +410,7 @@ fn own_name(accounts: &Accounts) -> Option<String> {
     accounts
         .selected()
         .map(|a| a.name.clone())
+        .or_else(|| accounts.name_arg().map(str::to_string))
         .or_else(crate::offline_name)
 }
 
@@ -531,6 +534,7 @@ impl Launcher {
         s.restart_needed.clear();
         s.texts.remove(&Field::Motd);
         s.texts.remove(&Field::Port);
+        s.texts.remove(&Field::PublicAddress);
         s.invalid = None;
         s.polled = None;
         self.load_details();
@@ -912,7 +916,7 @@ impl Launcher {
             difficulty: "normal",
             max_players: 10,
             friends_only: true,
-            check_accounts: true,
+            check_accounts: !self.settings.offline_enabled(),
             eula: false,
             eula_missing: false,
             friends,
@@ -959,6 +963,7 @@ impl Launcher {
             game_mode: c.mode.into(),
             difficulty: c.difficulty.into(),
             max_players: c.max_players,
+            port: None,
             friends_only: c.friends_only,
             check_accounts: c.check_accounts,
             players,
@@ -1199,6 +1204,18 @@ impl Launcher {
                 }
             }
             Field::Port => self.save_port(),
+            Field::PublicAddress => {
+                if let Some(dir) = self.servers.open.clone() {
+                    if let Err(error) = horizon_launcher::server_share::save(
+                        &dir,
+                        self.servers.value(Field::PublicAddress),
+                    ) {
+                        self.servers.problem = Some(Problem::plain(error));
+                    } else {
+                        self.servers.problem = None;
+                    }
+                }
+            }
             Field::Token => self.save_token(),
             Field::Email => self.invite_friend(),
             Field::InstanceName
@@ -1893,8 +1910,55 @@ impl Launcher {
                     .child(row),
             );
         }
-        tab.child(self.internet_panel(port as u16, cx))
+        tab.child(self.forwarding_panel(port as u16, cx))
+            .child(self.internet_panel(port as u16, cx))
             .child(self.server_console(status.running(), cx))
+    }
+
+    fn forwarding_panel(&mut self, port: u16, cx: &mut Context<Self>) -> Div {
+        let t = self.theme;
+        let saved = self
+            .servers
+            .open
+            .as_ref()
+            .and_then(|dir| horizon_launcher::server_share::load(dir).ok().flatten());
+        if !self.servers.texts.contains_key(&Field::PublicAddress) {
+            self.servers
+                .text(Field::PublicAddress)
+                .set(saved.clone().unwrap_or_default());
+        }
+        let mut panel = plate(&t).p(px(20.)).flex().flex_col().gap(px(10.))
+            .child(caps(tr("Own port forwarding")).text_color(t.muted))
+            .child(text(theme::CAPTION).text_color(t.ink_soft).child(trf(
+                "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+                &[("port", &port.to_string())],
+            )))
+            .child(div().flex().items_center().gap(px(8.))
+                .child(self.field(Field::PublicAddress, "play.example.com:25565", 300., cx))
+                .child(button("public-address-save", "Save", Kind::Secondary, &t)
+                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.field_enter(Field::PublicAddress);
+                        cx.notify();
+                    }))));
+        if let Some(address) = saved {
+            if let Ok(link) = horizon_launcher::server_share::link(&address) {
+                let copy = link.clone();
+                panel = panel
+                    .child(text(theme::UI).text_color(t.ink).child(link))
+                    .child(
+                        button("public-link-copy", "Copy server link", Kind::Secondary, &t)
+                            .on_click(cx.listener(move |_, _: &ClickEvent, _, cx| {
+                                copy_to_clipboard(
+                                    cx,
+                                    gpui::ClipboardItem::new_string(copy.clone()),
+                                );
+                            })),
+                    );
+            }
+        }
+        panel.child(text(theme::CAPTION).text_color(t.muted).child(tr(
+            "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.",
+        )))
     }
 
     fn server_console(&mut self, running: bool, cx: &mut Context<Self>) -> Div {
@@ -3352,6 +3416,16 @@ fn setting_name(key: &str) -> &str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hosting_whitelists_the_selected_offline_profile() {
+        let accounts = Accounts {
+            offline: vec!["Builder_1".into()],
+            offline_selected: Some("Builder_1".into()),
+            ..Accounts::default()
+        };
+        assert_eq!(own_name(&accounts).as_deref(), Some("Builder_1"));
+    }
 
     #[test]
     fn backups_read_for_people() {

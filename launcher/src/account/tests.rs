@@ -742,15 +742,16 @@ fn the_developer_option_plays_offline_names_without_an_owner() {
     let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();
     assert!(pass.session.is_none() && pass.owner.is_none() && pass.offline.is_none());
     assert!(m.lock().unwrap().log.is_empty());
-    // Beside an account the services say doesn't own the game: the same, still no owner.
-    let (_, ep) = mock(|m| m.owns_game = false);
+    // An offline profile never refreshes another signed-in account or changes its cached ownership.
+    let (m, ep) = mock(|m| m.owns_game = false);
     let mut accounts = signed_in(&store, &secrets("mc-token", true));
     accounts
         .play_as_with(&store, Player::Offline("Builder_1".into()), true)
         .unwrap();
     let pass = launch_for_game(&ep, Some("test-client"), &store, &mut accounts, true).unwrap();
     assert!(pass.session.is_none() && pass.owner.is_none());
-    assert!(!accounts.has_owner(&store));
+    assert!(m.lock().unwrap().log.is_empty());
+    assert!(accounts.has_owner(&store));
     // A real owner is still found and brings what it brings without the option.
     let (_, ep) = mock(|_| {});
     let mut accounts = signed_in(&store, &secrets("mc-token", true));

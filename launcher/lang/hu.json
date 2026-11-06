@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "A(z) {name} felépítése utáni lépés",
   "In use": "Használatban",
   "Prepare": "Készülj fel",
-  "Developer options": "Fejlesztői lehetőségek",
   "{online} of {max} players": "{online} / {max} játékos",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java kiadás). A Play először letölti a Mojang oldaláról a fiókjához, a szükséges Java-val.",
   "Close": "Bezárás",
@@ -172,7 +171,6 @@
   "about a minute left": "körülbelül egy perc van hátra",
   "Cancel": "Mégsem",
   "Add to {client}": "Hozzáadás ehhez: {client}",
-  "Skin…": "Bőr…",
   "Environment": "Környezet",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Gyakran még mindig együtt dolgoznak. Ha a felépítés sikertelen, telepítse az ugyanahhoz a Nightlyhoz készült verziókat.",
   "Import an instance folder…": "Példánymappa importálása…",
@@ -372,7 +370,6 @@
   "Move to Trash": "Áthelyezés a Kukába",
   "Start from": "Kezdje innen",
   "Asking Mojang for its versions…": "Mojang kérése a verziókról…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "Egy 64 × 64 (vagy 64 × 32) skin PNG és egy 64 × 32 cape PNG, amelyet az indító tart meg, és a játékhoz adnak, amikor ez a név játszik. A játék egyelőre az alapértelmezett skineket rajzolja; ezeket használja, ha csak teheti. Microsoft-fiók skin and cape: hamarosan.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Játssz offline más néven, és válts a felső sávról. Az online szerverek nem vesznek fel offline neveket.",
   "Report on Discord": "Jelentés a Discordról",
   "Export": "Exportálás",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} kimaradt: szüksége van erre: {other}, ami kimaradt",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Nem fordul le azon a Horizonon, amellyel játszol ({code}): a fordítás kihagyja, amíg a szerzője nem frissíti",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Ahol vagy, az alapítói szettet egy ingyenes fizetéssel lehet igényelni a playhorizon.dev oldalon. Igényeld a Boltban: megnyitja neked a fizetést.",
-  "The founder set can't be claimed from your country.": "Az alapítói szett nem igényelhető az országodból."
+  "The founder set can't be claimed from your country.": "Az alapítói szett nem igényelhető az országodból.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

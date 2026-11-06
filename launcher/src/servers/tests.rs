@@ -40,7 +40,7 @@ fn create_asks_init_and_config_set() {
     };
     assert_eq!(
         init_args(&open, "old", 25565).join(" "),
-        "init --yes --world old --port 25565 --no-whitelist"
+        "init --yes --world old --port 25565 --no-whitelist --offline"
     );
     assert_eq!(
         settings_args(&spec, 8131).join(" "),

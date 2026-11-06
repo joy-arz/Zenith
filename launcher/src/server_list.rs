@@ -122,7 +122,8 @@ impl List {
 
     /// Adds a server at the end of the shown ones, as the game's Add Server does.
     pub fn add(&mut self, name: &str, ip: &str) -> Result<(), String> {
-        let (name, ip) = (name.trim(), ip.trim());
+        let address = crate::server_share::resolve(ip)?;
+        let (name, ip) = (name.trim(), address.as_str());
         if ip.is_empty() {
             return Err("A server needs an address.".into());
         }

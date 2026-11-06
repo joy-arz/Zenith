@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Gradnja {name} korak po gradnji",
   "In use": "V uporabi",
   "Prepare": "Pripravite se",
-  "Developer options": "Možnosti razvijalca",
   "{online} of {max} players": "{online} od {max} igralcev",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Edition). Play ga prvič prenese iz Mojanga za vaš račun z Javo, ki jo potrebuje.",
   "Close": "Zapri",
@@ -172,7 +171,6 @@
   "about a minute left": "še približno minuta",
   "Cancel": "Prekliči",
   "Add to {client}": "Dodaj v {client}",
-  "Skin…": "Koža…",
   "Environment": "okolje",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Pogosto še delata skupaj. Če gradnja ne uspe, namestite različice, izdelane za isti Nightly.",
   "Import an instance folder…": "Uvozite mapo primerkov ...",
@@ -371,7 +369,6 @@
   "Move to Trash": "Premakni v smetnjak",
   "Start from": "Začnite od",
   "Asking Mojang for its versions…": "Vprašanje Mojanga za njegove različice ...",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "PNG s preobleko 64 × 64 (ali 64 × 32) in PNG s ogrinjalom 64 × 32, ki ju obdrži zaganjalnik in dasta igri, ko se predvaja to ime. Igra za zdaj nariše privzete preobleke; te uporabi, ko lahko. Preobleka in ogrinjalo Microsoftovega računa: kmalu na voljo.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Igrajte brez povezave pod drugim imenom in preklopite iz zgornje vrstice. Spletni strežniki ne sprejemajo imen brez povezave.",
   "Report on Discord": "Poročilo o Discordu",
   "Export": "Izvozi",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} je bil izpuščen: potrebuje {other}, ki je bil izpuščen",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Se ne zgradi na Horizonu, ki ga igraš ({code}): gradnja ga izpusti, dokler ga avtor ne posodobi",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Tam, kjer ste, se komplet ustanoviteljev prevzame z brezplačnim plačilom na playhorizon.dev. Prevzemite ga v Trgovini: odpre vam plačilo.",
-  "The founder set can't be claimed from your country.": "Kompleta ustanoviteljev ni mogoče prevzeti iz vaše države."
+  "The founder set can't be claimed from your country.": "Kompleta ustanoviteljev ni mogoče prevzeti iz vaše države.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

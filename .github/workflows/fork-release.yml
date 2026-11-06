@@ -1,0 +1,203 @@
+name: Fork launcher release
+
+on:
+  push:
+    tags: ['launcher@*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Launcher version, for example 0.2.1 (must be newer than the installed release)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-release-${{ github.ref }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    if: github.repository == 'joy-arz/horizon'
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          version="${INPUT_VERSION:-${REF_NAME#launcher@}}"
+          [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
+          tag="launcher@$version"
+          refs=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag" "refs/tags/$tag^{}")
+          if [[ -n "$refs" ]]; then
+            tagged_sha=$(printf '%s\n' "$refs" | tail -1 | cut -f1)
+            [[ "$tagged_sha" == "$GITHUB_SHA" ]] || { echo 'Version tag already points to another commit; choose a new version.' >&2; exit 1; }
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=launcher@$version" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+            asset: horizon-launcher-linux-x86_64.tar.gz
+          - os: windows-latest
+            platform: windows-x64
+            asset: horizon-launcher-windows-x64.zip
+          - os: macos-15
+            platform: macos-arm64
+            arch: arm64
+            asset: horizon-launcher-macos-arm64.zip
+          - os: macos-15-intel
+            platform: macos-x64
+            arch: x64
+            asset: horizon-launcher-macos-x64.zip
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    env:
+      HORIZON_LAUNCHER_VERSION: ${{ needs.version.outputs.version }}
+      HORIZON_LAUNCHER_TAG: ${{ needs.version.outputs.tag }}
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      CARGO_PROFILE_RELEASE_LTO: 'false'
+      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: launcher
+          shared-key: fork-launcher-${{ matrix.platform }}
+      - name: Install Linux build libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-x11-dev libwayland-dev libx11-xcb-dev libfontconfig-dev libvulkan-dev libasound2-dev libudev-dev
+      - name: Use runtime shaders on macOS
+        if: runner.os == 'macOS'
+        run: echo 'LAUNCHER_FEATURES=gpui_platform/runtime_shaders' >> "$GITHUB_ENV"
+      - name: Validate launcher
+        run: |
+          cargo fmt --manifest-path launcher/Cargo.toml --check
+          cargo test --locked --manifest-path launcher/Cargo.toml ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"} -- --test-threads=1
+      - name: Build launcher
+        run: cargo build --release --locked --manifest-path launcher/Cargo.toml ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"}
+      - name: Smoke test offline profile and PNG upload
+        env:
+          HORIZON_LAUNCHER_NO_SELF_UPDATE: '1'
+          HORIZON_NO_AUDIO: '1'
+          EXPECTED_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          export HORIZON_LAUNCHER_HOME="$RUNNER_TEMP/fork-smoke/launcher"
+          export HORIZON_HOME="$RUNNER_TEMP/fork-smoke/game"
+          export XDG_DATA_HOME="$RUNNER_TEMP/fork-smoke/data"
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/fork-smoke/config"
+          export HORIZON_LAUNCHER_TRASH="$RUNNER_TEMP/fork-smoke/trash"
+          export HORIZON_LAUNCHER_CLIPBOARD="$RUNNER_TEMP/fork-smoke/clipboard"
+          export HORIZON_LAUNCHER_DESKTOP="$RUNNER_TEMP/fork-smoke/desktop"
+          binary=launcher/target/release/horizon-launcher
+          [[ "$RUNNER_OS" != Windows ]] || binary="$binary.exe"
+          [[ "$("$binary" --version)" == "horizon-launcher $EXPECTED_VERSION" ]]
+          python3 - <<'PYCODE'
+          import os, pathlib, struct, zlib
+          def chunk(kind, body):
+              return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+          png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', 64, 64, 8, 6, 0, 0, 0))
+          png += chunk(b'IDAT', zlib.compress((b'\x00' + b'\x20\x80\xc0\xff' * 64) * 64)) + chunk(b'IEND', b'')
+          pathlib.Path(os.environ['RUNNER_TEMP'], 'fork-skin.png').write_bytes(png)
+          PYCODE
+          "$binary" account offline Builder_1
+          "$binary" account skin Builder_1 "$RUNNER_TEMP/fork-skin.png" --model slim
+          "$binary" --json account list > "$RUNNER_TEMP/fork-profile.json"
+          python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert any(n["name"] == "Builder_1" and n["selected"] for n in p["offline"])' "$RUNNER_TEMP/fork-profile.json"
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p out
+          tar -czf "out/horizon-launcher-linux-x86_64.tar.gz" -C launcher/target/release horizon-launcher
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p out
+          7z a out/horizon-launcher-windows-x64.zip ./launcher/target/release/horizon-launcher.exe
+          cp launcher/target/release/horizon-launcher.exe out/horizon-launcher-setup.exe
+      - name: Package macOS app and installer
+        if: runner.os == 'macOS'
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          MAC_ARCH: ${{ matrix.arch }}
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dmg"
+          "$RUNNER_TEMP/dmg/bin/pip" install dmgbuild==1.6.5
+          DMGBUILD="$RUNNER_TEMP/dmg/bin/dmgbuild" packaging/macos/package.sh launcher/target/release/horizon-launcher "$VERSION" out "$MAC_ARCH"
+          rm -rf out/Horizon.app
+      - uses: actions/upload-artifact@v7
+        with:
+          name: fork-${{ matrix.platform }}
+          path: out/*
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: fork-*
+          merge-multiple: true
+          path: dist
+      - name: Sign release checksums
+        env:
+          RELEASE_SIGNING_KEY: ${{ secrets.FORK_RELEASE_SIGNING_KEY }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          test -n "$RELEASE_SIGNING_KEY"
+          bash tools/ci/sign_release.sh "$RELEASE_TAG" dist/*
+          test -s dist/SHA256SUMS.sig
+      - name: Verify signature against the app's public key
+        env:
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+        run: |
+          python3 - <<'PY'
+          import base64, pathlib
+          key = next(line.strip() for line in pathlib.Path('launcher/release-keys.txt').read_text().splitlines() if line.strip() and not line.startswith('#'))
+          pathlib.Path('release-public.der').write_bytes(bytes.fromhex('302a300506032b6570032100') + base64.b64decode(key))
+          signature = pathlib.Path('dist/SHA256SUMS.sig').read_text().splitlines()[0]
+          pathlib.Path('release-signature.bin').write_bytes(base64.b64decode(signature))
+          PY
+          { printf 'horizon release %s\n' "$RELEASE_TAG"; cat dist/SHA256SUMS; } > release-message
+          openssl pkeyutl -verify -rawin -pubin -keyform DER -inkey release-public.der -in release-message -sigfile release-signature.bin
+          (cd dist && sha256sum --check SHA256SUMS)
+      - name: Publish immutable launcher release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.version.outputs.tag }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          cat > release-notes.md <<'NOTES'
+          Offline accounts, custom local skins, self-hosted offline servers, and owner-managed port-forwarding invitations.
+
+          Future launcher updates install from inside the app. Archives are verified with this fork's Ed25519 signing key. Game resources come from your own Minecraft installation.
+
+          See FORK.md in the repository for setup and hosting instructions. PNG skins render locally; they are not distributed to other clients.
+          NOTES
+          gh release create "$RELEASE_TAG" dist/* --target "$RELEASE_SHA" --title "Horizon Offline $RELEASE_TAG" --notes-file release-notes.md --latest

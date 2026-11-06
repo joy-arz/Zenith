@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "{name} төзүдән соңгы адым",
   "In use": "Куллануда",
   "Prepare": "Әзерлән",
-  "Developer options": "Төзүче вариантлары",
   "{online} of {max} players": "{max} уенчыларның {online}",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java басма). Беренче тапкыр счетыгыз өчен Mojang йөкләүләрен уйнагыз, кирәк Java белән.",
   "Close": "Ябу",
@@ -172,7 +171,6 @@
   "about a minute left": "бер минут чамасы вакыт калды",
   "Cancel": "Баш тарту",
   "Add to {client}": "{client} өстәргә",
-  "Skin…": "Скин…",
   "Environment": "Әйләнә-тирә мохит",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Алар еш кына бергә эшлиләр. Төзү уңышсыз булса, шул ук төн өчен ясалган версияләрне урнаштырыгыз.",
   "Import an instance folder…": "Мисал папкасын импортлагыз ...",
@@ -371,7 +369,6 @@
   "Move to Trash": "Чүпкә күчегез",
   "Start from": "Башлау",
   "Asking Mojang for its versions…": "Аның версияләре өчен Mojang сорау…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "64 × 64 (яки 64 × 32) тире PNG һәм 64 × 32 капка PNG, эшләтеп җибәрүче саклый һәм бу исем уйнаганда уенга бирелә. Уен хәзерге вакытта төп тиреләрне сыза; мөмкин булганнан соң куллана. Microsoft хисап тиресе һәм баш киеме: тиздән.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Башка исем астында оффлайн уйнагыз, һәм өске сызыктан күчегез. Онлайн серверлар оффлайн исемнәрне алмыйлар.",
   "Report on Discord": "Discord турында отчет",
   "Export": "Экспорт",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} төшереп калдырылды: аңа {other} кирәк, ә ул төшереп калдырылды",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Син уйнаган Horizon'да җыелмый ({code}): авторы яңартмыйча, җыю аны төшереп калдыра",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Сез булган җирдә нигез салучылар комплекты playhorizon.dev сайтында бушлай түләү аша алына. Аны Кибеттән алыгыз: ул түләүне сезгә үзе ача.",
-  "The founder set can't be claimed from your country.": "Нигез салучылар комплектын сезнең илдән алып булмый."
+  "The founder set can't be claimed from your country.": "Нигез салучылар комплектын сезнең илдән алып булмый.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

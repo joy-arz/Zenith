@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "בניית השלב שלאחר הבנייה של {name}",
   "In use": "בשימוש",
   "Prepare": "הכן",
-  "Developer options": "אפשרויות למפתחים",
   "{online} of {max} players": "{online} מתוך {max} שחקנים",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.",
   "Close": "סגור",
@@ -172,7 +171,6 @@
   "about a minute left": "נותרה בערך דקה",
   "Cancel": "בטל",
   "Add to {client}": "הוסף ל{client}",
-  "Skin…": "עור…",
   "Environment": "סביבה",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "לעתים קרובות הם עדיין עובדים יחד. אם הבנייה נכשלת, התקן גרסאות שנעשו עבור אותו Nightly.",
   "Import an instance folder…": "ייבוא תיקיית מופע...",
@@ -372,7 +370,6 @@
   "Move to Trash": "העבר לאשפה",
   "Start from": "התחל מ",
   "Asking Mojang for its versions…": "Asking Mojang for its versions…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "PNG של 64×64 (או 64×32) ו-64×32 שכמייה PNG, נשמר על ידי המשגר וניתן למשחק כאשר השם הזה מתנגן. המשחק מצייר לעת עתה את סקיני ברירת המחדל; הוא משתמש באלה ברגע שהוא יכול. העור והגלימה של חשבון Microsoft: בקרוב.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "שחק במצב לא מקוון תחת שם אחר, ועבור מהסרגל העליון. שרתים מקוונים לא לוקחים שמות לא מקוונים.",
   "Report on Discord": "Report on Discord",
   "Export": "ייצוא",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} הושמט: הוא צריך את {other}, שהושמט",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "לא נבנה על ה-Horizon שבו אתה משחק ({code}): בנייה משמיטה אותו עד שהיוצר יעדכן אותו",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "במקום שבו אתה נמצא, את ערכת המייסדים מקבלים דרך תשלום חינמי ב-playhorizon.dev. קבל אותה מהחנות: היא פותחת לך את התשלום.",
-  "The founder set can't be claimed from your country.": "אי אפשר לקבל את ערכת המייסדים מהמדינה שלך."
+  "The founder set can't be claimed from your country.": "אי אפשר לקבל את ערכת המייסדים מהמדינה שלך.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

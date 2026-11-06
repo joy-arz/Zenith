@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Ịrụ ụlọ {name}'s post-wuri nzọụkwụ",
   "In use": "A na-eji",
   "Prepare": "Kwadebe",
-  "Developer options": "Nhọrọ ndị nrụpụta",
   "{online} of {max} players": "{online} nke {max} egwuregwu",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java mbipụta). Kpọọ nbudata ya site na Mojang maka akaụntụ gị nke mbụ, yana Java ọ chọrọ.",
   "Close": "Mechie",
@@ -172,7 +171,6 @@
   "about a minute left": "ihe dị ka otu nkeji fọdụụrụ",
   "Cancel": "Kagbuo",
   "Add to {client}": "Tinye na {client}",
-  "Skin…": "Skin…",
   "Environment": "gburugburu",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Ha na-arụkọkarị ọrụ ọnụ. Ọ bụrụ na ihe owuwu ahụ daa, wụnye ụdị emere maka otu abalị.",
   "Import an instance folder…": "Bubata folda ihe atụ…",
@@ -371,7 +369,6 @@
   "Move to Trash": "Gaa na ahịhịa",
   "Start from": "Malite na",
   "Asking Mojang for its versions…": "Na-arịọ Mojang maka ụdị ya…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "A 64 × 64 (ma ọ bụ 64 × 32) akpụkpọ anụ PNG na 64 × 32 cape PNG, nke onye nrụpụta na-edebe ma nye ya egwuregwu mgbe aha a na-egwu. Egwuregwu ahụ na-adọta skins ndabara maka ugbu a; ọ na-eji ndị a mgbe ọ nwere ike. A Microsoft akpụkpọ na okpu akaụntụ: na-abịa ngwa ngwa.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Gwuo na-anọghị n'ịntanetị n'okpuru aha ọzọ, wee si n'elu mmanya gbanwee. Sava n'ịntanetị anaghị ewere aha ndị na-anọghị n'ịntanetị.",
   "Report on Discord": "Akuko na Discord",
   "Export": "Mbupụ",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "A hapụrụ {name}: ọ chọrọ {other}, nke a hapụrụ",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Anaghị ewu na Horizon ị na-egwu ({code}): owuwu na-ahapụ ya ruo mgbe onye dere ya ga-emelite ya",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "N'ebe ị nọ, a na-enweta otu ndị malitere site na ịkwụ ụgwọ n'efu na playhorizon.dev. Nweta ya site n'Ụlọ ahịa: ọ ga-emeghere gị ịkwụ ụgwọ ahụ.",
-  "The founder set can't be claimed from your country.": "Enweghị ike inweta otu ndị malitere site na mba gị."
+  "The founder set can't be claimed from your country.": "Enweghị ike inweta otu ndị malitere site na mba gị.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "بلڈنگ {name} کے بعد کی تعمیر کا مرحلہ",
   "In use": "استعمال میں",
   "Prepare": "تیار کریں۔",
-  "Developer options": "ڈویلپر کے اختیارات",
   "{online} of {max} players": "{online} از {max} کھلاڑی",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (جاوا ایڈیشن)۔ Play اسے پہلی بار اپنے اکاؤنٹ کے لیے Mojang سے ڈاؤن لوڈ کریں، جاوا کے ساتھ اس کی ضرورت ہے۔",
   "Close": "بند",
@@ -172,7 +171,6 @@
   "about a minute left": "تقریباً ایک منٹ باقی ہے۔",
   "Cancel": "منسوخ کریں۔",
   "Add to {client}": "{client} میں شامل کریں",
-  "Skin…": "جلد…",
   "Environment": "ماحولیات",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "وہ اکثر اب بھی ایک ساتھ کام کرتے ہیں۔ اگر تعمیر ناکام ہوجاتی ہے تو، اسی نائٹلی کے لیے بنائے گئے ورژن انسٹال کریں۔",
   "Import an instance folder…": "ایک مثالی فولڈر درآمد کریں…",
@@ -372,7 +370,6 @@
   "Move to Trash": "کوڑے دان میں منتقل کریں۔",
   "Start from": "سے شروع کریں۔",
   "Asking Mojang for its versions…": "موجنگ سے اس کے ورژن پوچھ رہے ہیں…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "ایک 64×64 (یا 64×32) جلد کی PNG اور 64×32 کیپ PNG، لانچر کے ذریعے رکھی جاتی ہے اور جب یہ نام چلتا ہے تو گیم کو دیا جاتا ہے۔ گیم ابھی کے لیے پہلے سے طے شدہ کھالیں کھینچتی ہے۔ یہ ان کو استعمال کرتا ہے جب یہ کر سکتا ہے. مائیکروسافٹ اکاؤنٹ کی جلد اور کیپ: جلد آرہا ہے۔",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "کسی اور نام سے آف لائن کھیلیں، اور ٹاپ بار سے سوئچ کریں۔ آن لائن سرور آف لائن نام نہیں لیتے ہیں۔",
   "Report on Discord": "ڈسکارڈ پر رپورٹ",
   "Export": "برآمد کریں۔",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} چھوڑ دیا گیا: اسے {other} چاہیے، جو چھوڑ دیا گیا",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "آپ جو Horizon کھیلتے ہیں اس پر نہیں بنتا ({code}): بلڈ اسے تب تک چھوڑ دیتا ہے جب تک اس کا مصنف اسے اپڈیٹ نہ کرے",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "آپ جہاں ہیں، وہاں بانیوں کا سیٹ playhorizon.dev پر مفت چیک آؤٹ کے ذریعے لیا جاتا ہے۔ اسے دکان سے لیں: وہ آپ کے لیے چیک آؤٹ کھول دیتی ہے۔",
-  "The founder set can't be claimed from your country.": "بانیوں کا سیٹ آپ کے ملک سے نہیں لیا جا سکتا۔"
+  "The founder set can't be claimed from your country.": "بانیوں کا سیٹ آپ کے ملک سے نہیں لیا جا سکتا۔",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

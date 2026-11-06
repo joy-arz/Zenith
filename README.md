@@ -1,3 +1,5 @@
+> **Offline/self-hosting fork:** [offline profiles, custom skins, local servers and share links](FORK.md).
+
 <p align="center">
   <img src="docs/media/banner.webp" alt="The Horizon website: the game you know, rebuilt in Rust" width="100%">
 </p>

@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Rakennuksen {name} rakennusvaiheen jälkeinen vaihe",
   "In use": "Käytössä",
   "Prepare": "Valmistaudu",
-  "Developer options": "Kehittäjävaihtoehdot",
   "{online} of {max} players": "{online}/{max} pelaajaa",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Java-versio). Play lataa sen Mojangista tilillesi ensimmäistä kertaa tarvitsemallaan Javalla.",
   "Close": "Sulje",
@@ -172,7 +171,6 @@
   "about a minute left": "noin minuutti jäljellä",
   "Cancel": "Peruuta",
   "Add to {client}": "Lisää {client}",
-  "Skin…": "Iho…",
   "Environment": "Ympäristö",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "He työskentelevät usein edelleen yhdessä. Jos rakentaminen epäonnistuu, asenna samalle Nightlylle tehdyt versiot.",
   "Import an instance folder…": "Tuo ilmentymäkansio…",
@@ -372,7 +370,6 @@
   "Move to Trash": "Siirrä roskakoriin",
   "Start from": "Aloita alkaen",
   "Asking Mojang for its versions…": "Mojangin versioiden kysyminen…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "64 × 64 (tai 64 × 32) skin PNG ja 64 × 32 cape PNG, jotka kantoraketti säilyttää ja annetaan pelille, kun tämä nimi on käytössä. Peli piirtää toistaiseksi oletusskinet; se käyttää näitä kun voi. Microsoft-tilin skin and cap: tulossa pian.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Pelaa offline-tilassa toisella nimellä ja vaihda yläpalkista. Online-palvelimet eivät ota offline-nimiä.",
   "Report on Discord": "Raportti Discordista",
   "Export": "Vie",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} jätettiin pois: se tarvitsee modin {other}, joka jätettiin pois",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Ei käänny pelaamallasi Horizonilla ({code}): käännös jättää sen pois, kunnes tekijä päivittää sen",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Siellä missä olet, perustajasetti lunastetaan ilmaisella kassalla osoitteessa playhorizon.dev. Lunasta se Kaupasta: se avaa kassan puolestasi.",
-  "The founder set can't be claimed from your country.": "Perustajasettiä ei voi lunastaa maastasi."
+  "The founder set can't be claimed from your country.": "Perustajasettiä ei voi lunastaa maastasi.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

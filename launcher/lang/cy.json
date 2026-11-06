@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Adeiladu {name} cam ôl-adeiladu",
   "In use": "Mewn defnydd",
   "Prepare": "Paratoi",
-  "Developer options": "Opsiynau datblygwr",
   "{online} of {max} players": "{online} o {max} chwaraewr",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Argraffiad Java). Mae Chwarae yn ei lawrlwytho o Mojang ar gyfer eich cyfrif y tro cyntaf, gyda'r Java sydd ei angen arno.",
   "Close": "Cau",
@@ -172,7 +171,6 @@
   "about a minute left": "tua munud ar ôl",
   "Cancel": "Canslo",
   "Add to {client}": "Ychwanegu at {client}",
-  "Skin…": "Croen…",
   "Environment": "Amgylchedd",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Maent yn aml yn dal i weithio gyda'i gilydd. Os bydd yr adeiladwaith yn methu, gosodwch fersiynau wedi'u gwneud ar gyfer yr un Nightly.",
   "Import an instance folder…": "Mewnforio ffolder enghraifft…",
@@ -371,7 +369,6 @@
   "Move to Trash": "Symud i'r Sbwriel",
   "Start from": "Cychwyn o",
   "Asking Mojang for its versions…": "Yn gofyn i Mojang am ei fersiynau…",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "PNG croen 64 × 64 (neu 64 × 32) a cape PNG 64 × 32, a gedwir gan y lansiwr a'i roi i'r gêm pan fydd yr enw hwn yn chwarae. Mae'r gêm yn tynnu'r crwyn rhagosodedig am y tro; mae'n defnyddio'r rhain unwaith y gall. Croen a chlogyn cyfrif Microsoft: yn dod yn fuan.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Chwarae all-lein o dan enw arall, a newid o'r bar uchaf. Nid yw gweinyddwyr ar-lein yn cymryd enwau all-lein.",
   "Report on Discord": "Adrodd ar Discord",
   "Export": "Allforio",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "Gadawyd {name} allan: mae angen {other} arno, a adawyd allan",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Nid yw'n adeiladu ar yr Horizon rwyt ti'n ei chwarae ({code}): mae adeiladu yn ei adael allan nes i'w awdur ei ddiweddaru",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Lle rydych chi, mae set y sylfaenwyr yn cael ei hawlio drwy daliad am ddim ar playhorizon.dev. Hawliwch hi o'r Siop: mae'n agor y taliad i chi.",
-  "The founder set can't be claimed from your country.": "Does dim modd hawlio set y sylfaenwyr o'ch gwlad chi."
+  "The founder set can't be claimed from your country.": "Does dim modd hawlio set y sylfaenwyr o'ch gwlad chi.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }

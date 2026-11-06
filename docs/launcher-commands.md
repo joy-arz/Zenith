@@ -68,7 +68,7 @@ MCP: `prepare`.
 
 ## `horizon-launcher play`
 
-Start the client (needs a signed-in Microsoft account that owns Minecraft: Java Edition).
+Start the client using a local offline profile or a signed-in Microsoft account.
 
     horizon-launcher play
 
@@ -198,7 +198,7 @@ MCP: `account_select`.
 
 ## `horizon-launcher account offline`
 
-Play offline (LAN, offline-mode servers) beside a signed-in account that owns the game: as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game made up.
+Play with a local offline profile (LAN and offline-mode servers): as NAME (kept to switch back to; 3 to 16 letters, digits or _), or as the name the game made up.
 
     horizon-launcher account offline [NAME]
 
@@ -237,7 +237,7 @@ Show the launcher's settings, or set one (the Settings page): selected-version T
 
     horizon-launcher settings [KEY] [VALUE]
 
-- `KEY` (selected-version, minecraft-dir, server-dir, install-new-versions, prune-old-versions, keep-versions, opening-animation, game-architecture, proxy, while-playing, language, accent, background, native-profile, native-cache-gib)
+- `KEY` (selected-version, minecraft-dir, server-dir, install-new-versions, prune-old-versions, keep-versions, opening-animation, game-architecture, proxy, while-playing, language, accent, background, native-profile, native-cache-gib, offline-access)
 - `VALUE`: The new value (with KEY)
 
 MCP: `settings`.
@@ -1000,8 +1000,10 @@ Create a server; with no options it is a new world, survival, normal, 10 players
 - `--mode` (survival, creative, adventure, spectator)
 - `--difficulty` (peaceful, easy, normal, hard)
 - `--max-players`
+- `--port`: Local TCP game port (default: first available port from 25565)
 - `--open`: Let anyone in (no whitelist)
 - `--offline`: Do not check players' Minecraft accounts (offline mode: anyone can use any name)
+- `--check-accounts`: Require Microsoft authentication instead of allowing local offline profiles
 - `--player`: Who may join (repeatable); the first becomes an operator
 - `--accept-eula`: Agree to the Minecraft EULA (https://aka.ms/MinecraftEULA)
 
@@ -1025,6 +1027,17 @@ Run a horizon-server command on a server, for example: servers run "My server" -
 - `ARGS`
 
 MCP: `servers_run`.
+
+## `horizon-launcher servers share`
+
+Save or show a share link for a manually forwarded public address.
+
+    horizon-launcher servers share <SERVER>
+
+- `SERVER`
+- `--address`: Public IP or DNS name, with your external TCP port (for example play.example.com:25570)
+
+MCP: `servers_share`.
 
 ## `horizon-launcher servers forget`
 

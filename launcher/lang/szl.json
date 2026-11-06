@@ -37,7 +37,6 @@
   "Building {name}'s post-build step": "Krok po budowaniu {name}",
   "In use": "W użyciu",
   "Prepare": "Przigotować sie",
-  "Developer options": "Ôpcyje dewelopera",
   "{online} of {max} players": "{online} z {max} groczy",
   "Minecraft {version} (Java Edition). Play downloads it from Mojang for your account the first time, with the Java it needs.": "Minecraft {version} (Wydanie Java). Play po piyrszy roz pobiyro go z Mojang na twoje kōnto, z potrzebnym Java.",
   "Close": "Zamknij",
@@ -172,7 +171,6 @@
   "about a minute left": "kole minuty ôstało",
   "Cancel": "Pociepniyńcie",
   "Add to {client}": "Przidej do {client}",
-  "Skin…": "Skōra...",
   "Environment": "Strzodowisko",
   "They often still work together. If the build fails, install versions made for the same Nightly.": "Czynsto durch robiōm razym. Jeźli build niy zadziało, instaluj wersyje wykōnane do tego samego Nightly.",
   "Import an instance folder…": "Importuj folder instancyje...",
@@ -372,7 +370,6 @@
   "Move to Trash": "Przesuń do śmieci",
   "Start from": "Zaczynaj ôd",
   "Asking Mojang for its versions…": "Pytajōm Mojang ô jego wersyje...",
-  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and given to the game when this name plays. The game draws the default skins for now; it uses these once it can. A Microsoft account's skin and cape: coming soon.": "64×64 (abo 64×32) skōry PNG i 64×32 cape PNG, utrzimowane bez launcher i dowane grze, kej to miano sie gra. Gra rysuje domyślne skōry na teroz; używo tych, kej może. Skōra i peleryna ôd kōnta Microsoft: wkrōtce.",
   "Play offline under another name, and switch from the top bar. Online servers don't take offline names.": "Ôdtworz offline pod inkszym mianym i przełōncz z wiyrchnigo słupka. Serwery online niy przijmujōm mian offline.",
   "Report on Discord": "Zgłoś ô Discord",
   "Export": "Eksport",
@@ -1223,5 +1220,12 @@
   "{name} was left out: it needs {other}, which was left out": "{name} zostoł pominiynty: potrzebuje {other}, kery zostoł pominiynty",
   "Doesn't build on the Horizon you play ({code}): a build leaves it out until its author updates it": "Niy buduje sie na Horizōnie, w kery grosz ({code}): budowanie go pomijo, aże autor go zaktualizuje",
   "Where you are, the founder set is claimed through a free checkout on playhorizon.dev. Claim it from the Shop: it opens the checkout for you.": "Kaj ty żeś je, zestŏw zôłożycieli dostŏwŏ sie bez darmowõ płatność na playhorizon.dev. Weź go we Sklepie: ôn ôtworzi ci płatność.",
-  "The founder set can't be claimed from your country.": "Zestŏwu zôłożycieli niy idzie dostać z twojigo krajū."
+  "The founder set can't be claimed from your country.": "Zestŏwu zôłożycieli niy idzie dostać z twojigo krajū.",
+  "Offline access": "Offline access",
+  "Custom skin…": "Custom skin…",
+  "Copy server link": "Copy server link",
+  "Own port forwarding": "Own port forwarding",
+  "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.": "A 64×64 (or 64×32) skin PNG and a 64×32 cape PNG, kept by the launcher and used in game when this offline name plays. Choose Classic or Slim arms to match your PNG. Restart the game after changing a skin.",
+  "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.": "Forward an external TCP port on your router to this computer's game port {port}. Enter your public IP or DNS name and external port below. No Tailscale account is required.",
+  "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends."
 }
