@@ -6802,12 +6802,25 @@ pub fn {f}("
         use std::os::unix::fs::PermissionsExt;
         let work = std::env::temp_dir().join(format!("horizon-bundle-{}", std::process::id()));
         let _ = fs::remove_dir_all(&work);
+        fs::create_dir_all(&work).unwrap();
+        // Re-signing an Apple platform binary can be killed by macOS code-signing policy.
+        // Use an executable we own so this tests bundle replacement, including execution.
+        let fixture = work.join("fixture");
+        let source = work.join("fixture.c");
+        fs::write(&source, "int main(void) { return 0; }\n").unwrap();
+        assert!(Command::new("cc")
+            .arg(&source)
+            .arg("-o")
+            .arg(&fixture)
+            .status()
+            .unwrap()
+            .success());
         let make = |dir: &Path, version: &str| {
             let app = dir.join("Horizon.app");
             fs::create_dir_all(app.join("Contents/MacOS")).unwrap();
             fs::create_dir_all(app.join("Contents/Resources")).unwrap();
             let bin = app.join("Contents/MacOS/horizon-launcher");
-            fs::copy("/usr/bin/true", &bin).unwrap();
+            fs::copy(&fixture, &bin).unwrap();
             fs::set_permissions(&bin, fs::Permissions::from_mode(0o755)).unwrap();
             fs::write(app.join("Contents/Resources/version"), version).unwrap();
             fs::write(

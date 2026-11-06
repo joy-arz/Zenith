@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Launcher version, for example 0.2.1 (must be newer than the installed release)'
+        description: 'Launcher version, for example 0.3.1 (must be newer than the installed release)'
         required: true
         type: string
 
@@ -99,6 +99,7 @@ jobs:
         env:
           HORIZON_LAUNCHER_NO_SELF_UPDATE: '1'
           HORIZON_NO_AUDIO: '1'
+          HORIZON_NO_KEYCHAIN: '1'
           EXPECTED_VERSION: ${{ needs.version.outputs.version }}
         run: |
           export HORIZON_LAUNCHER_HOME="$RUNNER_TEMP/fork-smoke/launcher"
