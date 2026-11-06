@@ -2237,7 +2237,10 @@ fn download_for(
     let v = &pins.version;
     match pass {
         _ if offline_access => {
-            log(format!("Offline profile: downloading Minecraft {v} from Mojang"));
+            log(crate::i18n::trf(
+                "Offline profile: downloading Minecraft {version} from Mojang",
+                &[("version", v)],
+            ));
             download_pinned(pins, dir, fetch, log)
         }
         Ok(account::Launch {
@@ -2279,8 +2282,12 @@ fn download_pinned(
         sources::Os::MacOs => "osx",
         sources::Os::Windows => "windows",
     };
-    mojang::download(pins, dir, os, 8, fetch, &mojang::CANCEL, log)
-        .map_err(|e| format!("Could not download Minecraft {}: {e}", pins.version))
+    mojang::download(pins, dir, os, 8, fetch, &mojang::CANCEL, log).map_err(|e| {
+        crate::i18n::trf(
+            "Could not download Minecraft {version}: {error}",
+            &[("version", &pins.version), ("error", &e)],
+        )
+    })
 }
 
 /// The Java home for this version: a runtime for precompiled exporters, a JDK for older
