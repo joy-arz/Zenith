@@ -6,6 +6,12 @@ Reviewed 6 November 2026 for joy-arz. Priorities: data integrity, reliable updat
 
 The five commits through `a1ff75a4a525b6a9e1ed68f74cf9d54161596370` merged without conflicts. They preserve caller-selected harness work directories and consolidate mass nightly-audit failures into one report. All eight affected Python tests passed. Upstream commit IDs and contributor attribution are preserved.
 
+## Follow-up synchronization for Zenith 0.3.2
+
+The follow-up request reported 13 missing commits. Fetching upstream found 21 incoming commits through `41f822b65`, including merge commits. This synchronization includes multiplayer player-list and name-tag performance fixes, slow LAN event attribution, 26.2 client registry adapters, the native transparent-screen hook, and refreshed upstream documentation.
+
+The merge had one README conflict. The resolution retains the upstream layout and screenshots while preserving Zenith branding, joy-arz attribution, fork downloads, and offline account instructions. No source-code conflicts occurred. Zenith’s launcher changes and the two selected backports remain intact.
+
 ## Selected fixes
 
 | Source | Problem | Validation |
