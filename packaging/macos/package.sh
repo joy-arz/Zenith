@@ -48,8 +48,12 @@ else
   codesign --force --options runtime --timestamp ${keychain[@]+"${keychain[@]}"} --sign "$identity" "$app"
 fi
 codesign --verify --strict --verbose=2 "$app"
-# Still starts under the hardened runtime.
-"$app/Contents/MacOS/horizon-launcher" --version
+# Run on matching hosts; cross packages retain architecture and signature verification.
+if [[ "$(uname -m)" == "$cpu" ]]; then
+  "$app/Contents/MacOS/horizon-launcher" --version
+else
+  echo "Cross-built $cpu package: architecture and signature verified; runtime validation needs a $cpu host."
+fi
 notarize=$([[ "$identity" != "-" && -n "${MACOS_NOTARY_PROFILE:-}" ]] && echo yes || true)
 # The app first, so the zip and the .dmg both carry it stapled.
 [[ -z "$notarize" ]] || "$here/notarize.sh" "$app"

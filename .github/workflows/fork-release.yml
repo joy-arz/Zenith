@@ -58,7 +58,8 @@ jobs:
             platform: windows-arm64
             asset: zenith-launcher-windows-arm64.zip
             setup: zenith-launcher-setup-arm64.exe
-          - os: macos-26
+          - os: macos-15-intel
+            target: aarch64-apple-darwin
             platform: macos-arm64
             arch: arm64
             asset: zenith-launcher-macos-arm64.zip
@@ -71,6 +72,7 @@ jobs:
     env:
       HORIZON_LAUNCHER_VERSION: ${{ needs.version.outputs.version }}
       HORIZON_LAUNCHER_TAG: ${{ needs.version.outputs.tag }}
+      BUILD_TARGET: ${{ matrix.target }}
       CARGO_PROFILE_DEV_DEBUG: '0'
       CARGO_PROFILE_TEST_DEBUG: '0'
       CARGO_PROFILE_RELEASE_DEBUG: '0'
@@ -84,10 +86,13 @@ jobs:
         with:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install cross-compilation target
+        if: matrix.target != ''
+        run: rustup target add "$BUILD_TARGET"
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: launcher
-          shared-key: fork-launcher-${{ matrix.platform }}
+          shared-key: fork-launcher-${{ matrix.target != '' && 'macos-x64' || matrix.platform }}
           cache-on-failure: true
       - name: Install Linux build libraries
         if: runner.os == 'Linux'
@@ -101,8 +106,11 @@ jobs:
         run: |
           cargo fmt --manifest-path launcher/Cargo.toml --check
           cargo test --locked --manifest-path launcher/Cargo.toml ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"} -- --test-threads=1
+      - name: Check target-specific tests
+        if: matrix.target != ''
+        run: cargo check --locked --all-targets --manifest-path launcher/Cargo.toml --target "$BUILD_TARGET" ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"}
       - name: Build launcher
-        run: cargo build --release --locked --manifest-path launcher/Cargo.toml ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"}
+        run: cargo build --release --locked --manifest-path launcher/Cargo.toml ${BUILD_TARGET:+--target "$BUILD_TARGET"} ${LAUNCHER_FEATURES:+--features "$LAUNCHER_FEATURES"}
       - name: Smoke test offline profile and PNG upload
         env:
           HORIZON_LAUNCHER_NO_SELF_UPDATE: '1'
@@ -118,6 +126,7 @@ jobs:
           export HORIZON_LAUNCHER_CLIPBOARD="$RUNNER_TEMP/fork-smoke/clipboard"
           export HORIZON_LAUNCHER_DESKTOP="$RUNNER_TEMP/fork-smoke/desktop"
           binary=launcher/target/release/horizon-launcher
+          [[ -z "$BUILD_TARGET" ]] || binary=launcher/target/debug/horizon-launcher
           [[ "$RUNNER_OS" != Windows ]] || binary="$binary.exe"
           [[ "$("$binary" --version)" == "horizon-launcher $EXPECTED_VERSION" ]]
           python3 - <<'PYCODE'
@@ -154,7 +163,9 @@ jobs:
         run: |
           python3 -m venv "$RUNNER_TEMP/dmg"
           "$RUNNER_TEMP/dmg/bin/pip" install dmgbuild==1.6.5
-          DMGBUILD="$RUNNER_TEMP/dmg/bin/dmgbuild" packaging/macos/package.sh launcher/target/release/horizon-launcher "$VERSION" out "$MAC_ARCH"
+          binary=launcher/target/release/horizon-launcher
+          [[ -z "$BUILD_TARGET" ]] || binary="launcher/target/$BUILD_TARGET/release/horizon-launcher"
+          DMGBUILD="$RUNNER_TEMP/dmg/bin/dmgbuild" packaging/macos/package.sh "$binary" "$VERSION" out "$MAC_ARCH"
           rm -rf out/Zenith.app
       - uses: actions/upload-artifact@v7
         with:

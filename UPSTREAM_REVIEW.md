@@ -59,3 +59,7 @@ Reviewed documentation only for [Mecso2/prism-launcher-crack at aa353ff513c4d07f
 The release runner for Apple Silicon is now `macos-26`, a supported standard ARM64 runner, after repeated macOS 15 capacity cancellations prevented publication. The app's architecture and package names remain unchanged.
 
 The live offline bootstrap also exposed first-use Java detection on macOS: Mojang downloads a `jre.bundle`, while preparation tried the outer component directory. Both Java installation paths now share runtime-home normalization, with a regression test for macOS bundles and flat Windows/Linux layouts.
+
+## Release runner recovery
+
+GitHub repeatedly canceled both macOS 15 and macOS 26 ARM64 jobs before allocating a runner. The Apple Silicon package now cross-compiles on the available `macos-15-intel` runners using Rust’s `aarch64-apple-darwin` target and the Apple SDK. Its job runs native host tests and the offline-profile smoke test, type-checks target-specific tests, and checks the packaged binary’s ARM64 architecture and code signature. Runtime verification of that release binary runs on Apple Silicon separately. No platform package is omitted from the signed release.
