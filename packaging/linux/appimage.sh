@@ -18,7 +18,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 binary=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
 version=$2
 out=$(mkdir -p "$3" && cd "$3" && pwd)
-name=horizon-launcher-linux-x86_64.AppImage
+name=zenith-launcher-linux-x86_64.AppImage
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -31,11 +31,15 @@ cp "$binary" "$appdir/usr/bin/horizon-launcher"
 chmod 755 "$appdir/usr/bin/horizon-launcher"
 
 # Both places: AppRun's, and the one desktop environments read once the image is unpacked.
-cp "$here/horizon-launcher.desktop" "$appdir/horizon-launcher.desktop"
-cp "$here/horizon-launcher.desktop" "$appdir/usr/share/applications/horizon-launcher.desktop"
+cp "$here/horizon-launcher.desktop" "$appdir/zenith-launcher.desktop"
+cp "$here/horizon-launcher.desktop" "$appdir/usr/share/applications/zenith-launcher.desktop"
 cp -R "$here/../icons/hicolor/." "$appdir/usr/share/icons/hicolor/"
-cp "$here/../icons/hicolor/512x512/apps/horizon.png" "$appdir/horizon.png"
-ln -s horizon.png "$appdir/.DirIcon"
+for icon in "$appdir"/usr/share/icons/hicolor/*/apps/horizon.*; do
+  [[ -f "$icon" ]] || continue
+  mv "$icon" "${icon%horizon.*}zenith.${icon##*.}"
+done
+cp "$here/../icons/hicolor/512x512/apps/horizon.png" "$appdir/zenith.png"
+ln -s zenith.png "$appdir/.DirIcon"
 
 # Runs the packaged binary. It finds the packaged libraries through its own run path (set below),
 # not LD_LIBRARY_PATH, which every program it starts (the game, a browser, a file manager) would

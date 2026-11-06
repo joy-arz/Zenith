@@ -33,6 +33,8 @@ fn menu_registration_preserves_the_package_wrapper() {
     // Migrate a registration that pointed at the private executable.
     desktop_entry(&home, None, &[]);
     let original = std::fs::read_to_string(&entry).unwrap();
+    assert!(original.contains("Name=Zenith\n"));
+    assert!(original.contains("StartupWMClass=zenith-launcher\n"));
     assert!(original.contains(&format!(
         "Exec=\"{}\"\n",
         env!("CARGO_BIN_EXE_horizon-launcher")
