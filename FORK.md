@@ -4,11 +4,11 @@ Maintained by [joy-arz](https://github.com/joy-arz).
 
 # Offline accounts and self-hosted servers
 
-This fork adds ordinary offline access to the Horizon launcher and invitations for servers hosted on your own computer. Microsoft sign-in is optional for offline play. Game resources still come from your own Minecraft installation. Authenticated downloads and online-mode servers keep their existing authentication requirements.
+This fork adds ordinary offline access to the Horizon launcher and invitations for servers hosted on your own computer. Microsoft sign-in is optional for offline play. Existing Minecraft installations are reused first. When offline access is enabled and an offline profile is selected, missing game files download automatically from Mojang using the pinned manifests and hashes. Online-mode servers retain their authentication requirements.
 
 ## Use the launcher
 
-1. Install and prepare a Horizon game version using your existing Minecraft files.
+1. Install a Horizon game version. Select your offline profile, then press **Play**. Zenith reuses an existing Minecraft installation or downloads missing files, obtains the required Java runtime, prepares resources, and starts the game. The first setup needs internet access; verified completed downloads are reused after interruption.
 2. Open **Settings → Account**. Add an offline name (3–16 letters, digits or underscores) and select **Play as**. **Offline access** is visible in Settings and enabled by default.
 3. Select **Custom skin… → Choose a skin…** beside that name. Import a 64×64 or legacy 64×32 PNG and choose Classic or Slim arms. The launcher stores a copy per profile and uses it at the next game launch. This existing skin feature renders your own player locally; it does not distribute the PNG to other players or vanilla clients.
 4. Open **Servers → Create a server**. New servers allow offline accounts by default. List your friends' offline usernames. The first listed player is the operator. Accept the EULA and create the server.
@@ -50,7 +50,7 @@ cargo build --release --manifest-path launcher/Cargo.toml
 
 On a Mac without the Metal compiler, append `--features gpui_platform/runtime_shaders`.
 
-Release builds check this fork's launcher releases from inside the app. Use the app's Update action to install and restart; the existing updater verifies the archive checksum and this fork's Ed25519 signature before replacement. Development builds keep self-update disabled. Game installation and updates retain upstream releases and their separate signing key. No Minecraft resources are included in the repository.
+Release builds check this fork's launcher releases from inside the app. Use the app's Update action to install and restart; the existing updater verifies the archive checksum and this fork's Ed25519 signature before replacement. Development builds keep self-update disabled. Game installation and updates retain upstream releases and their separate signing key. No Minecraft resources are included in the repository or release archives; game files are fetched at runtime into the launcher data folder.
 
 Focused checks:
 

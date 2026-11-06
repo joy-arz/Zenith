@@ -47,3 +47,13 @@ This review made no comments, claims, issue closures or merges in the upstream r
 The complete launcher suite passes: 752 tests, with eight existing opt-in tests ignored. Clippy passes with warnings denied. All eight Python tests affected by the five-commit upstream sync pass. Tests and smoke runs use isolated temporary data directories.
 
 Baseline release: [Zenith 0.3.0](https://github.com/joy-arz/horizon/releases/tag/launcher%400.3.0), built from `830207112c5edf6c042a34d7bb4675e598d2168c`.
+
+## Offline download follow-up
+
+The missing-files report showed a second gap after the first-run Play fix: offline profiles could prepare existing files, but the downloader still required a Microsoft owner. Zenith now selects an explicit offline download path and uses the existing pinned-manifest, hash-checked, resumable downloader. Offline profiles do not fabricate Microsoft accounts, tokens, or ownership. Microsoft profiles retain actual sign-in checks.
+
+Reviewed the MIT-licensed Horizon forks [Domaman202/horizon-crack at ad038ae2d7d91000b95a18f77ae439ed3eab44f3](https://github.com/Domaman202/horizon-crack/tree/ad038ae2d7d91000b95a18f77ae439ed3eab44f3) and [sirruserror/horizon-crack at eb181246292e5b3f4aef29b5495293be825cdbfc](https://github.com/sirruserror/horizon-crack/tree/eb181246292e5b3f4aef29b5495293be825cdbfc). The former replaces ownership checks and removes account tests; the latter adds synthetic authentication responses. No code was imported from either fork.
+
+Reviewed documentation only for [Mecso2/prism-launcher-crack at aa353ff513c4d07fcc7795893b5179a194f2a08e](https://github.com/Mecso2/prism-launcher-crack/tree/aa353ff513c4d07fcc7795893b5179a194f2a08e) (no license declared) and [Diegiwg/PrismLauncher-Cracked at 4916ceeb72022b275c9bae8b94518e7c2236027a](https://github.com/Diegiwg/PrismLauncher-Cracked/tree/4916ceeb72022b275c9bae8b94518e7c2236027a) (GPL-3.0). Their implementation was not read or copied under this repository's contribution rules.
+
+The release runner for Apple Silicon is now `macos-26`, a supported standard ARM64 runner, after repeated macOS 15 capacity cancellations prevented publication. The app's architecture and package names remain unchanged.

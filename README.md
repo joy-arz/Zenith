@@ -65,7 +65,7 @@ Get **Zenith** from [this fork’s releases](https://github.com/joy-arz/horizon/
 | macOS, Intel | `zenith-launcher-macos-x64.dmg` | macOS 12 or later |
 | Linux x86-64 | `zenith-launcher-linux-x86_64.tar.gz` | a glibc distribution, X11 or Wayland, a GPU with Vulkan or OpenGL 3.3 |
 
-**Offline profiles are enabled by default.** Microsoft sign-in is optional for offline play and offline-enabled servers. Game resources still come from your own Minecraft installation; authenticated downloads and online-mode servers retain their account requirements. Custom PNG skins render your own player locally. Use the [Zenith setup guide](FORK.md) for preparation, account selection, skins, and manual port-forwarding invitations.
+**Offline profiles are enabled by default.** Microsoft sign-in is optional for offline play and offline-enabled servers. Existing Minecraft installations are reused; offline profiles automatically download missing game files from Mojang. Online-mode servers retain their account requirements. Custom PNG skins render your own player locally. Use the [Zenith setup guide](FORK.md) for preparation, account selection, skins, and manual port-forwarding invitations.
 
 <table>
   <tr>

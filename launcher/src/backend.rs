@@ -1916,9 +1916,8 @@ pub fn complete_assets(tag: &str) {
     });
 }
 
-/// Horizon's own download (an owner's) may have stopped before the sounds and the languages,
-/// and the copies of `complete_assets` read them from its store: asked again, once per run, through
-/// the same owner gate as any download from Mojang (`download_for_owner`), which keeps the files
+/// A profile's download may have stopped before the sounds and languages. Refill it once per
+/// run using the selected profile's download access, keeping the files
 /// already whole. Called where a download is expected (`reuse_prepared_everywhere`), never on Play.
 fn refill_own_store(tag: &str) {
     static ASKED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -1945,7 +1944,7 @@ fn refill_own_store(tag: &str) {
             .map_err(|e| e.to_string())?;
         Ok(body)
     };
-    if let Err(e) = download_for_owner(&pins, &own, &fetch, &|line| eprintln!("{line}")) {
+    if let Err(e) = download_for_profile(&pins, &own, &fetch, &|line| eprintln!("{line}")) {
         eprintln!("{tag}: the missing assets were not downloaded: {e}");
     }
 }
@@ -2074,18 +2073,19 @@ fn preparer_binary(dir: &Path) -> Option<PathBuf> {
     binary.is_file().then_some(binary)
 }
 
-/// Downloads the pinned version from Mojang into `dir` when an account in the launcher owns
-/// Minecraft (asked again now), else says what signing in would do, as the last line of the
-/// not-found error.
-fn download_for_owner(
+/// Downloads verified game files for the selected profile. Offline access uses the public
+/// download manifests directly; Microsoft profiles retain their real ownership checks.
+fn download_for_profile(
     pins: &sources::Pins,
     dir: &Path,
     fetch: sources::Fetch,
     log: &dyn Fn(String),
 ) -> Result<(), String> {
     let mut accounts = account::Accounts::load();
-    // The strict gate, never `launch_for_game`: the developer option that lets offline names
-    // play without an owner must not download the game for them.
+    let offline = Settings::load().offline_enabled() && accounts.selected().is_none();
+    if offline {
+        return download_for(pins, dir, Err(account::NoOwner), false, true, fetch, log);
+    }
     let pass = account::launch(
         &account::Endpoints::live(),
         account::client_id().as_deref(),
@@ -2095,12 +2095,20 @@ fn download_for_owner(
     if let Err(e) = accounts.save() {
         log(format!("Horizon: the accounts are not saved: {e}"));
     }
-    download_for(pins, dir, pass, !accounts.accounts.is_empty(), fetch, log)
+    download_for(
+        pins,
+        dir,
+        pass,
+        !accounts.accounts.is_empty(),
+        false,
+        fetch,
+        log,
+    )
 }
 
 /// Downloads Minecraft `id` (any version on Mojang's list, its version file's sha1 from it) into
-/// Horizon's own game folder, in the official launcher's layout, for an account that owns the
-/// game (asked again now). Returns that folder.
+/// Horizon's own game folder using the selected profile's download access. The historical
+/// function name is retained for callers. Returns that folder.
 pub fn download_version_for_owner(
     id: &str,
     manifest_sha1: &str,
@@ -2116,7 +2124,7 @@ pub fn download_version_for_owner(
         Ok(body)
     };
     let pins = sources::Pins::for_version(id, manifest_sha1);
-    download_for_owner(&pins, &dir, &fetch, log)
+    download_for_profile(&pins, &dir, &fetch, log)
         .map_err(|e| e.trim_start_matches("\n  • ").to_string())?;
     Ok(dir)
 }
@@ -2216,18 +2224,22 @@ pub fn java_game(
     )
 }
 
-/// What [`download_for_owner`] does with the owner gate's answer: Mojang's files only for its
-/// `owner`, an account the services said owns the game just now.
+/// Download access is explicit: an offline profile, or a real verified Microsoft owner.
 fn download_for(
     pins: &sources::Pins,
     dir: &Path,
     pass: Result<account::Launch, account::NoOwner>,
     signed_in: bool,
+    offline_access: bool,
     fetch: sources::Fetch,
     log: &dyn Fn(String),
 ) -> Result<(), String> {
     let v = &pins.version;
     match pass {
+        _ if offline_access => {
+            log(format!("Offline profile: downloading Minecraft {v} from Mojang"));
+            download_pinned(pins, dir, fetch, log)
+        }
         Ok(account::Launch {
             owner: Some((owner, _)),
             ..
@@ -2236,14 +2248,7 @@ fn download_for(
             log(format!(
                 "{name} owns Minecraft: downloading {v} from Mojang"
             ));
-            let os = match sources::Os::current() {
-                sources::Os::Linux => "linux",
-                sources::Os::MacOs => "osx",
-                sources::Os::Windows => "windows",
-            };
-            mojang::download(pins, dir, os, 8, fetch, &mojang::CANCEL, log).map_err(|e| {
-                format!("\n  • Horizon tried to download {v} from Mojang for {name}, but: {e}")
-            })
+            download_pinned(pins, dir, fetch, log)
         }
         // An owner by its last answer, who can't be asked now.
         Ok(pass) => Err(format!(
@@ -2260,6 +2265,22 @@ fn download_for(
              downloads {v} from Mojang itself."
         )),
     }
+}
+
+/// Both profile paths use the same pinned hashes, resumable writes and cancellation.
+fn download_pinned(
+    pins: &sources::Pins,
+    dir: &Path,
+    fetch: sources::Fetch,
+    log: &dyn Fn(String),
+) -> Result<(), String> {
+    let os = match sources::Os::current() {
+        sources::Os::Linux => "linux",
+        sources::Os::MacOs => "osx",
+        sources::Os::Windows => "windows",
+    };
+    mojang::download(pins, dir, os, 8, fetch, &mojang::CANCEL, log)
+        .map_err(|e| format!("Could not download Minecraft {}: {e}", pins.version))
 }
 
 /// The Java home for this version: a runtime for precompiled exporters, a JDK for older
@@ -2369,10 +2390,9 @@ fn assets_folder(
 /// Where the preparation takes Minecraft's files from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MinecraftFrom {
-    /// The player's own install (any launcher's); Mojang only when none has the version and an
-    /// account that owns the game is signed in.
+    /// Reuse an existing install; download missing files for the selected profile.
     Install,
-    /// Mojang, for the signed-in account that owns the game ("Download and prepare").
+    /// Download and prepare for the selected profile.
     Mojang,
 }
 
@@ -2449,20 +2469,27 @@ pub fn preparer(
         };
         let linked = data_dir().join("linked-minecraft");
         if from == MinecraftFrom::Mojang {
-            // Straight from Mojang (what is already there and whole is kept), for an owner only.
-            download_for_owner(&pins, &own, &fetch, log)
+            // Verified files already present are retained.
+            download_for_profile(&pins, &own, &fetch, log)
                 .map_err(|e| e.trim_start_matches("\n  • ").to_string())?;
             own
         } else {
             let resolved = sources::resolve(minecraft, &pins, &known, &linked, &fetch, log);
             if reused {
-                assets_folder(resolved, &chosen, &version, log)
+                match resolved {
+                    Ok(sources::Resolved::NotFound(_)) if Settings::load().offline_enabled() => {
+                        download_for_profile(&pins, &own, &fetch, log)?;
+                        own
+                    }
+                    resolved => assets_folder(resolved, &chosen, &version, log),
+                }
             } else {
                 match resolved? {
                     sources::Resolved::Folder(dir) => dir,
                     sources::Resolved::NotFound(checked) => {
                         let not_found = sources::not_found(&version, &checked, minecraft);
-                        download_for_owner(&pins, &own, &fetch, log).map_err(|e| not_found + &e)?;
+                        download_for_profile(&pins, &own, &fetch, log)
+                            .map_err(|e| not_found + &e)?;
                         own
                     }
                 }
@@ -4760,11 +4787,9 @@ mod tests {
         fs::remove_dir_all(&dir).unwrap();
     }
 
-    /// The launcher downloads Mojang's game files (client jar, libraries, assets) only for an
-    /// account the services said owns the game: never without one, and never past the gate by
-    /// the developer option (`Settings::dev_offline`), whose pass has no owner.
+    /// Strict mode retains real ownership checks when offline download access is disabled.
     #[test]
-    fn mojang_downloads_only_for_an_owner() {
+    fn strict_downloads_require_a_verified_owner() {
         let dir = std::env::temp_dir().join(format!("horizon-owner-only-{}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         let pins = sources::Pins::read(&serde_json::json!({ "minecraft": {
@@ -4786,7 +4811,7 @@ mod tests {
             (no_owner(), false),
             (no_owner(), true),
         ] {
-            assert!(download_for(&pins, &dir, pass, signed_in, &fetch, &log).is_err());
+            assert!(download_for(&pins, &dir, pass, signed_in, false, &fetch, &log).is_err());
         }
         assert!(asked.lock().unwrap().is_empty());
         assert!(!dir.exists());
@@ -4805,7 +4830,7 @@ mod tests {
             owner: Some((owner, secrets)),
             ..Default::default()
         });
-        assert!(download_for(&pins, &dir, pass, true, &fetch, &log).is_err());
+        assert!(download_for(&pins, &dir, pass, true, false, &fetch, &log).is_err());
         assert!(!asked.lock().unwrap().is_empty());
         let _ = fs::remove_dir_all(&dir);
 
@@ -4818,84 +4843,121 @@ mod tests {
         .unwrap();
         asked.lock().unwrap().clear();
         for (pass, signed_in) in [(Err(account::NoOwner), true), (no_owner(), true)] {
-            assert!(download_for(&pins, &dir, pass, signed_in, &fetch, &log).is_err());
+            assert!(download_for(&pins, &dir, pass, signed_in, false, &fetch, &log).is_err());
         }
         assert!(asked.lock().unwrap().is_empty());
         let _ = fs::remove_dir_all(&dir);
+    }
 
-        // In the sources: one call downloads the game, in `download_for`, and the only caller
-        // of that asks the strict gate. Game-file hosts appear nowhere else.
-        let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-        let mut files = vec![src.clone()];
-        let mut sources = Vec::new();
-        while let Some(path) = files.pop() {
-            if path.is_dir() {
-                files.extend(fs::read_dir(&path).unwrap().map(|e| e.unwrap().path()));
-            } else if path.extension().is_some_and(|e| e == "rs") {
-                let name = path.file_name().unwrap().to_string_lossy().to_string();
-                let in_tests = name.contains("tests") || path.parent().unwrap() != src;
-                // The code alone: test modules (this one included) come after it.
-                // A Windows checkout has CRLF line ends: the searches below look for "\n".
-                let mut text = fs::read_to_string(&path).unwrap().replace("\r\n", "\n");
-                text.truncate(text.find("#[cfg(test)]").unwrap_or(text.len()));
-                sources.push((name, in_tests, text));
-            }
-        }
-        let calls: Vec<_> = sources
-            .iter()
-            .filter(|(_, tests, _)| !tests)
-            .flat_map(|(name, _, text)| {
-                text.matches("mojang::download(")
-                    .map(move |_| name.as_str())
-            })
-            .collect();
-        assert_eq!(calls, ["backend.rs"]);
-        let backend = &sources.iter().find(|(n, ..)| n == "backend.rs").unwrap().2;
-        let body = |f: &str| {
-            let start = backend.find(&format!("\nfn {f}(")).unwrap();
-            &backend[start..start + backend[start + 1..].find("\n}\n").unwrap()]
+    fn offline_download_fixture() -> (sources::Pins, std::collections::HashMap<String, Vec<u8>>) {
+        let client = b"offline bootstrap test client";
+        let index = br#"{"objects":{}}"#;
+        let manifest = serde_json::json!({
+            "id": "26.3",
+            "downloads": {"client": {"url": "https://example.invalid/client.jar",
+                "sha1": sources::sha1_hex(client), "size": client.len()}},
+            "libraries": [],
+            "assetIndex": {"id": "offline-test", "url": "https://example.invalid/assets.json",
+                "sha1": sources::sha1_hex(index), "size": index.len()},
+        })
+        .to_string()
+        .into_bytes();
+        let digest = sources::sha1_hex(&manifest);
+        let pins = sources::Pins::read(&serde_json::json!({"minecraft": {
+            "version": "26.3", "client_sha1": sources::sha1_hex(client), "manifest_sha1": digest,
+        }}))
+        .unwrap();
+        let files = std::collections::HashMap::from([
+            (
+                format!("https://piston-meta.mojang.com/v1/packages/{digest}/26.3.json"),
+                manifest,
+            ),
+            ("https://example.invalid/client.jar".into(), client.to_vec()),
+            ("https://example.invalid/assets.json".into(), index.to_vec()),
+        ]);
+        (pins, files)
+    }
+
+    #[test]
+    fn offline_profile_downloads_verified_files_without_an_owner_and_reuses_them() {
+        let dir =
+            std::env::temp_dir().join(format!("zenith-offline-download-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let (pins, files) = offline_download_fixture();
+        let asked = Mutex::new(Vec::new());
+        let fetch = |url: &str| {
+            asked.lock().unwrap().push(url.to_string());
+            files
+                .get(url)
+                .cloned()
+                .ok_or_else(|| format!("Unexpected URL: {url}"))
         };
-        assert!(body("download_for").contains("mojang::download("));
-        assert!(body("download_for_owner").contains("account::launch("));
-        assert!(!body("download_for_owner").contains("launch_for_game("));
-        // `download_for` is defined once and called once, by `download_for_owner`.
-        assert_eq!(backend.matches("download_for(").count(), 2);
-        assert!(body("download_for_owner").contains("download_for("));
-        // Refilling an incomplete store asks the same gate and names no host or download itself.
-        assert!(body("refill_own_store").contains("download_for_owner("));
-        assert!(!body("refill_own_store").contains("mojang::"));
-        // It runs at start-up, never on Play, which also runs `complete_assets`.
-        let public = |f: &str| {
-            let start = backend
-                .find(&format!(
-                    "
-pub fn {f}("
-                ))
-                .unwrap();
-            &backend[start
-                ..start
-                    + backend[start + 1..]
-                        .find(
-                            "
-}
-",
-                        )
-                        .unwrap()]
+        download_for(
+            &pins,
+            &dir,
+            Err(account::NoOwner),
+            false,
+            true,
+            &fetch,
+            &|_| {},
+        )
+        .unwrap();
+        assert_eq!(
+            fs::read(dir.join("versions/26.3/26.3.jar")).unwrap(),
+            b"offline bootstrap test client"
+        );
+        assert_eq!(
+            fs::read(dir.join("assets/indexes/offline-test.json")).unwrap(),
+            br#"{"objects":{}}"#
+        );
+        assert_eq!(asked.lock().unwrap().len(), 3);
+        asked.lock().unwrap().clear();
+        download_for(
+            &pins,
+            &dir,
+            Err(account::NoOwner),
+            false,
+            true,
+            &fetch,
+            &|_| {},
+        )
+        .unwrap();
+        assert!(
+            asked.lock().unwrap().is_empty(),
+            "whole verified files must be reused"
+        );
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn offline_profile_rejects_a_corrupted_client_before_installing_it() {
+        let dir =
+            std::env::temp_dir().join(format!("zenith-offline-corrupt-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let (pins, mut files) = offline_download_fixture();
+        files.insert(
+            "https://example.invalid/client.jar".into(),
+            vec![b'x'; b"offline bootstrap test client".len()],
+        );
+        let fetch = |url: &str| {
+            files
+                .get(url)
+                .cloned()
+                .ok_or_else(|| format!("Unexpected URL: {url}"))
         };
-        assert!(public("reuse_prepared_everywhere").contains("refill_own_store("));
-        assert!(!public("complete_assets").contains("refill_own_store("));
-        for host in [
-            "piston-data",
-            "libraries.minecraft.net",
-            "resources.download.minecraft.net",
-        ] {
-            for (name, tests, text) in &sources {
-                assert!(
-                    *tests || name == "mojang.rs" || !text.contains(host),
-                    "{name} names {host}"
-                );
-            }
-        }
+        let error = download_for(
+            &pins,
+            &dir,
+            Err(account::NoOwner),
+            false,
+            true,
+            &fetch,
+            &|_| {},
+        )
+        .unwrap_err();
+        assert!(error.contains("sha1"), "{error}");
+        assert!(!dir.join("versions/26.3/26.3.jar").exists());
+        fs::remove_dir_all(dir).unwrap();
     }
 
     /// A preparation that reuses the imported game files still reads the assets from the

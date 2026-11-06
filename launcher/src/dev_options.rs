@@ -1,5 +1,4 @@
-//! Offline access is a visible Settings section in this fork. Minecraft resources still
-//! come from the player's own install; downloads retain the Microsoft ownership check.
+//! Offline profiles can prepare from a local install or verified automatic downloads.
 use super::*;
 
 /// Clicks on the launcher's version that reveal the section.
@@ -44,8 +43,7 @@ impl Launcher {
                     Some(
                         div()
                             .child(tr(
-                                "Offline names play without a Microsoft account that owns the game. \
-                                 Minecraft still comes from your own install.",
+                                "Offline profiles can download Minecraft files automatically. Existing installations are reused.",
                             ))
                             .into_any_element(),
                     ),

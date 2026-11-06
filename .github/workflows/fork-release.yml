@@ -58,7 +58,7 @@ jobs:
             platform: windows-arm64
             asset: zenith-launcher-windows-arm64.zip
             setup: zenith-launcher-setup-arm64.exe
-          - os: macos-15
+          - os: macos-26
             platform: macos-arm64
             arch: arm64
             asset: zenith-launcher-macos-arm64.zip
@@ -208,7 +208,7 @@ jobs:
           cat > release-notes.md <<'NOTES'
           Offline accounts, custom local skins, self-hosted offline servers, and owner-managed port-forwarding invitations.
 
-          Future launcher updates install from inside the app. Archives are verified with this fork's Ed25519 signing key. Game resources come from your own Minecraft installation.
+          Future launcher updates install from inside the app. Archives are verified with this fork's Ed25519 signing key. Missing game files download automatically for offline profiles; existing installations are reused. No game files are bundled.
 
           See FORK.md in the repository for setup and hosting instructions. PNG skins render locally; they are not distributed to other clients.
           NOTES

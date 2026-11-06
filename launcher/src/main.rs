@@ -3389,6 +3389,7 @@ impl Launcher {
         let no_install = self.settings.minecraft_dir.is_none();
         let resources_value = match first {
             _ if self.preparing => tr("Preparing…").to_string(),
+            _ if !prepared && self.settings.offline_enabled() => tr("Offline profiles can download Minecraft files automatically. Existing installations are reused.").to_string(),
             Some(true) if no_install => trf(
                 "Not prepared. Play downloads Minecraft {version} from Mojang for your account and prepares it.",
                 &[("version", &version)],
@@ -4552,7 +4553,7 @@ impl Launcher {
             _ if self.settings.offline_enabled()
                 && (!configured
                     || (self.sign_in_state.is_none() && self.accounts.accounts.is_empty())) => div().child(tr(
-                "Offline names play without a Microsoft account that owns the game. Minecraft still comes from your own install.",
+                "Offline profiles can download Minecraft files automatically. Existing installations are reused.",
             )),
             _ if !configured => div().child(tr(account::NOT_CONFIGURED)),
             Some(SignInState::Starting) => div().child(tr("Asking Microsoft…")),
