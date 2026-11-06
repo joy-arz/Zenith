@@ -12,6 +12,8 @@ The follow-up request reported 13 missing commits. Fetching upstream found 21 in
 
 The merge had one README conflict. The resolution retains the upstream layout and screenshots while preserving Zenith branding, joy-arz attribution, fork downloads, and offline account instructions. No source-code conflicts occurred. Zenith’s launcher changes and the two selected backports remain intact.
 
+The first-run offline Play regression is fixed in this rebuild: both launcher themes now allow preparation from the player’s local Minecraft install when offline access is enabled. Busy launches still wait; strict account mode and authenticated downloads retain their checks. Account settings now explain local offline access instead of incorrectly claiming that missing Microsoft sign-in prevents all gameplay.
+
 ## Selected fixes
 
 | Source | Problem | Validation |

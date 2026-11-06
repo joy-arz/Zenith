@@ -2468,10 +2468,10 @@ fn segments<T: Copy + PartialEq + 'static>(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum PlayPress {
     Play,
-    /// Not prepared, for an account that owns the game: prepare it (from the player's install,
-    /// else downloaded from Mojang for that account), then play, as the official launcher does.
+    /// Prepare from the player's install, then play. Downloading missing Minecraft files
+    /// still requires a verified owner, independently of offline launch access.
     PrepareThenPlay,
-    /// Not prepared and no owner (signing in comes first), or busy preparing or playing.
+    /// No preparation access, or busy preparing or playing.
     Nothing,
 }
 
@@ -2519,11 +2519,11 @@ fn sign_in_change(shown: &mut Option<SignInState>, next: SignInState) -> Option<
 }
 
 /// `owner`: whether an account here owns the game, by the keychain (`Launcher::owner`).
-fn play_press(prepared: bool, owner: Option<bool>, busy: bool) -> PlayPress {
+fn play_press(prepared: bool, owner: Option<bool>, offline_access: bool, busy: bool) -> PlayPress {
     match (prepared, owner) {
         _ if busy => PlayPress::Nothing,
         (true, _) => PlayPress::Play,
-        (false, Some(true)) => PlayPress::PrepareThenPlay,
+        (false, _) if offline_access || owner == Some(true) => PlayPress::PrepareThenPlay,
         (false, _) => PlayPress::Nothing,
     }
 }
@@ -2532,7 +2532,7 @@ fn play_press(prepared: bool, owner: Option<bool>, busy: bool) -> PlayPress {
 /// code, a pack's Play) starts it now: only when Play would play. Never while a preparation runs:
 /// the game would open on half-written files.
 fn starts_now(prepared: bool, preparing: bool, running: bool) -> bool {
-    play_press(prepared, None, preparing || running) == PlayPress::Play
+    play_press(prepared, None, false, preparing || running) == PlayPress::Play
 }
 
 /// Whether `tag` can start being deleted now: it is installed, no install is writing it, and it
@@ -4549,6 +4549,11 @@ impl Launcher {
             Some(SignInState::Starting | SignInState::Code(_) | SignInState::Working(_))
         );
         let detail = match &self.sign_in_state {
+            _ if self.settings.offline_enabled()
+                && (!configured
+                    || (self.sign_in_state.is_none() && self.accounts.accounts.is_empty())) => div().child(tr(
+                "Offline names play without a Microsoft account that owns the game. Minecraft still comes from your own install.",
+            )),
             _ if !configured => div().child(tr(account::NOT_CONFIGURED)),
             Some(SignInState::Starting) => div().child(tr("Asking Microsoft…")),
             Some(SignInState::Working(phase)) => div().child(tr(phase.label())),
@@ -5955,22 +5960,31 @@ mod tests {
         );
     }
 
-    /// An owner's Play works on a version not prepared yet: it prepares it (downloading
-    /// Minecraft from Mojang when this computer has no install), then plays. Without an owner
-    /// it stays off: signing in comes first.
+    /// Local preparation is available to offline users without misrepresenting ownership.
+    /// Busy launches still wait, and strict mode keeps its original account requirement.
     #[test]
-    fn play_prepares_first_for_an_owner() {
+    fn play_prepares_for_offline_access_or_a_verified_owner() {
         use super::{play_press, PlayPress};
-        assert_eq!(play_press(true, Some(true), false), PlayPress::Play);
-        assert_eq!(play_press(true, None, false), PlayPress::Play);
-        assert_eq!(
-            play_press(false, Some(true), false),
-            PlayPress::PrepareThenPlay
-        );
-        assert_eq!(play_press(false, Some(false), false), PlayPress::Nothing);
-        assert_eq!(play_press(false, None, false), PlayPress::Nothing);
-        assert_eq!(play_press(false, Some(true), true), PlayPress::Nothing);
-        assert_eq!(play_press(true, Some(true), true), PlayPress::Nothing);
+        for owner in [None, Some(false), Some(true)] {
+            for offline_access in [false, true] {
+                assert_eq!(
+                    play_press(true, owner, offline_access, false),
+                    PlayPress::Play
+                );
+                let expected = if offline_access || owner == Some(true) {
+                    PlayPress::PrepareThenPlay
+                } else {
+                    PlayPress::Nothing
+                };
+                assert_eq!(play_press(false, owner, offline_access, false), expected);
+                for prepared in [false, true] {
+                    assert_eq!(
+                        play_press(prepared, owner, offline_access, true),
+                        PlayPress::Nothing
+                    );
+                }
+            }
+        }
     }
 
     /// A server's Join (and every other shortcut) waits like Play: not while the version's
