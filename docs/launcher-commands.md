@@ -1059,11 +1059,11 @@ MCP: none: this command is the MCP server.
 
 ## `horizon-launcher agent-config`
 
-How to connect an AI agent (Claude Code, Codex, Cursor, any MCP client) to `mcp`: the config to paste and the command that adds it (refused while No AI is on).
+How to connect an AI agent (Claude Code, Cursor, any MCP client) to `mcp`: the config to paste and the command that adds it (refused while No AI is on).
 
     horizon-launcher agent-config
 
-- `--client` (claude-code, codex, cursor, generic): Only this client
+- `--client` (claude-code, cursor, generic): Only this client
 - `--test`: Start the MCP server as a client would and say whether it answered
 
 MCP: none: it prints how to connect a client to `mcp`.

@@ -320,7 +320,7 @@ macOS runs a downloaded app from until it is moved to Applications), or on Windo
 folder, as a program opened inside a `.zip` does. `horizon-launcher update` replaces it at once. Development builds and
 `HORIZON_LAUNCHER_NO_SELF_UPDATE=1` never replace themselves.
 
-On Linux the release also comes as an AppImage, `horizon-launcher-linux-x86_64.AppImage`: one file
+On Linux the release also comes as an AppImage, `zenith-launcher-linux-x86_64.AppImage`: one file
 to download, make executable and run, with no installation and no `libfuse2` (its runtime mounts
 the image where FUSE 2 is there and unpacks it where it is not). It is the same binary as the
 `.tar.gz`, with the libraries GPUI needs beside it; glibc, the graphics drivers and the session's
@@ -342,16 +342,16 @@ set `HORIZON_LAUNCHER_NO_SELF_UPDATE=1` to keep launcher updates with the packag
 Launcher releases are automatic (docs/release-flow.md in the repository): when main changes the
 launcher, `horizon-prepare` or `horizon-theme`, the `launcher` workflow builds Linux, macOS, Windows x64 and
 Windows ARM64 and publishes `launcher-vX.Y.Z` (the next patch, or the next minor after a pull request
-labelled `feature`) with `horizon-launcher-linux-x86_64.tar.gz`,
-`horizon-launcher-linux-x86_64.AppImage`, `horizon-launcher-macos-arm64.zip`,
-`horizon-launcher-macos-x64.zip` (Intel Macs), `horizon-launcher-windows-x64.zip` and
-`horizon-launcher-windows-arm64.zip`, never marked latest. The version is built in from the tag
+labelled `feature`) with `zenith-launcher-linux-x86_64.tar.gz`,
+`zenith-launcher-linux-x86_64.AppImage`, `zenith-launcher-macos-arm64.zip`,
+`zenith-launcher-macos-x64.zip` (Intel Macs), `zenith-launcher-windows-x64.zip` and
+`zenith-launcher-windows-arm64.zip`, never marked latest. The version is built in from the tag
 (`HORIZON_LAUNCHER_VERSION`); `Cargo.toml`'s version is only what local builds report.
 
 Windows also publishes `horizon-launcher-setup.exe` (x64) and `horizon-launcher-setup-arm64.exe`: the launcher's own
 binary under another name, which opens
 a per-user setup instead of the window (no administrator). It copies itself to
-`%LOCALAPPDATA%\Programs\Horizon Launcher\horizon-launcher.exe`, makes the Start menu shortcut (and the
+`%LOCALAPPDATA%\Programs\Zenith\horizon-launcher.exe`, makes the Start menu shortcut (and the
 desktop one if asked) and an entry in *Apps & features*, then starts the copy. `horizon-launcher-setup.exe
 setup --quiet [--dir <folder>] [--desktop-shortcut]` does the same without a window, and
 `horizon-launcher.exe uninstall` (or `... uninstall --quiet [--remove-data]`) takes it all away again: the
@@ -451,7 +451,7 @@ file, so a test never touches the real trash or clipboard.
 ## AI agents (MCP)
 
 `horizon-launcher mcp` is a Model Context Protocol server over stdio. `horizon-launcher
-agent-config` prints the config for Claude Code, Codex, Cursor and any MCP client, and the
+agent-config` prints the config for Claude Code, Cursor and any MCP client, and the
 command that adds it; for Claude Code:
 
     claude mcp add --scope user horizon -- horizon-launcher mcp

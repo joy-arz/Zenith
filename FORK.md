@@ -1,3 +1,7 @@
+# Zenith
+
+Maintained by [joy-arz](https://github.com/joy-arz).
+
 # Offline accounts and self-hosted servers
 
 This fork adds ordinary offline access to the Horizon launcher and invitations for servers hosted on your own computer. Microsoft sign-in is optional for offline play. Game resources still come from your own Minecraft installation. Authenticated downloads and online-mode servers keep their existing authentication requirements.
@@ -60,6 +64,6 @@ A live game and an external connection still require your prepared resources, ro
 
 ## Release through GitHub Actions
 
-The **Fork launcher release** workflow builds Linux x86-64, Windows x64, macOS Apple Silicon and macOS Intel on GitHub-hosted runners. It runs launcher tests, packages the app, signs `SHA256SUMS`, verifies the signature against `launcher/release-keys.txt`, and publishes the matching archives. The signing key is stored only in the fork's `FORK_RELEASE_SIGNING_KEY` Actions secret. The upstream launcher release workflow is gated to the upstream repository.
+The **Zenith release** workflow builds Linux x86-64, Windows x64, macOS Apple Silicon and macOS Intel on GitHub-hosted runners. It runs launcher tests, packages the app, signs `SHA256SUMS`, verifies the signature against `launcher/release-keys.txt`, and publishes the matching archives. The signing key is stored only in the fork's `FORK_RELEASE_SIGNING_KEY` Actions secret. The upstream launcher release workflow is gated to the upstream repository.
 
-Run **Actions → Fork launcher release → Run workflow**, select the implementation branch, and enter a new three-part version such as `0.3.1`. Alternatively, push a tag such as `launcher@0.3.1` on the desired commit. Use increasing versions. The workflow refuses to overwrite an existing release. Once installed initially, release builds obtain later launcher versions through the in-app Update action.
+Run **Actions → Zenith release → Run workflow**, select the implementation branch, and enter a new three-part version such as `0.3.1`. Alternatively, push a tag such as `launcher@0.3.1` on the desired commit. Use increasing versions. The workflow refuses to overwrite an existing release. Once installed initially, release builds obtain later launcher versions through the in-app Update action.

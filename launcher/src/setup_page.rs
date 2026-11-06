@@ -277,10 +277,12 @@ impl Setup {
         match &self.stage {
             Stage::Welcome if self.mode == Mode::Install => {
                 body = body
-                    .child(text(night::UI, c(n.ink_soft)).child(
-                        tr("Installs Horizon Launcher for this account. No administrator needed.")
-                            .to_string(),
-                    ))
+                    .child(
+                        text(night::UI, c(n.ink_soft)).child(
+                            tr("Installs Zenith for this account. No administrator needed.")
+                                .to_string(),
+                        ),
+                    )
                     .child(self.folder_row(cx))
                     .child(self.toggle(
                         "desktop",
@@ -290,24 +292,26 @@ impl Setup {
                         |o| o.desktop = !o.desktop,
                         cx,
                     ))
-                    .child(div().flex().justify_end().child(
-                        crate::button(
-                            "go",
-                            if self.update {
-                                tr("Update").to_string()
-                            } else {
-                                tr("Install").to_string()
-                            },
-                            Kind::Primary,
-                            &t,
-                        )
-                        .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.start(cx))),
-                    ));
+                    .child(
+                        div().flex().justify_end().child(
+                            crate::button(
+                                "go",
+                                if self.update {
+                                    tr("Update").to_string()
+                                } else {
+                                    tr("Install").to_string()
+                                },
+                                Kind::Primary,
+                                &t,
+                            )
+                            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| this.start(cx))),
+                        ),
+                    );
             }
             Stage::Welcome => {
                 body = body
                     .child(text(night::UI, c(n.ink_soft)).child(
-                        tr("Removes Horizon Launcher from this computer. Your worlds and the game's folder stay.")
+                        tr("Removes Zenith from this computer. Your worlds and the game's folder stay.")
                             .to_string(),
                     ))
                     .child(self.toggle(
@@ -346,8 +350,8 @@ impl Setup {
             }
             Stage::Done { left } => {
                 let said = match self.mode {
-                    Mode::Install => tr("Horizon Launcher is installed.").to_string(),
-                    Mode::Uninstall => tr("Horizon Launcher was removed.").to_string(),
+                    Mode::Install => tr("Zenith is installed.").to_string(),
+                    Mode::Uninstall => tr("Zenith was removed.").to_string(),
                 };
                 body = body.child(text(night::TITLE, c(n.ink)).child(said));
                 if !left.is_empty() {
@@ -368,7 +372,7 @@ impl Setup {
                 if self.mode == Mode::Install {
                     body = body.child(
                         div().flex().items_center().justify_end().child(
-                            crate::button("launch", tr("Launch Horizon"), Kind::Primary, &t)
+                            crate::button("launch", tr("Launch Zenith"), Kind::Primary, &t)
                                 .on_click(
                                     cx.listener(|this, _: &ClickEvent, _, cx| this.launch(cx)),
                                 ),
@@ -396,7 +400,7 @@ impl Setup {
             .flex()
             .flex_col()
             .gap(px(18.))
-            .child(text(night::DISPLAY, c(n.ink)).child("Horizon"))
+            .child(text(night::DISPLAY, c(n.ink)).child("Zenith"))
             .child(body)
     }
 }

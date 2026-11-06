@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 pub const REPO: &str = "horizon-rust/horizon";
 /// This fork publishes launcher updates independently of the upstream game.
 pub const LAUNCHER_REPO: &str = "joy-arz/horizon";
-pub const README_URL: &str = "https://github.com/horizon-rust/horizon/blob/main/launcher/README.md";
+pub const README_URL: &str = "https://github.com/joy-arz/horizon/blob/main/FORK.md";
 /// The players' page on connecting an AI agent (the website's docs/agents.md).
 pub const AGENT_DOCS_URL: &str = "https://playhorizon.dev/docs/agents";
 /// This launcher's version: the release workflow sets `HORIZON_LAUNCHER_VERSION` from the
@@ -58,32 +58,32 @@ pub const PLATFORMS: [(&str, &str, &str, &str); 5] = [
         "linux",
         "x86_64",
         "horizon-linux-x86_64.tar.gz",
-        "horizon-launcher-linux-x86_64.tar.gz",
+        "zenith-launcher-linux-x86_64.tar.gz",
     ),
     (
         "macos",
         "aarch64",
         "horizon-macos-arm64.zip",
-        "horizon-launcher-macos-arm64.zip",
+        "zenith-launcher-macos-arm64.zip",
     ),
     // Intel Macs (#1161).
     (
         "macos",
         "x86_64",
         "horizon-macos-x64.zip",
-        "horizon-launcher-macos-x64.zip",
+        "zenith-launcher-macos-x64.zip",
     ),
     (
         "windows",
         "x86_64",
         "horizon-windows-x64.zip",
-        "horizon-launcher-windows-x64.zip",
+        "zenith-launcher-windows-x64.zip",
     ),
     (
         "windows",
         "aarch64",
         "horizon-windows-arm64.zip",
-        "horizon-launcher-windows-arm64.zip",
+        "zenith-launcher-windows-arm64.zip",
     ),
 ];
 
@@ -477,7 +477,7 @@ const fn game_fallback_for(os: &str, arch: &str) -> Option<&'static str> {
 /// one file. A launcher running from one updates by replacing that file ([`appimage_path`]), so it
 /// needs this archive rather than the platform's `.tar.gz`.
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
-pub const LAUNCHER_APPIMAGE_ASSET: Option<&str> = Some("horizon-launcher-linux-x86_64.AppImage");
+pub const LAUNCHER_APPIMAGE_ASSET: Option<&str> = Some("zenith-launcher-linux-x86_64.AppImage");
 #[cfg(not(all(target_os = "linux", target_arch = "x86_64")))]
 pub const LAUNCHER_APPIMAGE_ASSET: Option<&str> = None;
 
@@ -4933,27 +4933,21 @@ pub fn {f}("
     fn each_mac_picks_the_build_for_its_processor() {
         assert_eq!(
             platform_assets("macos", "aarch64"),
-            Some((
-                "horizon-macos-arm64.zip",
-                "horizon-launcher-macos-arm64.zip"
-            ))
+            Some(("horizon-macos-arm64.zip", "zenith-launcher-macos-arm64.zip"))
         );
         assert_eq!(
             platform_assets("macos", "x86_64"),
-            Some(("horizon-macos-x64.zip", "horizon-launcher-macos-x64.zip"))
+            Some(("horizon-macos-x64.zip", "zenith-launcher-macos-x64.zip"))
         );
         assert_eq!(
             platform_assets("windows", "x86_64"),
-            Some((
-                "horizon-windows-x64.zip",
-                "horizon-launcher-windows-x64.zip"
-            ))
+            Some(("horizon-windows-x64.zip", "zenith-launcher-windows-x64.zip"))
         );
         assert_eq!(
             platform_assets("windows", "aarch64"),
             Some((
                 "horizon-windows-arm64.zip",
-                "horizon-launcher-windows-arm64.zip"
+                "zenith-launcher-windows-arm64.zip"
             ))
         );
         assert_eq!(platform_assets("linux", "aarch64"), None);
@@ -5234,8 +5228,8 @@ pub fn {f}("
     #[test]
     fn an_arm64_launcher_skips_a_release_without_its_zip() {
         let (arm, x64) = (
-            "horizon-launcher-windows-arm64.zip",
-            "horizon-launcher-windows-x64.zip",
+            "zenith-launcher-windows-arm64.zip",
+            "zenith-launcher-windows-x64.zip",
         );
         let asset = |name: &str| serde_json::json!({"name": name, "browser_download_url": format!("https://example.test/{name}"), "size": 1});
         let list = serde_json::json!([
@@ -5256,7 +5250,7 @@ pub fn {f}("
         let read = |path: &str| fs::read_to_string(repo.join(path)).unwrap();
         let build = read(".github/workflows/game-build.yml");
         let nightly = read(".github/workflows/nightly-build.yml");
-        let launcher = read(".github/workflows/launcher.yml");
+        let launcher = read(".github/workflows/fork-release.yml");
         for (os, arch, game, launcher_asset) in PLATFORMS {
             assert!(
                 build.contains(&format!("asset: {game}")),
@@ -5272,7 +5266,7 @@ pub fn {f}("
             );
             assert!(
                 launcher.contains(&format!("asset: {launcher_asset}")),
-                "launcher.yml builds no {launcher_asset}"
+                "fork-release.yml builds no {launcher_asset}"
             );
         }
     }
@@ -5416,7 +5410,7 @@ pub fn {f}("
         assert_eq!(launcher_version("launcher-vx"), None);
         let list = serde_json::json!([
             {"tag_name": "v2026.10.12", "assets": [{"name": "horizon-linux-x86_64.tar.gz", "browser_download_url": "u", "size": 1}]},
-            {"tag_name": "launcher-v9.0.0", "assets": [{"name": "horizon-launcher-linux-x86_64.tar.gz", "browser_download_url": "u", "size": 1}]},
+            {"tag_name": "launcher-v9.0.0", "assets": [{"name": "zenith-launcher-linux-x86_64.tar.gz", "browser_download_url": "u", "size": 1}]},
             {"tag_name": "v2026.10.13", "assets": []},
             {"tag_name": "launcher-v0.0.1", "draft": true, "assets": []},
         ]);
@@ -5761,7 +5755,7 @@ pub fn {f}("
         #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
         assert_eq!(
             launcher_asset_running_from(true),
-            Some("horizon-launcher-linux-x86_64.AppImage")
+            Some("zenith-launcher-linux-x86_64.AppImage")
         );
     }
 
@@ -5774,7 +5768,7 @@ pub fn {f}("
         let inside = |dir: &str| in_temp_folder(Path::new(dir), temp);
         assert!(inside("/tmp/t"));
         assert!(inside(
-            "/tmp/t/Temp12_horizon-launcher-windows-x64.zip/inner"
+            "/tmp/t/Temp12_zenith-launcher-windows-x64.zip/inner"
         ));
         assert!(inside("/tmp/t/7zO8A1B2C3D"));
         assert!(!inside("/tmp/tools"));

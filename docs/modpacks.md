@@ -1160,7 +1160,7 @@ the mods that need porting (not counting performance mods and libraries), 2 of 8
 ## Open questions for Ludovic
 
 - Contacting authors of permissively licensed mods to publish ports (none contacted).
-- Whether players should run code-port agents themselves (their own Claude Code or Codex
+- Whether players should run code-port agents themselves (their own Claude Code or another MCP client
   login, as Zenith does) or only download published ports.
 - CurseForge: dropped for now (its API needs a paid key; Ludovic, 2026-10-22), shown as coming
   soon. CurseForge packs import from their zip or an installed instance.

@@ -978,11 +978,11 @@ enum Cmd {
     /// Serve the Model Context Protocol on stdin and stdout, for AI agents (refused while No AI
     /// is on)
     Mcp,
-    /// How to connect an AI agent (Claude Code, Codex, Cursor, any MCP client) to `mcp`: the
+    /// How to connect an AI agent (Claude Code, Cursor, any MCP client) to `mcp`: the
     /// config to paste and the command that adds it (refused while No AI is on)
     AgentConfig {
         /// Only this client
-        #[arg(long, value_parser = ["claude-code", "codex", "cursor", "generic"])]
+        #[arg(long, value_parser = ["claude-code", "cursor", "generic"])]
         client: Option<String>,
         /// Start the MCP server as a client would and say whether it answered
         #[arg(long)]

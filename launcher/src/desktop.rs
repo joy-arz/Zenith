@@ -52,7 +52,7 @@ const ICONS: [(&str, &[u8]); 9] = [
     ),
 ];
 
-const LAUNCHER_ENTRY: &str = "horizon-launcher.desktop";
+const LAUNCHER_ENTRY: &str = "zenith-launcher.desktop";
 const GAME_ENTRY: &str = "horizon.desktop";
 const GAME_ENTRY_TEXT: &str = include_str!("../../packaging/linux/horizon.desktop");
 
@@ -82,12 +82,12 @@ pub fn launcher_entry(exe: &Path) -> String {
     format!(
         "[Desktop Entry]\n\
          Type=Application\n\
-         Name=Horizon\n\
+         Name=Zenith\n\
          GenericName=Game launcher\n\
          Comment=Install, prepare and play Horizon, Minecraft: Java Edition {minecraft} rewritten in Rust\n\
          Exec={}\n\
          TryExec={}\n\
-         Icon=horizon\n\
+         Icon=zenith\n\
          Terminal=false\n\
          Categories=Game;\n\
          StartupWMClass=horizon-launcher\n",
@@ -111,9 +111,9 @@ fn files(data: &Path, exe: &Path) -> Vec<(PathBuf, Vec<u8>)> {
     ];
     for (size, bytes) in ICONS {
         let name = if size == "scalable" {
-            "horizon.svg"
+            "zenith.svg"
         } else {
-            "horizon.png"
+            "zenith.png"
         };
         out.push((
             data.join("icons/hicolor")
@@ -262,7 +262,7 @@ mod tests {
         let entry = launcher_entry(Path::new("/home/a b/Horizon \"x\"/horizon-launcher"));
         assert!(entry.contains("Exec=\"/home/a b/Horizon \\\"x\\\"/horizon-launcher\"\n"));
         assert!(entry.contains("TryExec=/home/a b/Horizon \"x\"/horizon-launcher\n"));
-        assert!(entry.contains("Icon=horizon\n"));
+        assert!(entry.contains("Icon=zenith\n"));
     }
 
     #[test]
@@ -271,11 +271,9 @@ mod tests {
         let _ = fs::remove_dir_all(&data);
         assert!(install_in(&data, Path::new("/opt/a/horizon-launcher")).unwrap());
         assert!(!install_in(&data, Path::new("/opt/a/horizon-launcher")).unwrap());
-        let png = data.join("icons/hicolor/48x48/apps/horizon.png");
+        let png = data.join("icons/hicolor/48x48/apps/zenith.png");
         assert!(fs::read(&png).unwrap().starts_with(b"\x89PNG"));
-        assert!(data
-            .join("icons/hicolor/scalable/apps/horizon.svg")
-            .exists());
+        assert!(data.join("icons/hicolor/scalable/apps/zenith.svg").exists());
         assert!(install_in(&data, Path::new("/opt/b/horizon-launcher")).unwrap());
         let entry = fs::read_to_string(data.join("applications").join(LAUNCHER_ENTRY)).unwrap();
         assert!(entry.contains("Exec=\"/opt/b/horizon-launcher\""));
@@ -303,7 +301,7 @@ mod tests {
         // Only the main group counts: an action's Exec is not the launcher.
         let action = "[Desktop Action play]\nExec=/a\n[Desktop Entry]\nExec=/b --x\n";
         assert_eq!(entry_target(action).as_deref(), Some("/b"));
-        assert_eq!(entry_target("[Desktop Entry]\nName=Horizon\n"), None);
+        assert_eq!(entry_target("[Desktop Entry]\nName=Zenith\n"), None);
         assert_eq!(entry_target("[Desktop Entry]\nExec=\nTryExec=\n"), None);
     }
 
@@ -336,7 +334,7 @@ mod tests {
         fs::remove_file(&installed).unwrap();
         assert!(needs_repair_in(&data, path));
         // An entry that starts nothing is broken too.
-        fs::write(&entry, "[Desktop Entry]\nName=Horizon\n").unwrap();
+        fs::write(&entry, "[Desktop Entry]\nName=Zenith\n").unwrap();
         assert!(needs_repair_in(&data, path));
         let _ = fs::remove_dir_all(&root);
     }

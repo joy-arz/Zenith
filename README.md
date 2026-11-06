@@ -1,3 +1,7 @@
+# Zenith
+
+Zenith is **joy-arz**'s Horizon fork with offline profiles, custom local skins, self-hosted offline servers, and signed in-app updates. [Setup and releases](FORK.md) · [Contributors](CONTRIBUTORS.md).
+
 > **Offline/self-hosting fork:** [offline profiles, custom skins, local servers and share links](FORK.md).
 
 <p align="center">
@@ -24,7 +28,6 @@
   <a href="#contributing"><b>Contributing</b></a>
 </p>
 
-# Horizon
 
 Minecraft: Java Edition 26.3, rewritten in Rust. Same worlds, same rules, same terrain, checked against the Java game by more than 300 differential harnesses. Free, open source and unofficial.
 

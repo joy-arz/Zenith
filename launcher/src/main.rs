@@ -2171,35 +2171,29 @@ fn version_tag(tag: &str) -> Div {
         )
 }
 
-/// Horizon's mark: two stems, their reflection below, and the horizon across in the accent.
+/// Zenith's Z, with the shared violet horizon and muted lower half.
 fn mark(size: f32, t: &Theme) -> Div {
     let u = size / 16.;
-    let stem = |x: f32, y: f32, color: Hsla| {
+    let bar = |x: f32, y: f32, width: f32, height: f32, color: Hsla| {
         div()
             .absolute()
             .left(px(x * u))
             .top(px(y * u))
-            .w(px(2. * u))
-            .h(px(4. * u))
+            .w(px(width * u))
+            .h(px(height * u))
             .bg(color)
     };
     div()
         .relative()
         .flex_none()
         .size(px(size))
-        .child(stem(4., 3., t.ink))
-        .child(stem(10., 3., t.ink))
-        .child(stem(4., 8., t.ink.opacity(0.36)))
-        .child(stem(10., 8., t.ink.opacity(0.36)))
-        .child(
-            div()
-                .absolute()
-                .left(px(u))
-                .top(px(7. * u))
-                .w(px(14. * u))
-                .h(px(u))
-                .bg(t.accent),
-        )
+        .child(bar(4., 3., 8., 2., t.ink))
+        .child(bar(8., 5., 3., 1., t.ink))
+        .child(bar(7., 6., 3., 1., t.ink))
+        .child(bar(5., 8., 3., 1., t.ink.opacity(0.36)))
+        .child(bar(4., 9., 3., 1., t.ink.opacity(0.36)))
+        .child(bar(4., 10., 8., 2., t.ink.opacity(0.36)))
+        .child(bar(0., 7., 16., 1., t.accent))
 }
 
 /// The last thing the player did was press Tab: focused controls show a ring (a click focuses them
@@ -3177,7 +3171,7 @@ impl Launcher {
                 .child(
                     shell::text(theme::night::TITLE, shell::c(n.ink))
                         .font_family(theme::DISPLAY_FONT)
-                        .child("Horizon"),
+                        .child("Zenith"),
                 )
         });
         shell::sidebar_plate(&t)
@@ -5570,7 +5564,7 @@ impl Render for Launcher {
                 .line_height(px(theme::WORDMARK.px * 0.5))
                 .font_weight(FontWeight::BOLD)
                 .text_color(t.ink)
-                .children("HORIZON".chars().enumerate().map(|(i, c)| {
+                .children("ZENITH".chars().enumerate().map(|(i, c)| {
                     let at = held - i as f32 * theme::STAGGER.as_secs_f32() * 1.5;
                     let p = ease_out_cubic(at / theme::ENTER.as_secs_f32());
                     div()
@@ -5726,8 +5720,8 @@ fn page_after_startup(page: Page, data_folder_failed: bool) -> Page {
 fn menus() -> Vec<Menu> {
     vec![
         Menu {
-            name: "Horizon Launcher".into(),
-            items: vec![MenuItem::action("Quit Horizon Launcher", Quit)],
+            name: "Zenith".into(),
+            items: vec![MenuItem::action("Quit Zenith", Quit)],
             disabled: false,
         },
         Menu {
@@ -6020,10 +6014,10 @@ mod tests {
     #[test]
     fn the_app_menu_has_quit() {
         let menus = super::menus();
-        assert_eq!(menus[0].name, "Horizon Launcher");
+        assert_eq!(menus[0].name, "Zenith");
         assert!(matches!(
             &menus[0].items[0],
-            gpui::MenuItem::Action { name, .. } if name == "Quit Horizon Launcher"
+            gpui::MenuItem::Action { name, .. } if name == "Quit Zenith"
         ));
     }
 

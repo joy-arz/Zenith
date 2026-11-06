@@ -1,6 +1,6 @@
 # Agent control: driving the launcher and the game
 
-A player's own AI agent (Claude Code, Codex, Cursor, any MCP client) or a script can do
+A player's own AI agent (Claude Code, Cursor, any MCP client) or a script can do
 everything a player does with the mouse and keyboard, in the launcher and in the game. This page
 covers developers: the surfaces, the full inventory, and the rules every new command follows.
 Players read [Control Horizon with your AI agent](https://playhorizon.dev/docs/agents)
@@ -184,9 +184,9 @@ turn the switch off.
 ## Connecting
 
 - **Launcher, Settings > AI > Connect an AI agent:**
-  - a client picker (Claude Code, Codex, Cursor, any MCP client) with its config and a Copy button;
+  - a client picker (Claude Code, Cursor, any MCP client) with its config and a Copy button;
   - for clients with a CLI, the add command, shown and run only on **Add to ...**:
-    `claude mcp add --scope user horizon -- <exe> mcp`, `codex mcp add horizon -- <exe> mcp`;
+    `claude mcp add --scope user horizon -- <exe> mcp`;
   - **Test the connection** (`agents::self_test`) starts `<exe> mcp`, lists its tools and says
     how many answered.
   - `horizon-launcher agent-config [--client ID] [--json] [--test]` prints the same thing.

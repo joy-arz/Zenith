@@ -9,7 +9,7 @@ use std::path::Path;
 pub const SERVER_NAME: &str = "horizon";
 
 pub struct Client {
-    /// `claude-code`, `codex`, `cursor` or `generic`.
+    /// `claude-code`, `cursor` or `generic`.
     pub id: &'static str,
     pub name: &'static str,
     /// Where its configuration lives.
@@ -35,11 +35,6 @@ fn mcp_servers_json(exe: &Path) -> String {
     serde_json::to_string_pretty(&config).unwrap_or_default()
 }
 
-/// A TOML basic string.
-fn toml_string(s: &str) -> String {
-    format!("\"{}\"", s.replace('\\', "\\\\").replace('"', "\\\""))
-}
-
 /// The clients, for the launcher at `exe`.
 pub fn clients(exe: &Path) -> Vec<Client> {
     let exe_text = exe.display().to_string();
@@ -58,16 +53,6 @@ pub fn clients(exe: &Path) -> Vec<Client> {
                 "claude",
                 add(&["mcp", "add", "--scope", "user", SERVER_NAME, "--"]),
             )),
-        },
-        Client {
-            id: "codex",
-            name: "Codex",
-            file: "~/.codex/config.toml",
-            config: format!(
-                "[mcp_servers.{SERVER_NAME}]\ncommand = {}\nargs = [\"mcp\"]\n",
-                toml_string(&exe_text)
-            ),
-            add: Some(("codex", add(&["mcp", "add", SERVER_NAME, "--"]))),
         },
         Client {
             id: "cursor",
@@ -188,26 +173,18 @@ mod tests {
 
     #[test]
     fn configs_name_the_launcher_and_quote_its_path() {
-        let exe = Path::new("/Applications/Horizon Launcher.app/Contents/MacOS/horizon-launcher");
+        let exe = Path::new("/Applications/Zenith Test.app/Contents/MacOS/horizon-launcher");
         let all = clients(exe);
         let claude = &all[0];
         assert_eq!(
             claude.add_line().unwrap(),
-            "claude mcp add --scope user horizon -- '/Applications/Horizon Launcher.app/Contents/MacOS/horizon-launcher' mcp"
+            "claude mcp add --scope user horizon -- '/Applications/Zenith Test.app/Contents/MacOS/horizon-launcher' mcp"
         );
         let parsed: Value = serde_json::from_str(&claude.config).unwrap();
         assert_eq!(parsed["mcpServers"]["horizon"]["args"], json!(["mcp"]));
         assert_eq!(
             parsed["mcpServers"]["horizon"]["command"],
             exe.display().to_string()
-        );
-        let codex = &all[1];
-        assert!(codex
-            .config
-            .contains("command = \"/Applications/Horizon Launcher.app"));
-        assert_eq!(
-            toml_string(r#"C:\Horizon\"x".exe"#),
-            r#""C:\\Horizon\\\"x\".exe""#
         );
         assert!(all.iter().any(|c| c.id == "cursor" && c.add.is_none()));
     }

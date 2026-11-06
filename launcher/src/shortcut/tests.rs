@@ -40,7 +40,7 @@ fn a_linux_entry_plays_its_instance() {
 #[test]
 fn a_mac_app_runs_a_script_that_plays_its_instance() {
     let files = mac_app(
-        Path::new("/Applications/Horizon Launcher.app/Contents/MacOS/horizon-launcher"),
+        Path::new("/Applications/Zenith.app/Contents/MacOS/horizon-launcher"),
         "it's",
         "Tom & Jerry",
     );
@@ -52,7 +52,7 @@ fn a_mac_app_runs_a_script_that_plays_its_instance() {
     let (path, script, program) = &files[1];
     assert_eq!((*path, *program), ("Contents/MacOS/play", true));
     assert!(String::from_utf8(script.clone()).unwrap().ends_with(
-        "exec '/Applications/Horizon Launcher.app/Contents/MacOS/horizon-launcher' play \
+        "exec '/Applications/Zenith.app/Contents/MacOS/horizon-launcher' play \
          --instance 'it'\\''s'\n"
     ));
     assert_eq!(files[2].1, MAC_ICON);
@@ -134,7 +134,7 @@ fn a_windows_shortcut_is_a_shell_link_to_the_launcher() {
 #[test]
 fn the_shell_written_link_keeps_the_instance_it_plays() {
     let root = scratch("plays");
-    let exe = root.join("Horizon Launcher").join("horizon-launcher.exe");
+    let exe = root.join("Zenith").join("horizon-launcher.exe");
     fs::create_dir_all(exe.parent().unwrap()).unwrap();
     fs::write(&exe, b"x").unwrap();
     let link = root.join("Hardcore (Horizon).lnk");

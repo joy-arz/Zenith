@@ -1,4 +1,4 @@
-name: Fork launcher release
+name: Zenith release
 
 on:
   push:
@@ -49,18 +49,23 @@ jobs:
         include:
           - os: ubuntu-24.04
             platform: linux-x86_64
-            asset: horizon-launcher-linux-x86_64.tar.gz
+            asset: zenith-launcher-linux-x86_64.tar.gz
           - os: windows-latest
             platform: windows-x64
-            asset: horizon-launcher-windows-x64.zip
+            asset: zenith-launcher-windows-x64.zip
+            setup: zenith-launcher-setup.exe
+          - os: windows-11-vs2026-arm
+            platform: windows-arm64
+            asset: zenith-launcher-windows-arm64.zip
+            setup: zenith-launcher-setup-arm64.exe
           - os: macos-15
             platform: macos-arm64
             arch: arm64
-            asset: horizon-launcher-macos-arm64.zip
+            asset: zenith-launcher-macos-arm64.zip
           - os: macos-15-intel
             platform: macos-x64
             arch: x64
-            asset: horizon-launcher-macos-x64.zip
+            asset: zenith-launcher-macos-x64.zip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     env:
@@ -68,7 +73,7 @@ jobs:
       HORIZON_LAUNCHER_TAG: ${{ needs.version.outputs.tag }}
       CARGO_PROFILE_RELEASE_DEBUG: '0'
       CARGO_PROFILE_RELEASE_LTO: 'false'
-      RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
+      RUSTFLAGS: ${{ startsWith(matrix.os, 'windows-') && '-C target-feature=+crt-static' || '' }}
     defaults:
       run:
         shell: bash
@@ -128,13 +133,16 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p out
-          tar -czf "out/horizon-launcher-linux-x86_64.tar.gz" -C launcher/target/release horizon-launcher
+          tar -czf "out/zenith-launcher-linux-x86_64.tar.gz" -C launcher/target/release horizon-launcher
       - name: Package Windows
         if: runner.os == 'Windows'
+        env:
+          ASSET: ${{ matrix.asset }}
+          SETUP_ASSET: ${{ matrix.setup }}
         run: |
           mkdir -p out
-          7z a out/horizon-launcher-windows-x64.zip ./launcher/target/release/horizon-launcher.exe
-          cp launcher/target/release/horizon-launcher.exe out/horizon-launcher-setup.exe
+          7z a "out/$ASSET" ./launcher/target/release/horizon-launcher.exe
+          cp launcher/target/release/horizon-launcher.exe "out/$SETUP_ASSET"
       - name: Package macOS app and installer
         if: runner.os == 'macOS'
         env:
@@ -144,7 +152,7 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/dmg"
           "$RUNNER_TEMP/dmg/bin/pip" install dmgbuild==1.6.5
           DMGBUILD="$RUNNER_TEMP/dmg/bin/dmgbuild" packaging/macos/package.sh launcher/target/release/horizon-launcher "$VERSION" out "$MAC_ARCH"
-          rm -rf out/Horizon.app
+          rm -rf out/Zenith.app
       - uses: actions/upload-artifact@v7
         with:
           name: fork-${{ matrix.platform }}
@@ -201,4 +209,4 @@ jobs:
 
           See FORK.md in the repository for setup and hosting instructions. PNG skins render locally; they are not distributed to other clients.
           NOTES
-          gh release create "$RELEASE_TAG" dist/* --target "$RELEASE_SHA" --title "Horizon Offline $RELEASE_TAG" --notes-file release-notes.md --latest
+          gh release create "$RELEASE_TAG" dist/* --target "$RELEASE_SHA" --title "Zenith $RELEASE_TAG" --notes-file release-notes.md --latest
