@@ -87,18 +87,23 @@ impl Node {
             .find(|ip| !ip.contains(':'))
     }
 
-    /// What a friend types in Minecraft: the MagicDNS name when it is on, else the address.
-    pub fn address(&self, port: u16) -> String {
-        let host = if self.magic_dns && !self.dns_name.is_empty() {
-            self.dns_name.as_str()
-        } else {
-            self.ipv4().unwrap_or_default()
-        };
-        if port == 25565 {
-            host.to_string()
-        } else {
-            format!("{host}:{port}")
+    /// The game address on the tailnet, with an explicit port for launcher invitations.
+    pub fn address(&self, port: u16) -> Option<String> {
+        if self.magic_dns {
+            if let Ok(endpoint) = crate::server_share::address(&format!("{}:{port}", self.dns_name))
+            {
+                return Some(endpoint);
+            }
         }
+        let ip = self
+            .ipv4()
+            .and_then(|ip| ip.parse::<std::net::IpAddr>().ok())
+            .or_else(|| {
+                self.ips
+                    .iter()
+                    .find_map(|ip| ip.parse::<std::net::IpAddr>().ok())
+            })?;
+        crate::server_share::address(&std::net::SocketAddr::new(ip, port).to_string()).ok()
     }
 }
 
@@ -128,6 +133,9 @@ pub fn status_of(cli: Option<PathBuf>) -> State {
     };
     let mut command = crate::process::command(&cli);
     command.args(["status", "--json"]);
+    if cfg!(target_os = "macos") {
+        command.env("TAILSCALE_BE_CLI", "1");
+    }
     let out = match command.output() {
         Ok(out) => out,
         Err(e) => return State::Off(e.to_string()),

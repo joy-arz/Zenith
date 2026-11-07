@@ -360,7 +360,14 @@ impl Launcher {
             Some(State::Running(_)) => {}
         }
         let node = self.internet.node().cloned().unwrap_or_default();
-        let address = node.address(port);
+        let Some(address) = node.address(port) else {
+            return panel
+                .child(line(
+                    tr("Tailscale has no address for this server yet.").into(),
+                ))
+                .child(check);
+        };
+        let share = self.tailscale_share_link(&address);
         let ip = node.ipv4().unwrap_or_default().to_string();
         let mut where_ = div().flex().flex_col().gap(px(6.)).child(
             div()
@@ -391,7 +398,7 @@ impl Launcher {
                     .into(),
             ));
         }
-        panel = panel.child(where_);
+        panel = panel.child(where_).child(share);
         panel = panel.child(
             div()
                 .border_t_1()
@@ -480,7 +487,12 @@ impl Launcher {
                 )),
             Some(State::Running(_)) => {
                 let node = self.internet.node().cloned().unwrap_or_default();
-                let address = node.address(port);
+                let Some(address) = node.address(port) else {
+                    return d
+                        .child(ui::card_note(tr("Tailscale has no address for this server yet.")))
+                        .child(check);
+                };
+                let share = self.tailscale_share_link(&address);
                 let copied = self.internet.copied.as_ref().is_some_and(|(what, at)| {
                     *what == address && at.elapsed() < Duration::from_secs(2)
                 });
@@ -515,6 +527,7 @@ impl Launcher {
                         .child(copy),
                 )
                 .child(ui::card_note(tr("Through Tailscale. Only the friends you invite can reach it.")).mt(px(4.)))
+                .child(share)
             }
         }
     }
@@ -541,6 +554,27 @@ impl Launcher {
                 "Horizon never turns on Funnel: the server isn't put on the public internet, only shared with the people you invite.",
             )));
         self.internet_message(panel)
+    }
+
+    fn tailscale_share_link(&self, address: &str) -> Div {
+        let mut section = div().mt(px(6.)).flex().flex_col().gap(px(6.));
+        if let Ok(link) = horizon_launcher::server_share::link(address) {
+            let copy = button(
+                "ts-server-link",
+                "Copy server link",
+                Kind::Secondary,
+                &self.theme,
+            )
+            .on_click(move |_, _, cx| {
+                copy_to_clipboard(cx, gpui::ClipboardItem::new_string(link.clone()));
+            });
+            section = section
+                .child(div().child(copy))
+                .child(text(theme::CAPTION).text_color(self.theme.muted).child(tr(
+                    "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.",
+                )));
+        }
+        section
     }
 
     fn internet_message(&self, panel: Div) -> Div {

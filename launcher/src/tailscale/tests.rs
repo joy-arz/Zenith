@@ -24,14 +24,18 @@ fn status_reads_as_the_cli_writes_it() {
     assert_eq!(node.id, "nAbCdEf1CNTRL");
     assert_eq!(node.dns_name, "ludos-mac.tail1234.ts.net");
     assert_eq!(node.ipv4(), Some("100.101.102.103"));
-    assert_eq!(node.address(25565), "ludos-mac.tail1234.ts.net");
+    assert_eq!(
+        node.address(25565).as_deref(),
+        Some("ludos-mac.tail1234.ts.net:25565")
+    );
     assert_eq!(
         Node {
             magic_dns: false,
             ..node.clone()
         }
-        .address(25570),
-        "100.101.102.103:25570"
+        .address(25570)
+        .as_deref(),
+        Some("100.101.102.103:25570")
     );
     assert_eq!(
         parse_status(
@@ -267,4 +271,19 @@ fn invites_and_access_controls_go_through_the_api() {
     assert!(seen[5].1.to_ascii_lowercase().contains("if-match: \"e1\""));
     let sent: Value = serde_json::from_str(&seen[5].2).unwrap();
     assert_eq!(sent, limited);
+}
+
+#[test]
+fn an_ipv6_tailnet_endpoint_round_trips_through_a_zenith_invitation() {
+    let node = Node {
+        ips: vec!["fd7a:115c:a1e0::1".into()],
+        ..Node::default()
+    };
+    let endpoint = node.address(25570).unwrap();
+    let link = crate::server_share::link(&endpoint).unwrap();
+    assert_eq!(
+        crate::server_share::resolve(&link).unwrap(),
+        "[fd7a:115c:a1e0::1]:25570"
+    );
+    assert_eq!(Node::default().address(25565), None);
 }

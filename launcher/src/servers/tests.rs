@@ -292,3 +292,17 @@ fn the_game_mode_comes_from_server_toml() {
     assert_eq!(game_mode(&dir), None);
     let _ = fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn local_join_uses_the_bound_interface_or_loopback() {
+    for (bind, expected) in [
+        ("", "127.0.0.1:25570"),
+        ("0.0.0.0", "127.0.0.1:25570"),
+        ("::", "[::1]:25570"),
+        ("192.168.1.20", "192.168.1.20:25570"),
+        ("fd7a:115c:a1e0::1", "[fd7a:115c:a1e0::1]:25570"),
+    ] {
+        assert_eq!(local_game_address(bind, 25570).as_deref(), Some(expected));
+    }
+    assert_eq!(local_game_address("", 0), None);
+}

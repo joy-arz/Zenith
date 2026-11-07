@@ -1857,6 +1857,7 @@ impl Launcher {
             .gap(px(10.))
             .p(px(20.))
             .child(caps(tr("Address on this network")).text_color(t.muted))
+            .children(self.local_server_join(status, cx))
             .child(
                 div()
                     .flex()
@@ -1914,9 +1915,55 @@ impl Launcher {
                     .child(row),
             );
         }
-        tab.child(self.forwarding_panel(port as u16, cx))
-            .child(self.internet_panel(port as u16, cx))
+        tab.child(self.internet_panel(port as u16, cx))
+            .child(self.forwarding_panel(port as u16, cx))
             .child(self.server_console(status.running(), cx))
+    }
+
+    fn local_server_join(&self, status: &Status, cx: &mut Context<Self>) -> Option<Div> {
+        if status.phase != "running"
+            || self.servers.restart_needed.contains("server.port")
+            || self.servers.restart_needed.contains("server.bind")
+        {
+            return None;
+        }
+        let port = u16::try_from(self.servers.setting("server", "port")?.as_u64()?).ok()?;
+        let bind = self
+            .servers
+            .setting("server", "bind")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let address = servers::local_game_address(bind, port)?;
+        let join = button(
+            "local-server-join",
+            "Join on this computer",
+            Kind::Secondary,
+            &self.theme,
+        );
+        let join = if self.can_join_selected() {
+            let endpoint = address.clone();
+            join.on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                if this.can_join_selected() {
+                    this.quick_play("--server", endpoint.clone());
+                    cx.notify();
+                }
+            }))
+        } else {
+            join.opacity(0.4).cursor_default()
+        };
+        Some(
+            div()
+                .flex()
+                .flex_wrap()
+                .items_center()
+                .gap(px(8.))
+                .child(join)
+                .child(
+                    text(theme::CAPTION)
+                        .text_color(self.theme.muted)
+                        .child(address),
+                ),
+        )
     }
 
     fn forwarding_panel(&mut self, port: u16, cx: &mut Context<Self>) -> Div {

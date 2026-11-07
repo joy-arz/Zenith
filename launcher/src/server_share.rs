@@ -1,4 +1,4 @@
-//! Portable server invitations for owner-managed TCP port forwarding.
+//! Portable invitations for directly reachable game addresses, including Tailscale.
 //! Links are pasted into the launcher's Multiplayer address field or `play --server`.
 use std::fs;
 use std::net::{IpAddr, Ipv6Addr};

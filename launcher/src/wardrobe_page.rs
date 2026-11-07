@@ -786,7 +786,11 @@ impl Launcher {
             });
         let page = div().flex().flex_col().gap(px(24.)).child(header);
         if signed_out {
-            return page.child(self.wardrobe_sign_in(cx));
+            return page.child(self.wardrobe_sign_in(cx)).child(
+                ui::text(14., FontWeight::NORMAL, ink::FAINT).child(tr(
+                    "For an offline Minecraft skin, open Settings, Account, then Custom skin.",
+                )),
+            );
         }
         let viewer = self.wardrobe_dress(cx);
         let Some(w) = self.wardrobe.as_ref() else {

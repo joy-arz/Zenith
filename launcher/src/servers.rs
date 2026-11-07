@@ -852,6 +852,19 @@ pub fn lan_address() -> Option<std::net::IpAddr> {
     (!ip.is_unspecified() && !ip.is_loopback()).then_some(ip)
 }
 
+/// The game endpoint on the host itself. A wildcard bind needs a loopback
+/// address in the matching family; a specific bind must be reached there.
+pub fn local_game_address(bind: &str, port: u16) -> Option<String> {
+    let bind = bind.trim();
+    let host = match bind {
+        "" | "0.0.0.0" => "127.0.0.1".to_string(),
+        "::" | "[::]" => "[::1]".to_string(),
+        host if host.parse::<std::net::Ipv6Addr>().is_ok() => format!("[{host}]"),
+        host => host.to_string(),
+    };
+    crate::server_share::address(&format!("{host}:{port}")).ok()
+}
+
 /// Whether the server starts at login: the service definition `horizon-server service print` names exists.
 pub fn service_installed(dir: &Path) -> bool {
     if cfg!(windows) {

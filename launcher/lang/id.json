@@ -1262,5 +1262,9 @@
   "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.",
   "Launch Zenith": "Luncurkan Zenith",
   "Offline profile: downloading Minecraft {version} from Mojang": "Profil offline: mengunduh Minecraft {version} dari Mojang",
-  "Could not download Minecraft {version}: {error}": "Tidak dapat mengunduh Minecraft {version}: {error}"
+  "Could not download Minecraft {version}: {error}": "Tidak dapat mengunduh Minecraft {version}: {error}",
+  "Join on this computer": "Gabung di komputer ini",
+  "Tailscale has no address for this server yet.": "Tailscale belum memiliki alamat untuk server ini.",
+  "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.": "Teman dapat menempelkan tautan ini di Multipemain setelah Anda membagikan komputer ini di Tailscale dan mereka terhubung ke Tailscale.",
+  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "Untuk skin Minecraft offline, buka Pengaturan, Akun, lalu Skin kustom."
 }

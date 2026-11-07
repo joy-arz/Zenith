@@ -1262,5 +1262,9 @@
   "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.": "Paste the link into this launcher's Multiplayer address field. Router reachability is not verified. If your ISP uses CGNAT, request a public IP or use your own TCP tunnel. Offline usernames are not authenticated; use a whitelist for friends.",
   "Launch Zenith": "Paleiskite „Zenith“.",
   "Offline profile: downloading Minecraft {version} from Mojang": "Offline profile: downloading Minecraft {version} from Mojang",
-  "Could not download Minecraft {version}: {error}": "Could not download Minecraft {version}: {error}"
+  "Could not download Minecraft {version}: {error}": "Could not download Minecraft {version}: {error}",
+  "Join on this computer": "Join on this computer",
+  "Tailscale has no address for this server yet.": "Tailscale has no address for this server yet.",
+  "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.": "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.",
+  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "For an offline Minecraft skin, open Settings, Account, then Custom skin."
 }

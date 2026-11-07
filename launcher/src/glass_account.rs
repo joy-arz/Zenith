@@ -193,6 +193,17 @@ impl Launcher {
                     .child(tr("Offline names")),
             )
             .child(chips)
+            .children(match self.accounts.player() {
+                Player::Offline(name) => Some(
+                    ui::quiet("offline-skin-selected", tr("Custom skin…"), 32., &t)
+                        .mt(px(8.))
+                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                            this.open_skin(name.clone());
+                            cx.notify();
+                        })),
+                ),
+                _ => None,
+            })
             .child(
                 ui::text(13., FontWeight::NORMAL, 0.5)
                     .mt(px(10.))

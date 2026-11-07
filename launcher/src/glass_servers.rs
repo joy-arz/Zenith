@@ -677,6 +677,7 @@ impl Launcher {
             .flex()
             .flex_col()
             .child(ui::card_heading(tr("On this network")))
+            .children(self.local_server_join(status, cx))
             .child(address(
                 lan.clone(),
                 22.,

@@ -13,10 +13,11 @@ This fork adds ordinary offline access to the Horizon launcher and invitations f
 3. Select **Custom skin… → Choose a skin…** beside that name. Import a 64×64 or legacy 64×32 PNG and choose Classic or Slim arms. The launcher stores a copy per profile and uses it at the next game launch. This existing skin feature renders your own player locally; it does not distribute the PNG to other players or vanilla clients.
 4. Open **Servers → Create a server**. New servers allow offline accounts by default. List your friends' offline usernames. The first listed player is the operator. Accept the EULA and create the server.
 5. Change the local game port in the server's **Settings** if needed, then start the server. Existing servers retain their settings: disable **account checks** to let offline accounts join.
-6. Give the host computer a stable LAN address. Forward your chosen **external TCP port** on your router to this computer's **local game port**. Allow that local game port through the host firewall. Keep management, panel and RCON ports private.
-7. Under **Own port forwarding**, save your public IP or DNS name with its external port. Use **Copy server link**. Friends paste that link into this fork's **Multiplayer → Add Server** address field. Other clients can use the ordinary `host:port` address.
+6. On the host computer, use **Join on this computer**. This opens the selected game on the server's local address and game port. Players on the same network can use the separate LAN address.
+7. For friends on another network, install and sign in to Tailscale on both computers. In Tailscale's **Machines** page, share the host computer with your friend and have them accept. In Zenith's **Over the internet** panel, use **Copy server link**. Your friend can paste it into **Multiplayer → Add Server** while connected to Tailscale. The link carries an address; sharing the machine grants access. No router change or Tailscale API token is needed for this setup.
+8. If you already manage a public TCP port, **Own port forwarding** can save that address and generate the same type of link. Keep the management, panel and RCON ports private.
 
-The share link is `zenith://server/HOST:PORT`. It is a pasteable invitation, not a hosted webpage or a registered browser protocol. The launcher does not configure your router, discover your public IP, or claim that the port is reachable. CGNAT requires an ISP-provided public IP or your own TCP tunnel. Update the saved address when your public IP changes, or use dynamic DNS.
+The share link is `zenith://server/HOST:PORT`. It is a pasteable invitation, not a hosted webpage or a registered browser protocol. The launcher does not configure your router, discover your public IP, or claim that the port is reachable. Use Tailscale if the router cannot forward ports or the ISP uses CGNAT. Update the saved address when your public IP changes, or use dynamic DNS.
 
 Offline names are not authenticated. A whitelist limits names, but cannot prove who owns one. Share the endpoint with trusted friends and keep backups.
 
@@ -60,7 +61,7 @@ cargo test --manifest-path launcher/Cargo.toml --lib skins::tests
 python3 tools/pr_ready.py --base upstream/main --quick
 ```
 
-A live game and an external connection still require your prepared resources, router mapping, public address and a second network. Unit tests cannot establish internet reachability.
+A live game requires prepared resources. To verify external reachability, test from a second network using Tailscale or a reachable public TCP address. Unit tests cannot establish internet reachability.
 
 ## Release through GitHub Actions
 
