@@ -1,8 +1,8 @@
 //! The player's own look, on top of Dark, Light or System: an accent colour and a picture behind
 //! Home.
 //!
-//! An accent is a hue, and the player may pick any of them; seven hues have names, as shortcuts.
-//! Horizon's violet is the default. Another hue turns the violet tokens (`horizon_theme::Blocks`'
+//! An accent is a hue, and the player may pick any of them; eight hues have names, as shortcuts.
+//! Zenith's orange is the default. Another hue turns the violet tokens (`horizon_theme::Blocks`'
 //! accent and the main action's face, bevel and lip) to it, keeping their saturation and
 //! lightness, then darkens or lightens each just enough to read as well as the violet does: white
 //! on the face at 4.5:1, the accent at 3:1 on every background.
@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 /// An accent: a hue in degrees, or none for Horizon's violet, whose tokens are the palette's own
 /// and stay untouched; and for a colour typed as hex, that colour (the glass look wears it as
 /// is, the light look takes its hue).
-#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub struct Accent {
     hue: Option<f32>,
@@ -145,12 +145,20 @@ pub fn theme(id: Option<&str>) -> Option<&'static Theme> {
 }
 
 /// The glass look's colour for each of [`Accent::ALL`]: the mockup's swatches.
-pub const SWATCHES: [u32; 7] = [
-    0x6b4bff, 0x2563eb, 0x0f766e, 0x15803d, 0xc2410c, 0xdc2626, 0xbe185d,
+pub const SWATCHES: [u32; 8] = [
+    0x6b4bff, 0x2563eb, 0x0f766e, 0x15803d, 0xc2410c, 0xdc2626, 0xbe185d, 0xf97316,
 ];
 
 /// [`Accent::ALL`]'s names, in its order.
-const NAMES: [&str; 7] = ["violet", "blue", "teal", "green", "amber", "red", "pink"];
+const NAMES: [&str; 8] = [
+    "violet", "blue", "teal", "green", "amber", "red", "pink", "orange",
+];
+
+impl Default for Accent {
+    fn default() -> Self {
+        Self::ORANGE
+    }
+}
 
 impl Accent {
     pub const VIOLET: Accent = Accent {
@@ -182,7 +190,12 @@ impl Accent {
         rgb: None,
     };
 
-    pub const ALL: [Accent; 7] = [
+    pub const ORANGE: Accent = Accent {
+        hue: Some(25.),
+        rgb: None,
+    };
+
+    pub const ALL: [Accent; 8] = [
         Self::VIOLET,
         Self::BLUE,
         Self::TEAL,
@@ -190,6 +203,7 @@ impl Accent {
         Self::AMBER,
         Self::RED,
         Self::PINK,
+        Self::ORANGE,
     ];
 
     /// Any hue the player picks.
@@ -258,10 +272,10 @@ impl Accent {
                 .flatten()
                 .map(Self::from_rgb);
         }
-        let name = if name == "purple" || name == "default" {
-            "violet"
-        } else {
-            &name
+        let name = match name.as_str() {
+            "purple" => "violet",
+            "default" => return Some(Self::default()),
+            name => name,
         };
         if let Some(i) = NAMES.iter().position(|n| *n == name) {
             return Some(Self::ALL[i]);

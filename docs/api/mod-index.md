@@ -78,6 +78,10 @@ changing what one means, makes schema 2.
 
 ## `.hpack`
 
+Zenith packs can declare an exact game release in their manifest with
+`zenith_version = "zenith-game@0.2.0-preview.2"`. Zenith uses this release
+for the pack's profile and keeps its saves in that profile.
+
 A zip holding `horizon-modpack.toml` and, optionally, `overrides/`. The mods are not inside: the launcher downloads
 each from the index and checks it as above.
 

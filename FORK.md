@@ -70,3 +70,16 @@ The **Zenith release** workflow builds Linux x86-64, Windows x64 and ARM64, macO
 Run **Actions → Zenith release → Run workflow**, select the implementation branch, and enter a new three-part version such as `0.3.1`. Alternatively, push a tag such as `launcher@0.3.1` on the desired commit. Use increasing versions. The workflow refuses to overwrite an existing release. Once installed initially, release builds obtain later launcher versions through the in-app Update action.
 
 Automatic registry updates retain a content mod's enabled or disabled state. Automatic game updates mark their Nightly installations for retention cleanup; manual and legacy installs, selected and instance-pinned versions, and running versions keep their protections. Source review and tests: [UPSTREAM_REVIEW.md](UPSTREAM_REVIEW.md).
+
+### Zenith game previews
+
+The launcher lists Zenith builds in **Versions**. Install a build and select
+**Use**. Keep an older build installed to switch back at any time. A profile
+pinned to a specific release uses that release and keeps its own saves.
+
+While the engine repository is private, use a GitHub token with read access
+to its contents. Pipe the token into `horizon-launcher zenith-access` to save
+it in the system credential store. The terminal command
+`horizon-launcher install zenith-latest` installs the latest preview the
+launcher can verify. The desktop launcher uses the same saved credential.
+`horizon-launcher zenith-access --forget` removes it.

@@ -173,6 +173,7 @@ impl Launcher {
             .flex_col()
             .child(head)
             .child(self.zenith_version_card().mb(px(24.)))
+            .child(self.zenith_game_versions(on_disk, cx).mb(px(24.)))
             .children(sponsor)
             .child(
                 div()
@@ -235,6 +236,11 @@ impl Launcher {
             }
             Load::Ready(r) => r,
         };
+        let releases: Vec<_> = releases
+            .iter()
+            .filter(|release| !horizon_launcher::zenith_game::is_tag(&release.tag))
+            .cloned()
+            .collect();
         let keep = |i: usize| {
             let tag = &releases[i].tag;
             self.installing.as_ref().is_some_and(|(t, _)| t == tag)

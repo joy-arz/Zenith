@@ -28,6 +28,8 @@ pub struct Installed {
     pub sha256: String,
     /// The pack's mods: `id version`.
     pub mods: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zenith_version: Option<String>,
     #[serde(skip)]
     pub work: PathBuf,
 }
@@ -120,6 +122,14 @@ fn install_version_in(
         let _ = fs::remove_file(&path);
     })?;
     let pack = Modpack::read(&path)?;
+    if pack
+        .manifest
+        .zenith_version
+        .as_deref()
+        .is_some_and(|version| !crate::zenith_game::is_tag(version))
+    {
+        return Err(crate::i18n::tr("Invalid Zenith game version.").into());
+    }
     let home = home(work);
     fs::create_dir_all(&home).map_err(|e| format!("{}: {e}", home.display()))?;
     // A mod the pack's last version listed keeps the player's on/off choice from the Mods
@@ -158,6 +168,7 @@ fn install_version_in(
         version: v.version.clone(),
         sha256: v.file.sha256.clone(),
         mods,
+        zenith_version: pack.manifest.zenith_version,
         work: work.to_path_buf(),
     };
     let text = serde_json::to_string_pretty(&record).map_err(|e| e.to_string())?;

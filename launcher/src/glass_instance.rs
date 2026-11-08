@@ -554,7 +554,10 @@ impl Launcher {
 pub(super) fn horizon_choices(releases: &[Release], installed: &[String]) -> Vec<String> {
     let published = releases
         .iter()
-        .filter(|r| r.nightly.is_some() && r.asset.is_some())
+        .filter(|r| {
+            (r.nightly.is_some() || horizon_launcher::zenith_game::is_tag(&r.tag))
+                && r.asset.is_some()
+        })
         .map(|r| &r.tag);
     let mut out: Vec<String> = Vec::new();
     for tag in published.chain(installed) {
@@ -567,7 +570,8 @@ pub(super) fn horizon_choices(releases: &[Release], installed: &[String]) -> Vec
 
 /// "Nightly · c9d474d", "Imported · 2026-10-30", or the tag.
 fn version_label(tag: &str) -> String {
-    horizon_launcher::nightly::label(tag)
+    horizon_launcher::zenith_game::label(tag)
+        .or_else(|| horizon_launcher::nightly::label(tag))
         .or_else(|| build_import::label(tag))
         .unwrap_or_else(|| tag.to_string())
 }

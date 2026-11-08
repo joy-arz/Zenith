@@ -334,9 +334,14 @@ fn list_in(game_home: &Path, data: &Path) -> Vec<Instance> {
             home,
         ));
     }
+    let mut required = std::collections::HashMap::new();
     for p in registry_pack::list_in(&game_home.join("horizon-packs")) {
         let home = registry_pack::home(&p.work);
-        found.push((format!("pack:{}", p.id), p.name, Kind::Pack, p.work, home));
+        let id = format!("pack:{}", p.id);
+        if let Some(version) = p.zenith_version {
+            required.insert(id.clone(), version);
+        }
+        found.push((id, p.name, Kind::Pack, p.work, home));
     }
     let mut out: Vec<Instance> = found
         .into_iter()
@@ -346,7 +351,7 @@ fn list_in(game_home: &Path, data: &Path) -> Vec<Instance> {
                 name: meta.name.unwrap_or(name),
                 icon: meta.icon,
                 group: meta.group,
-                version: meta.version,
+                version: required.remove(&id).or(meta.version),
                 played: Duration::from_secs(meta.played_secs),
                 last_played: meta
                     .last_played

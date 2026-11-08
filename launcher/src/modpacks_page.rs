@@ -119,13 +119,23 @@ impl Launcher {
     fn play_pack(&mut self, work: PathBuf) {
         // The pack's instance plays its own version, if it has one.
         let pack = self.instances.list.iter().find(|i| i.work == work);
-        let Some(tag) = pack
-            .and_then(|i| self.version_of(i))
-            .or_else(|| self.launcher_version())
-            .cloned()
-        else {
+        let pinned = pack.and_then(|instance| instance.version.as_ref());
+        let Some(tag) = pinned.or_else(|| self.launcher_version()).cloned() else {
             return;
         };
+        if !self.installed.contains(&tag) {
+            if let super::Load::Ready(releases) = &self.releases {
+                if let Some(release) = releases.iter().find(|r| r.tag == tag && r.asset.is_some()) {
+                    self.install_for_instance(release.clone());
+                    return;
+                }
+            }
+            self.client_error = Some(trf(
+                "Game version {version} is required for this pack.",
+                &[("version", &tag)],
+            ));
+            return;
+        }
         if !self.can_start(&tag) {
             return;
         }

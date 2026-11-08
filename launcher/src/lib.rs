@@ -63,3 +63,5 @@ pub mod wardrobe;
 #[cfg(windows)]
 mod windows_runtime;
 pub mod worlds;
+
+pub mod zenith_game;

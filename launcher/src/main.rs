@@ -1589,9 +1589,10 @@ impl Launcher {
 
     /// The version Play starts: the selected instance's own, else the launcher's.
     fn selected(&self) -> Option<&String> {
-        self.selected_instance()
-            .and_then(|i| self.version_of(i))
-            .or_else(|| self.launcher_version())
+        match self.selected_instance() {
+            Some(instance) => self.version_of(instance),
+            None => self.launcher_version(),
+        }
     }
 
     /// The launcher's version: what instances without one of their own play.
@@ -2154,7 +2155,8 @@ fn version_tag(tag: &str) -> Div {
         .line_height(px(28.))
         .font_weight(FontWeight::MEDIUM)
         .child(
-            horizon_launcher::nightly::label(tag)
+            horizon_launcher::zenith_game::label(tag)
+                .or_else(|| horizon_launcher::nightly::label(tag))
                 .or_else(|| build_import::label(tag))
                 .unwrap_or_else(|| tag.trim_start_matches('v').to_string()),
         )
@@ -3159,7 +3161,8 @@ impl Launcher {
         let label = self.selected().map_or_else(
             || tr("No version").into(),
             |tag| {
-                horizon_launcher::nightly::label(tag)
+                horizon_launcher::zenith_game::label(tag)
+                    .or_else(|| horizon_launcher::nightly::label(tag))
                     .or_else(|| build_import::label(tag))
                     .unwrap_or_else(|| tag.clone())
             },
@@ -4865,11 +4868,7 @@ impl Launcher {
                     .flex_col()
                     .gap(px(6.))
                     .child(version)
-                    .children(update)
-                    .child(text(theme::CAPTION).text_color(t.muted).child(trf(
-                        "Rust Edition preview {version}",
-                        &[("version", backend::ZENITH_ENGINE_PREVIEW)],
-                    ))),
+                    .children(update),
             )
             .child(
                 div()
@@ -4897,6 +4896,77 @@ impl Launcher {
                         }),
                     ),
             )
+    }
+
+    fn zenith_game_versions(
+        &self,
+        on_disk: &dyn Fn(&String) -> Option<u64>,
+        cx: &mut Context<Self>,
+    ) -> Div {
+        use horizon_launcher::zenith_game;
+        let t = self.theme;
+        let mut list = div()
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .child(caps(tr("Zenith Rust Edition builds")).text_color(t.muted))
+            .children(
+                self.installed
+                    .iter()
+                    .filter(|tag| zenith_game::is_tag(tag))
+                    .map(|tag| self.local_build_row(tag, on_disk, cx)),
+            );
+        if let Load::Ready(releases) = &self.releases {
+            for release in releases.iter().filter(|release| {
+                zenith_game::is_tag(&release.tag) && !self.installed.contains(&release.tag)
+            }) {
+                let release = release.clone();
+                let tag = release.tag.clone();
+                let name = zenith_game::label(&tag).unwrap_or_else(|| tag.clone());
+                let status = self
+                    .installing
+                    .as_ref()
+                    .filter(|(version, _)| version == &tag);
+                let error = self
+                    .install_error
+                    .as_ref()
+                    .filter(|(version, _)| version == &tag);
+                let mut install = button(format!("install-{tag}"), "Install", Kind::Primary, &t);
+                if self.installing.is_some() || release.asset.is_none() {
+                    install = disabled(install);
+                } else {
+                    install = install.on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                        this.install(&release);
+                        cx.notify();
+                    }));
+                }
+                list = list.child(
+                    plate(&t)
+                        .p(px(12.))
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .gap(px(8.))
+                                .child(text(theme::UI).text_color(t.ink).child(name))
+                                .child(install),
+                        )
+                        .children(status.map(|(_, value)| progress_bar(Some((0., *value)), &t)))
+                        .children(error.map(|(_, error)| notice(error.clone(), &t))),
+                );
+            }
+        }
+        if !matches!(&self.releases, Load::Ready(releases) if releases.iter().any(|r| zenith_game::is_tag(&r.tag)))
+        {
+            list = list.child(text(theme::CAPTION).text_color(t.muted).child(tr(
+                "Zenith previews require access to the Zenith game repository.",
+            )));
+        }
+        list
     }
 
     fn versions_page(&mut self, cx: &mut Context<Self>) -> Div {
@@ -4981,6 +5051,7 @@ impl Launcher {
             .gap(px(32.))
             .child(header)
             .child(self.zenith_version_card())
+            .child(self.zenith_game_versions(&on_disk, cx))
             .children(sponsor)
             .child(
                 div()
@@ -5036,6 +5107,11 @@ impl Launcher {
             }
             Load::Ready(r) => r,
         };
+        let releases: Vec<_> = releases
+            .iter()
+            .filter(|release| !horizon_launcher::zenith_game::is_tag(&release.tag))
+            .cloned()
+            .collect();
         // A hundred releases: only the rows near the screen are drawn.
         let keep = |i: usize| {
             let tag = &releases[i].tag;

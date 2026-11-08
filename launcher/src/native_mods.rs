@@ -1304,6 +1304,9 @@ fn profile_of(source: &Path, chosen: Profile) -> Profile {
 
 /// The Horizon commit `version` (an installed release or Nightly) was built from, from GitHub.
 pub fn revision_of(version: &str) -> Result<String, String> {
+    if crate::zenith_game::is_tag(version) {
+        return crate::zenith_game::VerifiedRelease::load(version)?.source_revision();
+    }
     let reference = match version.strip_prefix("nightly-") {
         // nightly-2026-10-28-0c02067: the commit is its last word.
         Some(rest) => rest.rsplit('-').next().unwrap_or(rest),
@@ -1416,9 +1419,9 @@ fn pinned_revision(
 
 /// The newest installed release or Nightly in `installed` (newest first).
 pub(crate) fn newest_installed(installed: &[String]) -> Option<&String> {
-    installed
-        .iter()
-        .find(|t| backend::is_game_tag(t) || t.starts_with("nightly-"))
+    installed.iter().find(|t| {
+        backend::is_game_tag(t) || t.starts_with("nightly-") || crate::zenith_game::is_tag(t)
+    })
 }
 
 /// The installed version a build for an instance that plays `current` starts from: `current`
@@ -2049,24 +2052,44 @@ fn source(revision: &str) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
+fn zenith_source(tag: &str, revision: &str) -> Result<PathBuf, String> {
+    let parent = root().join("zenith-source");
+    let dir = parent.join(revision);
+    if dir.join(".horizon-revision").is_file() {
+        return Ok(dir);
+    }
+    let release = crate::zenith_game::VerifiedRelease::load(tag)?;
+    if release.source_revision()? != revision {
+        return Err(crate::i18n::tr("The Zenith release has a different source revision.").into());
+    }
+    let partial = parent.join(format!(".{revision}.partial"));
+    let _ = fs::remove_dir_all(&partial);
+    fs::create_dir_all(&partial).map_err(|e| e.to_string())?;
+    let result = (|| {
+        let archive = partial.join("source.tar.gz");
+        release.download("zenith-source.tar.gz", &archive, &|_| {})?;
+        let source = partial.join("source");
+        fs::create_dir(&source).map_err(|e| e.to_string())?;
+        let reader = fs::File::open(&archive).map_err(|e| e.to_string())?;
+        extract_source(reader, &source, 2 << 30)?;
+        if !source.join("Cargo.toml").is_file() {
+            return Err(
+                crate::i18n::tr("The Zenith source archive has no Cargo workspace.").into(),
+            );
+        }
+        fs::write(source.join(".horizon-revision"), revision).map_err(|e| e.to_string())?;
+        fs::rename(&source, &dir).map_err(|e| e.to_string())
+    })();
+    let _ = fs::remove_dir_all(&partial);
+    result.map(|()| dir)
+}
+
 /// GitHub's archive (`.tar.gz`) at `url`, unpacked into the fresh folder `partial`: the archive's
 /// one top folder, which is returned. Links are left out; at most `limit` bytes are unpacked.
 pub(crate) fn unpack_archive(url: &str, partial: &Path, limit: u64) -> Result<PathBuf, String> {
-    use std::io::Read;
     let _ = fs::remove_dir_all(partial);
     fs::create_dir_all(partial).map_err(|e| e.to_string())?;
-    let reader = flate2::read::GzDecoder::new(backend::get(url)?.into_reader()).take(limit);
-    let mut tar = tar::Archive::new(reader);
-    for entry in tar.entries().map_err(|e| e.to_string())? {
-        let mut entry = entry.map_err(|e| format!("Download interrupted: {e}"))?;
-        let kind = entry.header().entry_type();
-        if !(kind.is_file() || kind.is_dir()) {
-            continue;
-        }
-        entry
-            .unpack_in(partial)
-            .map_err(|e| format!("Could not unpack the source: {e}"))?;
-    }
+    extract_source(backend::get(url)?.into_reader(), partial, limit)?;
     // The archive's one top folder (<repo>-<commit>/) is the source's root.
     fs::read_dir(partial)
         .map_err(|e| e.to_string())?
@@ -2074,6 +2097,26 @@ pub(crate) fn unpack_archive(url: &str, partial: &Path, limit: u64) -> Result<Pa
         .map(|e| e.path())
         .find(|p| p.is_dir())
         .ok_or_else(|| "The source archive is empty.".into())
+}
+
+fn extract_source(reader: impl std::io::Read, partial: &Path, limit: u64) -> Result<(), String> {
+    use std::io::Read;
+    let reader = flate2::read::GzDecoder::new(reader).take(limit);
+    let mut tar = tar::Archive::new(reader);
+    for entry in tar.entries().map_err(|e| e.to_string())? {
+        let mut entry = entry.map_err(|e| format!("Download interrupted: {e}"))?;
+        let kind = entry.header().entry_type();
+        if !(kind.is_file() || kind.is_dir()) {
+            continue;
+        }
+        if !entry
+            .unpack_in(partial)
+            .map_err(|e| format!("Could not unpack the source: {e}"))?
+        {
+            return Err("The source archive has a path outside its folder.".into());
+        }
+    }
+    Ok(())
 }
 
 /// Makes `to` hold `from`'s files, writing only those that changed, so Cargo, which goes by file
@@ -2296,7 +2339,8 @@ fn pipeline(
     // A mod naming a hook points' version doesn't pin: it follows the others, else the game.
     let pins: Vec<Bundle> = mods.iter().filter(|b| b.hooks.is_none()).cloned().collect();
     let free = pins.iter().all(|b| b.horizon.is_none());
-    let on_base = on_base || built_on.as_ref().is_some_and(|a| a.on_base);
+    let zenith = crate::zenith_game::is_tag(origin);
+    let on_base = on_base || zenith || built_on.as_ref().is_some_and(|a| a.on_base);
     // The commit of the release or Nightly the build starts from. A native build's own is that
     // of the version it started from when it recorded it; else, outside `on_base`, the commit it
     // compiled, so a rebuild stays on the Horizon it plays.
@@ -2316,7 +2360,29 @@ fn pipeline(
         false => base_revision().ok(),
     };
     let game = || revision_of(origin).ok();
-    let revision = with_hooks(&mods, pinned.clone(), free, game, hooks_at, catalog_at)?;
+    let revision = if zenith {
+        let source = zenith_source(origin, &pinned)?;
+        let hooks = fs::read_to_string(source.join(HOOKS_FILE)).ok();
+        let catalog = fs::read_to_string(source.join(CATALOG)).ok();
+        with_hooks(
+            &mods,
+            pinned.clone(),
+            false,
+            || Some(pinned.clone()),
+            |revision| {
+                (revision == pinned)
+                    .then(|| hooks.as_deref().and_then(hooks_in))
+                    .flatten()
+            },
+            |revision| {
+                (revision == pinned)
+                    .then(|| catalog.as_deref().and_then(catalog_in))
+                    .flatten()
+            },
+        )?
+    } else {
+        with_hooks(&mods, pinned.clone(), free, game, hooks_at, catalog_at)?
+    };
     // Nothing to say when the pin is the base's own commit, or the hook points moved the build.
     if base_horizon.as_ref() == Some(&revision) || revision != pinned {
         pinned_by.clear();
@@ -2399,7 +2465,11 @@ fn pipeline(
         let rust = rust_toolchain::install(|f| progress(Step::Rust(f)))?;
         let needs_mixins = mods.iter().any(|m| m.mixins_content);
         progress(Step::Source(revision.clone()));
-        let source = source(&revision)?;
+        let source = if zenith {
+            zenith_source(origin, &revision)?
+        } else {
+            source(&revision)?
+        };
         // `root()` is already the form horizon-mixins and MinGW take: resolved (no link, which
         // it refuses) and, on Windows, ASCII (which they can't read past), both by build_dir.
         let real = root();
@@ -3098,6 +3168,7 @@ mod tests {
     /// ARM64 target's rustflags, nothing on the other hosts.
     fn host_args(rust: &Toolchain) -> Vec<String> {
         let mut cmd = Command::new("cargo");
+        cmd.env_remove(crate::zenith_game::TOKEN_ENV);
         rust.configure_cargo(&mut cmd);
         cmd.get_args()
             .map(|a| a.to_string_lossy().into_owned())

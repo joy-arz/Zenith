@@ -1,7 +1,7 @@
 //! Everything that is not UI: GitHub, installs, resource preparation, the game's processes and
 //! updates. The GUI, the CLI and the MCP server all go through this module. Functions here
 //! block; the GUI runs them on threads and reads their messages.
-use crate::{account, mojang, sources};
+use crate::{account, mojang, sources, zenith_game};
 use std::fs;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
@@ -10,7 +10,6 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 pub const REPO: &str = "horizon-rust/horizon";
-pub const ZENITH_ENGINE_PREVIEW: &str = "0.1.0-preview.1";
 /// This fork publishes launcher updates independently of the upstream game.
 pub const LAUNCHER_REPO: &str = "joy-arz/Zenith";
 pub const README_URL: &str = "https://github.com/joy-arz/Zenith/blob/main/FORK.md";
@@ -188,9 +187,34 @@ fn architecture_for_platform(architecture: &str) -> Option<GameArchitecture> {
 
 fn architecture_for_asset(asset: &str) -> Option<GameArchitecture> {
     match asset.rsplit('/').next()? {
-        "horizon-windows-x64.zip" => Some(GameArchitecture::X64),
-        "horizon-windows-arm64.zip" => Some(GameArchitecture::Arm64),
+        "horizon-windows-x64.zip" | "zenith-windows-x64.tar.gz" => Some(GameArchitecture::X64),
+        "horizon-windows-arm64.zip" | "zenith-windows-arm64.tar.gz" => {
+            Some(GameArchitecture::Arm64)
+        }
         _ => None,
+    }
+}
+
+pub(crate) fn zenith_game_assets() -> (Option<&'static str>, Option<&'static str>) {
+    let arch = std::env::consts::ARCH;
+    let os = std::env::consts::OS;
+    let settings = Settings::load();
+    if os == "windows" {
+        let (primary, fallback) = game_assets_for(
+            os,
+            native_windows_architecture(),
+            arch,
+            settings.game_architecture,
+        )
+        .unwrap_or(("horizon-windows-x64.zip", None));
+        let convert = |asset| match architecture_for_asset(asset) {
+            Some(GameArchitecture::Arm64) => zenith_game::asset_name(os, "aarch64"),
+            Some(GameArchitecture::X64) => zenith_game::asset_name(os, "x86_64"),
+            _ => None,
+        };
+        (convert(primary), fallback.and_then(convert))
+    } else {
+        (zenith_game::asset_name(os, arch), None)
     }
 }
 
@@ -610,6 +634,7 @@ pub fn release_order(tag: &str) -> ReleaseOrder {
     let semver = tag
         .strip_prefix(LAUNCHER_TAG_PREFIX)
         .or_else(|| tag.strip_prefix('v'))
+        .or_else(|| zenith_game::version(tag))
         .and_then(semver_order);
     semver.unwrap_or_else(|| {
         let v = tag
@@ -729,7 +754,16 @@ fn is_launcher_tag(tag: &str) -> bool {
 /// 2026-10-28, docs/release-flow.md), the last week's Nightlies, then the releases from before.
 /// Drafts never reach the anonymous API, and launcher releases are left out.
 pub fn releases() -> Result<Vec<Release>, String> {
-    Ok(game_releases(&release_list()?))
+    let zenith = zenith_game::releases().unwrap_or_default();
+    match release_list() {
+        Ok(list) => {
+            let mut upstream = game_releases(&list);
+            upstream.extend(zenith);
+            Ok(upstream)
+        }
+        Err(_) if !zenith.is_empty() => Ok(zenith),
+        Err(error) => Err(error),
+    }
 }
 
 /// The game's builds in `list`, newest first. A Nightly is listed under the version it installs as
@@ -1146,7 +1180,7 @@ pub(crate) fn download(
 
 /// Saves `reader` as `to` once all of it has arrived and its SHA-256 is `sha256`: until then it
 /// has a temporary name beside `to`, so `to` is never a partial or unchecked file.
-fn save_checked(
+pub(crate) fn save_checked(
     reader: impl Read,
     size: u64,
     name: &str,
@@ -1209,6 +1243,23 @@ fn unpack(archive: &Path, url: &str, to: &Path) -> Result<(), String> {
 pub fn install(release: &Release, progress: impl Fn(f32)) -> Result<(), String> {
     let tag = release.tag.as_str();
     let settings = Settings::load();
+    if zenith_game::is_tag(tag) {
+        let (asset, fallback) = zenith_game_assets();
+        let name = asset_installed(release, asset, fallback).ok_or_else(|| {
+            crate::i18n::trf(
+                "{tag} has no build for the selected game architecture.",
+                &[("tag", tag)],
+            )
+        })?;
+        let verified = zenith_game::VerifiedRelease::load(tag)?;
+        return install_archive(
+            tag,
+            name,
+            selected_game_architecture(&settings),
+            &progress,
+            |path| verified.download(name, path, &progress),
+        );
+    }
     let assets = game_assets_for(
         std::env::consts::OS,
         native_windows_architecture(),
@@ -1292,14 +1343,69 @@ pub(crate) fn install_as(
         .asset
         .clone()
         .ok_or_else(|| format!("{tag} has no build for this platform."))?;
+    install_archive(tag, &url, requested_architecture, &progress, |archive| {
+        download(&url, size, sha256, archive, &progress)
+    })
+}
+
+fn install_archive(
+    tag: &str,
+    filename: &str,
+    requested_architecture: Option<GameArchitecture>,
+    progress: &impl Fn(f32),
+    download_archive: impl FnOnce(&Path) -> Result<(), String>,
+) -> Result<(), String> {
     let root = versions_dir();
     let partial = root.join(format!(".{tag}.partial"));
+    fs::create_dir_all(&root).map_err(|e| e.to_string())?;
+    let _lock = if zenith_game::is_tag(tag) {
+        let lock = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(root.join(format!(".{tag}.lock")))
+            .map_err(|e| e.to_string())?;
+        lock.lock().map_err(|e| e.to_string())?;
+        if version_dir(tag).join(COMPLETE).is_file() {
+            progress(1.0);
+            return Ok(());
+        }
+        Some(lock)
+    } else {
+        None
+    };
     let _ = fs::remove_dir_all(&partial);
     fs::create_dir_all(&partial).map_err(|e| e.to_string())?;
-    let archive = partial.join("download");
-    download(&url, size, sha256, &archive, &progress)?;
+    let result = (|| {
+        let archive = partial.join("download");
+        download_archive(&archive)?;
+        finish_install(
+            tag,
+            filename,
+            requested_architecture,
+            progress,
+            &partial,
+            &archive,
+        )
+    })();
+    let _ = fs::remove_dir_all(&partial);
+    if result.is_ok() {
+        reuse_prepared_for(tag);
+        progress(1.0);
+    }
+    result
+}
+
+fn finish_install(
+    tag: &str,
+    filename: &str,
+    requested_architecture: Option<GameArchitecture>,
+    progress: &impl Fn(f32),
+    partial: &Path,
+    archive: &Path,
+) -> Result<(), String> {
     let unpacked = partial.join("unpacked");
-    unpack(&archive, &url, &unpacked)?;
+    unpack(archive, filename, &unpacked)?;
     progress(0.97);
     // The archives hold one top folder (horizon-linux-x86_64/...); the version folder is its contents.
     let entries: Vec<_> = fs::read_dir(&unpacked)
@@ -1318,7 +1424,8 @@ pub(crate) fn install_as(
         use std::os::unix::fs::PermissionsExt;
         let _ = fs::set_permissions(top.join(CLIENT), fs::Permissions::from_mode(0o755));
     }
-    if let (Some(requested), Some(binary)) = (requested_architecture, architecture_for_asset(&url))
+    if let (Some(requested), Some(binary)) =
+        (requested_architecture, architecture_for_asset(filename))
     {
         fs::write(
             top.join(GAME_BUILD_ARCHITECTURE),
@@ -1328,12 +1435,9 @@ pub(crate) fn install_as(
         .map_err(|e| e.to_string())?;
     }
     let target = version_dir(tag);
+    fs::write(top.join(COMPLETE), "").map_err(|e| e.to_string())?;
     let _ = fs::remove_dir_all(&target);
     fs::rename(&top, &target).map_err(|e| e.to_string())?;
-    fs::write(target.join(COMPLETE), "").map_err(|e| e.to_string())?;
-    let _ = fs::remove_dir_all(&partial);
-    reuse_prepared_for(tag);
-    progress(1.0);
     Ok(())
 }
 
@@ -2999,6 +3103,7 @@ pub fn client_command(tag: &str) -> Command {
     cmd.current_dir(&home)
         .env("HORIZON_HOME", &home)
         .env("HORIZON_TELEMETRY_URL", "off")
+        .env_remove(zenith_game::TOKEN_ENV)
         .env_remove("HORIZON_ACCOUNT_SESSIONS")
         .arg("--resources")
         .arg(resources(tag));
@@ -3034,6 +3139,7 @@ pub fn server_command(tag: &str, folder: &Path) -> Command {
     let mut cmd = Command::new(version_dir(tag).join(CLIENT));
     cmd.current_dir(folder)
         .env("HORIZON_TELEMETRY_URL", "off")
+        .env_remove(zenith_game::TOKEN_ENV)
         .arg("--resources")
         .arg(resources(tag))
         .args(["--dedicated", "--nogui"]);
@@ -3440,7 +3546,47 @@ fn launcher_update_from(releases: &[Release], own: &str) -> Option<Release> {
 pub fn releases_and_updates(
     on_releases: impl FnOnce(Result<Vec<Release>, String>),
 ) -> Result<Updates, String> {
-    releases_and_updates_with(release_list, installed, launcher_releases_in, on_releases)
+    let zenith = zenith_game::releases().unwrap_or_default();
+    let installed_versions = installed();
+    let settings = Settings::load();
+    let zenith_selected = settings
+        .selected
+        .as_deref()
+        .is_some_and(zenith_game::is_tag);
+    let upstream = releases_and_updates_with(
+        release_list,
+        || {
+            installed_versions
+                .iter()
+                .filter(|tag| !zenith_game::is_tag(tag))
+                .cloned()
+                .collect()
+        },
+        launcher_releases_in,
+        |result| {
+            on_releases(match result {
+                Ok(mut releases) => {
+                    releases.extend(zenith.iter().cloned());
+                    Ok(releases)
+                }
+                Err(_) if !zenith.is_empty() => Ok(zenith.clone()),
+                Err(error) => Err(error),
+            });
+        },
+    );
+    let mut updates = match upstream {
+        Ok(updates) => updates,
+        Err(_) if !zenith.is_empty() => Updates::default(),
+        Err(error) => return Err(error),
+    };
+    if zenith_selected {
+        let installed_zenith: Vec<_> = installed_versions
+            .into_iter()
+            .filter(|tag| zenith_game::is_tag(tag))
+            .collect();
+        updates.horizon = horizon_update(&zenith, &installed_zenith);
+    }
+    Ok(updates)
 }
 
 fn releases_and_updates_with(
@@ -3500,6 +3646,11 @@ pub fn select_after_update(selected: Option<&str>, installed_before: &[String]) 
         None => true,
         Some(s) if crate::nightly::date_of(s).is_some() => true,
         Some(s) if crate::build_import::is_imported(s) => false,
+        Some(s) if zenith_game::is_tag(s) => installed_before
+            .iter()
+            .filter(|tag| zenith_game::is_tag(tag))
+            .max_by(|a, b| compare_versions(a, b))
+            .is_none_or(|newest| newest == s),
         Some(s) => installed_before
             .iter()
             .find(|t| is_game_tag(t))
@@ -3510,8 +3661,17 @@ pub fn select_after_update(selected: Option<&str>, installed_before: &[String]) 
 /// Installs `tag` (or with "latest" the newest release, pre-releases left out), then updates the selection as
 /// `select_after_update` says when `as_update`, or always selects it otherwise.
 pub fn install_tag(tag: &str, as_update: bool, progress: impl Fn(f32)) -> Result<String, String> {
-    let releases = releases()?;
-    let release = if tag == "latest" {
+    let zenith = zenith_game::is_tag(tag) || tag == "zenith-latest";
+    let releases = if zenith {
+        zenith_game::releases()?
+    } else {
+        releases()?
+    };
+    let release = if tag == "zenith-latest" {
+        latest(&releases).ok_or_else(|| {
+            crate::i18n::tr("No Zenith game build is available for this platform.").to_string()
+        })?
+    } else if tag == "latest" {
         releases
             .iter()
             .find(|r| r.asset.is_some() && !r.prerelease)
@@ -4529,7 +4689,7 @@ pub struct Settings {
     /// What the window does while the game runs. Stays by default.
     #[serde(default)]
     pub while_playing: WhilePlaying,
-    /// The accent colour on top of the appearance (`themes::Accent`). Horizon's violet by default.
+    /// The accent colour on top of the appearance (`themes::Accent`). Zenith's orange by default.
     #[serde(default)]
     pub accent: crate::themes::Accent,
     /// How much white the glass look's plates take, in percent (the mockup's Glass, 0 to 16).
@@ -5742,9 +5902,13 @@ mod tests {
     }
 
     #[test]
-    fn the_accent_is_violet_unless_picked_and_an_unknown_one_keeps_the_rest() {
+    fn the_accent_is_orange_unless_picked_and_an_unknown_one_keeps_the_rest() {
         use crate::themes::Accent;
-        assert_eq!(Settings::parse("{}").accent, Accent::VIOLET);
+        assert_eq!(Settings::parse("{}").accent, Accent::ORANGE);
+        assert_eq!(
+            Settings::parse(r#"{"accent":"violet"}"#).accent,
+            Accent::VIOLET
+        );
         let teal =
             Settings::parse(r#"{"accent": "teal", "background": "background-0123456789ab.png"}"#);
         assert_eq!(
@@ -5754,7 +5918,7 @@ mod tests {
         let future = Settings::parse(r#"{"accent": "plaid", "game_args": "--x"}"#);
         assert_eq!(
             (future.accent, future.game_args.as_str()),
-            (Accent::VIOLET, "--x")
+            (Accent::ORANGE, "--x")
         );
     }
 

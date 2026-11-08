@@ -35,6 +35,9 @@ pub struct Manifest {
     pub authors: Vec<String>,
     /// The Minecraft version it is for.
     pub game: String,
+    /// An optional exact Zenith Rust Edition release tag.
+    #[serde(default)]
+    pub zenith_version: Option<String>,
     #[serde(default)]
     pub mods: Vec<PackMod>,
 }

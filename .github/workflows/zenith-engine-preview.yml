@@ -149,7 +149,8 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: inputs.publish_preview && github.event.repository.private
+    environment: zenith-engine-release
+    if: inputs.publish_preview && github.event.repository.private && github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -164,6 +165,12 @@ jobs:
           pattern: zenith-*
           path: dist
           merge-multiple: true
+      - name: Sign the verified checksums for Zenith Launcher
+        env:
+          ZENITH_ENGINE_SIGNING_KEY: ${{ secrets.ZENITH_ENGINE_SIGNING_KEY }}
+        run: |
+          (cd dist && sha256sum --check SHA256SUMS)
+          bash tools/ci/sign_zenith_checksums.sh "zenith-game@$HORIZON_VERSION" dist launcher/zenith-engine-release-keys.txt
       - name: Publish the verified preview
         env:
           GH_TOKEN: ${{ github.token }}
@@ -184,4 +191,4 @@ jobs:
           fi
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
             --title "Zenith Rust Edition $HORIZON_VERSION" --notes-file packaging/ZENITH-PREVIEW.txt \
-            dist/*.tar.gz dist/preview.json dist/SHA256SUMS dist/SHA256SUMS.sig dist/ephemeral.pub
+            dist/*.tar.gz dist/preview.json dist/SHA256SUMS dist/SHA256SUMS.sig dist/SHA256SUMS.zenith.sig dist/ephemeral.pub

@@ -721,7 +721,13 @@ enum Cmd {
         #[arg(long)]
         installed: bool,
     },
-    /// Download and install a release (a tag such as v2026.10.13, or "latest")
+    /// Read a GitHub token for private Zenith previews from standard input and store it
+    ZenithAccess {
+        /// Remove saved Zenith repository access
+        #[arg(long)]
+        forget: bool,
+    },
+    /// Install a release by tag, "latest" for Horizon, or "zenith-latest" for Zenith
     Install { tag: String },
     /// Remove an installed version
     Remove { tag: String },
@@ -862,7 +868,7 @@ enum Cmd {
     /// newest to keep; "default" is 2), opening-animation on|off, proxy http://host:port|socks5://host:port
     /// ("default" removes it), while-playing stay|minimize|hide (what the window does while the game runs), language
     /// system|en|fr|ru|de|zh|es|uk|pl (the window's language; system follows the computer's), accent
-    /// violet|blue|teal|green|amber|red|pink|#rrggbb|DEGREES (a named accent, any colour, or any
+    /// orange|violet|blue|teal|green|amber|red|pink|#rrggbb|DEGREES (a named accent, any colour, or any
     /// hue), background PATH (a picture behind Home; "default"
     /// shows Horizon's landscape), native-cache-gib N (combined native compilation cache limit
     /// in GiB, default 30; 0 disables automatic cleanup), native-profile performance|dev|release (the profile native
@@ -1303,6 +1309,17 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
                     (false, false) => "no build for this platform",
                 };
                 println!("{:<15} {}  {}", r.tag, r.date, state);
+            }
+        }
+        Cmd::ZenithAccess { forget } => {
+            if forget {
+                horizon_launcher::zenith_game::forget_access_token()?;
+            } else {
+                let mut token = String::new();
+                std::io::stdin()
+                    .read_line(&mut token)
+                    .map_err(|error| error.to_string())?;
+                horizon_launcher::zenith_game::save_access_token(&token)?;
             }
         }
         Cmd::Install { tag } => {

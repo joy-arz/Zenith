@@ -1244,5 +1244,21 @@
   "Zenith Rust Edition builds": "Zenith Rust Edition builds",
   "Zenith launcher {version}": "Zenith launcher {version}",
   "Zenith updates and compatible game builds.": "Zenith updates and compatible game builds.",
-  "Rust Edition preview {version}": "Rust Edition preview {version}"
+  "Zenith Rust Edition {version}": "Zenith Rust Edition {version}",
+  "Could not connect to the Zenith game repository.": "Could not connect to the Zenith game repository.",
+  "Enter a GitHub token with read access to the Zenith game repository.": "Enter a GitHub token with read access to the Zenith game repository.",
+  "Game version {version} is required for this pack.": "Game version {version} is required for this pack.",
+  "GitHub did not return the requested Zenith release.": "GitHub did not return the requested Zenith release.",
+  "GitHub returned HTTP {status} for the Zenith game repository.": "GitHub returned HTTP {status} for the Zenith game repository.",
+  "Invalid Zenith game version.": "Invalid Zenith game version.",
+  "No Zenith game build is available for this platform.": "No Zenith game build is available for this platform.",
+  "The Zenith release has a different source revision.": "The Zenith release has a different source revision.",
+  "The Zenith release has no source revision.": "The Zenith release has no source revision.",
+  "The Zenith release has no {file} attachment.": "The Zenith release has no {file} attachment.",
+  "The Zenith source archive has no Cargo workspace.": "The Zenith source archive has no Cargo workspace.",
+  "This Zenith release has no trusted signature.": "This Zenith release has no trusted signature.",
+  "Zenith previews require access to the Zenith game repository.": "Zenith previews require access to the Zenith game repository.",
+  "Zenith release metadata is too large.": "Zenith release metadata is too large.",
+  "Zenith release metadata names a different game version.": "Zenith release metadata names a different game version.",
+  "The launcher cannot save Zenith repository access on this device.": "The launcher cannot save Zenith repository access on this device."
 }
