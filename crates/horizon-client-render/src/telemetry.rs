@@ -192,6 +192,9 @@ pub fn crash_item(report: &crate::crash::Report) -> Item {
 
 /// Keeps the crash for the launcher to send, if the player allows crash reports.
 pub fn keep_crash(home: &Path, report: &crate::crash::Report) {
+    if horizon_telemetry::endpoint().is_none() {
+        return;
+    }
     if let Err(e) = outbox::push(home, &crash_item(report)) {
         log::warn!("Horizon: could not keep the crash report to send: {e}");
     }
@@ -200,6 +203,9 @@ pub fn keep_crash(home: &Path, report: &crate::crash::Report) {
 /// Keeps a benchmark report (`--benchmark`) for the launcher to send, if the player allows
 /// benchmark uploads: the report as docs/benchmark-report.md defines it, dated to the day.
 pub fn keep_benchmark(home: &Path, report: &horizon_bench::Report) {
+    if horizon_telemetry::endpoint().is_none() {
+        return;
+    }
     let Ok(data) = serde_json::to_value(report.for_upload()) else {
         return;
     };
@@ -302,7 +308,8 @@ impl Session {
     /// Keeps the session's summary for the launcher to send, if the player allows performance
     /// statistics, and starts the next session (the time to the title goes with the first).
     pub fn finish(&mut self, home: &Path, settings: Settings) {
-        if horizon_telemetry::Consent::load(home).allows(horizon_telemetry::Kind::Perf)
+        if horizon_telemetry::endpoint().is_some()
+            && horizon_telemetry::Consent::load(home).allows(horizon_telemetry::Kind::Perf)
             && let Some(perf) = self.summary(settings)
         {
             let item = Item::new(Source::Game, version(), Payload::Perf(perf));
@@ -350,7 +357,7 @@ fn peak_ram_mb() -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use horizon_telemetry::{Choices, Consent, Kind};
+    use horizon_telemetry::{Choices, Consent};
 
     fn home(name: &str) -> std::path::PathBuf {
         let dir = std::env::temp_dir().join(format!(
@@ -439,7 +446,7 @@ mod tests {
     }
 
     #[test]
-    fn benchmark_reports_need_their_own_consent_and_go_dated_to_the_day() {
+    fn benchmarks_are_not_queued_with_old_consent() {
         let home = home("benchmark");
         let mut report = horizon_bench::Report::new(horizon_bench::Kind::Game, Default::default());
         report.created = "2026-10-15T14:03:27Z".into();
@@ -462,17 +469,11 @@ mod tests {
             },
         );
         keep_benchmark(&home, &report);
-        let pending = outbox::pending(&home);
-        assert_eq!(pending.len(), 1);
-        let text = serde_json::to_string(&pending[0].1).unwrap();
-        assert!(
-            text.contains("2026-10-15T00:00:00Z") && !text.contains("my machine"),
-            "{text}"
-        );
+        assert!(outbox::pending(&home).is_empty());
     }
 
     #[test]
-    fn crashes_stay_local_without_consent() {
+    fn crashes_stay_local_even_with_old_consent() {
         let home = home("crash");
         keep_crash(&home, &report());
         assert!(outbox::pending(&home).is_empty());
@@ -493,9 +494,7 @@ mod tests {
             },
         );
         keep_crash(&home, &report());
-        let pending = outbox::pending(&home);
-        assert_eq!(pending.len(), 1);
-        assert_eq!(pending[0].1.kind(), Kind::Crash);
+        assert!(outbox::pending(&home).is_empty());
     }
 
     #[test]
@@ -513,7 +512,7 @@ mod tests {
     }
 
     #[test]
-    fn a_session_is_kept_only_with_consent_and_once_long_enough() {
+    fn play_sessions_are_not_queued_with_old_consent() {
         let home = home("session");
         let mut session = Session::default();
         session.world_opening();
@@ -533,24 +532,18 @@ mod tests {
         session.world_opening();
         (0..4000).for_each(|_| session.frame(16.6, &[]));
         (0..1200).for_each(|_| session.tick(4.0));
-        session.finish(
-            &home,
-            Settings {
-                render_distance: 12,
-                ..Settings::default()
-            },
-        );
-        let pending = outbox::pending(&home);
-        assert_eq!(pending.len(), 1);
-        let Payload::Perf(perf) = &pending[0].1.payload else {
-            panic!("a perf item");
+        let settings = Settings {
+            render_distance: 12,
+            ..Settings::default()
         };
+        let perf = session.summary(settings.clone()).unwrap();
         assert_eq!(perf.seconds, 66);
         assert_eq!(perf.frames.count, 4000);
         assert_eq!(perf.ticks.as_ref().unwrap().p50_ms, 4.0);
         assert_eq!(perf.settings.render_distance, 12);
         assert!(perf.to_world_ms.is_some());
-        assert!(serde_json::to_vec(&pending[0].1).unwrap().len() < 1024);
+        session.finish(&home, settings);
+        assert!(outbox::pending(&home).is_empty());
     }
 
     /// Frames of 250 ms or more count under the step that took most of them; a frame with no

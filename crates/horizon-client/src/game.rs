@@ -17678,6 +17678,7 @@ pub fn run_with() -> Result<()> {
     // A player who allows performance statistics also says what their slow frames spent their
     // time in: this thread, which draws the frames, times its steps (wall time only).
     if options.execution_role.is_client()
+        && horizon_telemetry::endpoint().is_some()
         && horizon_telemetry::Consent::load(&horizon_client::logging::game_home())
             .allows(horizon_telemetry::Kind::Perf)
     {
