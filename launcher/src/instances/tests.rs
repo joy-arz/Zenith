@@ -199,12 +199,18 @@ fn names_stay_unique_and_packs_are_not_copied() {
 }
 
 #[test]
-fn an_instance_follows_the_players_answers() {
+fn an_instance_follows_player_settings_without_enabling_telemetry() {
+    use horizon_telemetry::{Choices, Consent};
     let root = scratch("follow");
     let (main, own) = (root.join("main"), root.join("own"));
     put(&main.join("options.txt"), "fov:90\n");
     put(&main.join("horizon-player.txt"), "name:Player123\n");
-    put(&main.join("telemetry/consent.json"), r#"{"version":1}"#);
+    let mut consent = Consent::default();
+    consent.answer(Choices {
+        performance: true,
+        ..Choices::NONE
+    });
+    consent.save(&main).unwrap();
     horizon_core::no_ai::set(&main, true).unwrap();
     put(&own.join("options.txt"), "fov:70\n");
     follow_player(&main, &own);
@@ -216,14 +222,15 @@ fn an_instance_follows_the_players_answers() {
         fs::read_to_string(own.join("horizon-player.txt")).unwrap(),
         "name:Player123\n"
     );
-    assert_eq!(
-        fs::read_to_string(own.join("telemetry/consent.json")).unwrap(),
-        r#"{"version":1}"#
-    );
+    assert!(!Consent::path(&own).exists());
     assert!(horizon_core::no_ai::is_on(&own));
+    consent.save(&own).unwrap();
     horizon_core::no_ai::set(&main, false).unwrap();
     follow_player(&main, &own);
     assert!(!horizon_core::no_ai::is_on(&own));
+    let disabled = Consent::load(&own);
+    assert_eq!(disabled.choices, Choices::NONE);
+    assert_eq!(disabled.install_id, consent.install_id);
     fs::remove_dir_all(&root).unwrap();
 }
 
