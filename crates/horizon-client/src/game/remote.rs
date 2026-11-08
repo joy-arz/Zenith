@@ -606,6 +606,11 @@ pub(super) struct Remote {
     /// sequence its block updates only replace the remembered state; then the block
     /// takes it.
     predictions: HashMap<[i32; 3], Prediction>,
+    /// The entities the level held when its `LocalPlayer` was added
+    /// (`ClientLevel.addEntity` on login or respawn): `ClientLevel.tickEntities`
+    /// ticks in the order entities were added, so these tick before the
+    /// player and every later one after it.
+    ticked_before_player: std::collections::HashSet<u32>,
     /// Open container: (window id, menu name).
     pub(super) menu: Option<(i32, String)>,
     /// The crafting result slot of the open menu as the server last set it
@@ -909,7 +914,7 @@ impl Game<'_> {
         name: &str,
         cookies: Option<horizon_client::net::Cookies>,
     ) -> Result<()> {
-        self.connect_server_with_options(address, name, cookies, false)
+        self.connect_server_with_options(address, name, cookies, false, false)
     }
     /// `ConnectScreen.startConnecting`: keep LAN discovery's server kind through loading.
     pub(super) fn connect_server_with_options(
@@ -918,6 +923,7 @@ impl Game<'_> {
         name: &str,
         cookies: Option<horizon_client::net::Cookies>,
         lan: bool,
+        realm: bool,
     ) -> Result<()> {
         super::world_loading::preload_server_loot(&self.options.resources);
         if self.defer_world_entry(super::PendingWorldEntry::Server {
@@ -925,11 +931,12 @@ impl Game<'_> {
             name: name.to_owned(),
             cookies: cookies.clone(),
             lan,
+            realm,
         })? {
             return Ok(());
         }
         self.join_world_rest()?;
-        if let Err(error) = self.join_server(address, name, None, cookies, lan) {
+        if let Err(error) = self.join_server(address, name, None, cookies, lan, realm) {
             log::warn!("Horizon: could not join server: {error}");
             if self.title.is_none() {
                 self.title = Some(
@@ -955,7 +962,11 @@ impl Game<'_> {
         pipe: horizon_protocol::connection::Pipe,
         name: &str,
     ) -> Result<()> {
-        self.join_server("local", name, Some(pipe), None, false)
+        self.join_server("local", name, Some(pipe), None, false, false)?;
+        // `Minecraft.startIntegratedServer`: the local world is in, so presence reads
+        // the world's status at once.
+        horizon_client::social::try_update_presence();
+        Ok(())
     }
     fn join_server(
         &mut self,
@@ -964,7 +975,9 @@ impl Game<'_> {
         local: Option<horizon_protocol::connection::Pipe>,
         cookies: Option<horizon_client::net::Cookies>,
         lan: bool,
+        realm: bool,
     ) -> Result<()> {
+        self.realm_session = realm;
         self.reset_tutorial();
         self.perf.world_opening();
         // A server's own biomes come over the connection; the last local
@@ -1175,6 +1188,7 @@ impl Game<'_> {
             level_load: horizon_client::level_loading::LevelLoadTracker::new(0),
             sent_info: info,
             predictions: HashMap::new(),
+            ticked_before_player: std::collections::HashSet::new(),
             menu: None,
             craft_result: None,
             menu_title: None,
@@ -1403,6 +1417,7 @@ impl Game<'_> {
             level_load: horizon_client::level_loading::LevelLoadTracker::new(0),
             sent_info: info,
             predictions: HashMap::new(),
+            ticked_before_player: std::collections::HashSet::new(),
             menu: None,
             craft_result: None,
             menu_title: None,
@@ -3746,6 +3761,13 @@ impl Game<'_> {
                     r.sequence = 0;
                 }
                 self.enter_remote_dimension(&p.spawn, true, reason);
+                // handleRespawn adds the new LocalPlayer after what the kept
+                // level holds; a new level holds nothing yet.
+                let before: std::collections::HashSet<u32> =
+                    self.mobs.iter().map(|m| m.id).collect();
+                if let Some(r) = self.remote.as_mut() {
+                    r.ticked_before_player = before;
+                }
                 if dimension_changed {
                     // LevelExtractor.setLevel: a new level drops the highlights.
                     self.test_highlights.clear();
@@ -3906,6 +3928,9 @@ impl Game<'_> {
                 let rotation =
                     [p.yaw, p.pitch, p.head_yaw].map(horizon_protocol::buf::unpack_degrees);
                 if let Some(r) = self.remote.as_mut() {
+                    // ClientLevel.addEntity: an id it holds already is removed
+                    // and added again, after the player.
+                    r.ticked_before_player.remove(&(p.id as u32));
                     // A new entity looks its PlayerInfo up afresh.
                     r.level_player_textures.remove(&p.id);
                     if kind == "minecraft:player" {
@@ -5395,7 +5420,7 @@ impl Game<'_> {
                                         Signature::Unsigned
                                     };
                                     let textures =
-                                        skins::unpack(&t.value, signature, &skins::TEXTURE_URIS);
+                                        skins::unpack(&t.value, signature, skins::texture_uris());
                                     r.skin_textures.entry(e.uuid).or_insert(textures);
                                 }
                             }
@@ -6065,7 +6090,7 @@ impl Game<'_> {
                     horizon_client::skins::unpack(
                         &t.value,
                         signature,
-                        &horizon_client::skins::TEXTURE_URIS,
+                        horizon_client::skins::texture_uris(),
                     )
                 } else {
                     // `ResolvableProfile.resolveProfile`: no `textures` and
@@ -6083,7 +6108,7 @@ impl Game<'_> {
                                 horizon_client::skins::unpack(
                                     &value,
                                     signature,
-                                    &horizon_client::skins::TEXTURE_URIS,
+                                    horizon_client::skins::texture_uris(),
                                 )
                             })
                         }
@@ -6631,6 +6656,10 @@ impl Game<'_> {
         // ClientLevel.tick: the End's sky flash, frozen or not.
         self.tick_end_flash();
         self.player_border();
+        // The entities added after the player tick after it: their pushes
+        // (from where they ended last tick, onto where the player ended)
+        // reach its next move, this one.
+        let pushed_after = self.remote_pushes(false);
         self.tick_remote_entities(running);
         self.tick_random_textures();
         // Breeze.tick's block dust: drawn by each client for the breezes it sees.
@@ -6679,7 +6708,8 @@ impl Game<'_> {
         self.tick_subtitles();
         self.tick_client_load();
         let entity_collisions = self.player_entity_collisions();
-        let pushed = self.remote_pushes();
+        // Those added before it tick before it: their pushes reach this move.
+        let pushed = pushed_after.add_vector(self.remote_pushes(true));
         let sprint_window = self.settings.sprint_window;
         let Some(player) = self.player.as_mut() else {
             return Ok(());
@@ -7033,8 +7063,10 @@ impl Game<'_> {
     /// `LivingEntity.pushEntities`, and of the boats' pushes: on a client
     /// `EntitySelector.pushableBy` lets entities push only the local player,
     /// so the server never sends these pushes. `doPush(player)` is
-    /// `player.push(entity)`.
-    fn remote_pushes(&self) -> Vec3 {
+    /// `player.push(entity)`. `before_player`: the mobs that tick before the
+    /// player (`ticked_before_player`) and the boats, else the mobs that tick
+    /// after it.
+    fn remote_pushes(&self, before_player: bool) -> Vec3 {
         let (Some(p), Some(r)) = (self.player.as_ref(), self.remote.as_ref()) else {
             return Vec3::ZERO;
         };
@@ -7059,7 +7091,8 @@ impl Game<'_> {
         let board = &self.score.board;
         let player_team = board.players_team(&r.profile_name);
         let mut push = Vec3::ZERO;
-        for m in &self.mobs {
+        let order = |id: u32| r.ticked_before_player.contains(&id) == before_player;
+        for m in self.mobs.iter().filter(|m| order(m.id)) {
             let listed = r
                 .level_players
                 .get(&(m.id as i32))
@@ -7101,7 +7134,14 @@ impl Game<'_> {
         // AbstractBoat.push(player) from the boat's own tick (its box grown
         // by 0.2 sideways) and from the player's pushEntities (its box).
         let area = Vec3::new(f64::from(0.2_f32), f64::from(-0.01_f32), f64::from(0.2_f32));
-        for b in self.boats.iter().filter(|b| self.riding != Some(b.id)) {
+        // The boats' pushes stay where they were measured: with the entities
+        // that tick before the player.
+        let boats = if before_player {
+            &self.boats[..]
+        } else {
+            &[][..]
+        };
+        for b in boats.iter().filter(|b| self.riding != Some(b.id)) {
             let bb = b.bounds();
             let times = usize::from(
                 bounds.intersects(bb.inflate(area))
@@ -9311,8 +9351,9 @@ impl Game<'_> {
         if gliding && &*held.item == "minecraft:firework_rocket" {
             self.with_hand(hand, Game::swing_arm);
         }
-        // A stack's own `blocks_attacks` raises it as a shield's does.
-        let blocks = self.blocks_attacks(&held).is_some();
+        // A stack's own `blocks_attacks` raises it as a shield's does; a
+        // use the server's patch gives it is CONSUME too (no swing).
+        let blocks = self.blocks_attacks(&held).is_some() || self.patched_held_use(&held);
         let ends = use_ends_click(&info, gliding) || blocks;
         // MultiPlayerGameMode.useItem: `ItemStack.use`'s SUCCESS swings
         // (SwingSource.CLIENT); CONSUME does not — a bow, crossbow, trident
@@ -9427,8 +9468,12 @@ impl Game<'_> {
             // Item.use: a kinetic weapon starts being used.
             id if horizon_client::spear::Kinetic::of(id).is_some() => true,
             // ShieldItem.use: anything that blocks attacks, off cooldown.
+            // Item.use: a consumable or `blocks_attacks` the server's patch
+            // adds starts the use (Consumable.startConsuming, startUsingItem).
             _ => {
-                self.raise_shield(self.held_slot());
+                if !self.raise_shield(self.held_slot()) && self.patched_held_use(held) {
+                    self.start_using_item();
+                }
                 return true;
             }
         };
@@ -9470,6 +9515,21 @@ impl Game<'_> {
                 | "minecraft:ender_eye"
         ) || horizon_client::spear::Kinetic::of(&stack.item).is_some()
             || self.blocks_attacks(stack).is_some()
+            || self.patched_held_use(stack)
+    }
+    /// Whether the server's patch gives `stack`, an item with no consumable
+    /// of its own, a `consumable` with a use time or `blocks_attacks` (a
+    /// sword made to block): `Item.use` starts a use of it
+    /// (`Consumable.startConsuming`, `startUsingItem`) that lasts until the
+    /// button lets go or the server stops it, as the client's
+    /// `LivingEntity.updateUsingItem` never completes one.
+    fn patched_held_use(&self, stack: &ItemStack) -> bool {
+        let (ticks, blocks) = horizon_client::item_sync::patched_use(stack);
+        ticks.map_or(blocks, |ticks| ticks > 0)
+            && self
+                .items()
+                .get(&stack.item)
+                .is_none_or(|i| i.consumable.is_none())
     }
 
     /// The rest of Minecraft.startUseItem once the main hand's target passed:

@@ -49,6 +49,13 @@ pub fn uuid(tag: &Tag) -> Option<[i32; 4]> {
 pub fn motion(tag: &Tag) -> Vec3 {
     read_doubles::<3>(tag.get("Motion")).map_or(Vec3::ZERO, |m| Vec3::new(m[0], m[1], m[2]))
 }
+/// A saved Motion as `Entity.load` takes it: a component faster than 10 blocks
+/// a tick loads as 0.
+pub fn loaded_motion(tag: &Tag) -> Vec3 {
+    let m = motion(tag);
+    let clamp = |v: f64| if v.abs() > 10.0 { 0.0 } else { v };
+    Vec3::new(clamp(m.x), clamp(m.y), clamp(m.z))
+}
 pub fn rotation(tag: &Tag) -> [f32; 2] {
     read_doubles::<2>(tag.get("Rotation")).map_or([0.0; 2], |r| [r[0] as f32, r[1] as f32])
 }
@@ -3946,6 +3953,7 @@ pub fn item_frame_from_nbt(tag: &Tag, id: u32) -> Option<ItemFrame> {
         invisible: flag(tag, "Invisible"),
         check_interval: 0,
         custom_name: tag.get("CustomName").cloned(),
+        random: crate::random_source::entity(),
     })
 }
 /// ArmorStand.addAdditionalSaveData with LivingEntity's `equipment`.
@@ -4060,7 +4068,7 @@ pub fn armor_stand_from_nbt(tag: &Tag, id: u32) -> Option<ArmorStand> {
     // AttributeMap.load makes an instance for each saved attribute.
     a.speed_instance = matches!(tag.get("attributes"), Some(Tag::List(list))
         if list.iter().any(|attr| text(attr.get("id")).as_deref() == Some(SPEED_ATTRIBUTE)));
-    a.velocity = motion(tag);
+    a.velocity = loaded_motion(tag);
     a.health = float(tag.get("Health")).unwrap_or(20.0) as f32;
     a.fire_ticks = number(tag.get("Fire")).unwrap_or(0) as i32;
     a.custom_name = tag.get("CustomName").map(name_text);
@@ -4093,8 +4101,9 @@ pub fn armor_stand_from_nbt(tag: &Tag, id: u32) -> Option<ArmorStand> {
     }
     Some(a)
 }
-/// A boat entity (`minecraft:<wood>_boat`, `minecraft:bamboo_chest_raft`...):
-/// chest boats keep their slots in `Items` (`ContainerHelper.saveAllItems`).
+/// `AbstractBoat.addAdditionalSaveData` / `ContainerEntity.addChestVehicleSaveData`:
+/// only chest boats own container fields; a pending table replaces `Items`.
+/// Ordinary slots use `ContainerHelper.saveAllItems` through the existing item encoder.
 pub fn boat_to_nbt(
     id: &str,
     position: Vec3,
@@ -4114,8 +4123,22 @@ pub fn boat_to_nbt(
         fall_distance: 0.0,
     }
     .non_mob_tag(raw);
-    if let (Some(items), Tag::Compound(map)) = (items, &mut tag) {
-        map.insert("Items".into(), crate::save::encode_items(items));
+    if let Tag::Compound(map) = &mut tag {
+        map.remove(&"Items".into());
+        if let Some(items) = items {
+            let table = crate::save::text(map.get(&"LootTable".into()))
+                .and_then(|id| horizon_client_core::identifier::normalize_id(&id));
+            if let Some(table) = table {
+                map.insert("LootTable".into(), Tag::String(table.as_str().into()));
+            } else {
+                map.remove(&"LootTable".into());
+                map.remove(&"LootTableSeed".into());
+                map.insert("Items".into(), crate::save::encode_items(items));
+            }
+        } else {
+            map.remove(&"LootTable".into());
+            map.remove(&"LootTableSeed".into());
+        }
     }
     tag
 }
@@ -5201,6 +5224,27 @@ mod tests {
         let cleared = armor_stand_to_nbt(&a, [0; 4], Some(&saved));
         assert!(cleared.get("NoGravity").is_none());
         assert!(!armor_stand_from_nbt(&cleared, 7).unwrap().no_gravity);
+    }
+
+    /// `Entity.load`: a Motion component past 10 blocks a tick loads as 0,
+    /// the others as saved.
+    #[test]
+    fn armor_stand_drops_a_motion_component_past_ten() {
+        let doubles = |v: [f64; 3]| Tag::List(v.map(|d| Tag::Double(d.to_bits())).to_vec());
+        let tag = Tag::compound([
+            ("id", string("minecraft:armor_stand")),
+            ("Pos", doubles([0.0, 64.0, 0.0])),
+            ("Motion", doubles([1.0e10, -0.5, -10.5])),
+        ]);
+        let a = armor_stand_from_nbt(&tag, 7).unwrap();
+        assert_eq!(a.velocity, Vec3::new(0.0, -0.5, 0.0));
+        let tag = Tag::compound([
+            ("id", string("minecraft:armor_stand")),
+            ("Pos", doubles([0.0, 64.0, 0.0])),
+            ("Motion", doubles([10.0, 0.0, -10.0])),
+        ]);
+        let a = armor_stand_from_nbt(&tag, 7).unwrap();
+        assert_eq!(a.velocity, Vec3::new(10.0, 0.0, -10.0), "10 itself stays");
     }
 
     fn falling_decode_registry() -> BlockRegistry {

@@ -229,11 +229,17 @@ fn has_stored_enchantments(stack: &ItemStack) -> bool {
 pub fn increased_repair_cost(cost: u32) -> u32 {
     (u64::from(cost) * 2 + 1).min(i32::MAX as u64) as u32
 }
-/// `ItemStack.getHoverName`: the custom name, a written book's title, the
-/// `item_name` component, else the item's, potion's or head owner's name.
+/// `ItemStack.getHoverName`: the custom name, a potion's or tipped arrow's
+/// contents, a written book's title, the `item_name` component, else the
+/// item's or head owner's name.
 pub fn hover_name(names: &crate::creative::Names, stack: &ItemStack) -> String {
     if let Some(name) = stack.custom_name() {
         return name;
+    }
+    if let Some(key) = crate::brewing::contents_name_key(stack) {
+        return names
+            .display_get(&key)
+            .unwrap_or_else(|| names.display_item(&stack.item));
     }
     if let Some(title) = stack
         .data()
@@ -250,15 +256,6 @@ pub fn hover_name(names: &crate::creative::Names, stack: &ItemStack) -> String {
         return names
             .display_get("block.minecraft.ominous_banner")
             .unwrap_or_else(|| "Ominous Banner".to_owned());
-    }
-    if stack.potion().is_some()
-        || stack.item.ends_with("potion")
-        || &*stack.item == "minecraft:tipped_arrow"
-    {
-        let key = crate::brewing::potion_name_key(&stack.item, stack.potion());
-        return names
-            .display_get(&key)
-            .unwrap_or_else(|| names.display_item(&stack.item));
     }
     if let Some(head) = crate::item_tooltip::player_head_name(stack) {
         return head.title(&|key| names.display_get(key));
@@ -499,10 +496,14 @@ pub fn grindstone_result(
             }
             let mut out = ItemStack { count, ..a.clone() };
             if is_damageable(items, &out) {
-                // GrindstoneMenu.mergeItems writes the larger MAX_DAMAGE first.
-                out.data_mut().set_other(
+                // GrindstoneMenu.mergeItems writes the larger MAX_DAMAGE first. The
+                // patch drops a value equal to the item's own (PatchedDataComponentMap.set).
+                let default = items.get(&out.item).map_or(0, |i| i.max_damage as i32);
+                let data = out.data_mut();
+                data.set_other("!minecraft:max_damage", None);
+                data.set_other(
                     "minecraft:max_damage",
-                    Some(horizon_world::nbt::Tag::Int(durability)),
+                    (durability != default).then_some(horizon_world::nbt::Tag::Int(durability)),
                 );
                 set_damage_value(items, &mut out, durability - remaining);
             }
@@ -973,7 +974,7 @@ fn apply_trim(
     pattern: &str,
 ) -> Option<ItemStack> {
     let material = e.props(&material.item)?.trim_material.clone()?;
-    let trim = (Arc::from(material.as_str()), Arc::from(pattern));
+    let trim: crate::item_data::Trim = (material.as_str().into(), pattern.into());
     if base.data().and_then(|d| d.trim.as_ref()) == Some(&trim) {
         return None;
     }
@@ -1029,6 +1030,40 @@ mod tests {
         );
         // remaining 10 + 10 + 200 * 5 / 100 = 30 -> damage 170.
         assert_eq!(out.damage, 170);
+    }
+
+    /// Grindstone: a merged MAX_DAMAGE equal to the item's own is no patch, so the
+    /// result saves without it (vanilla: two worn diamond pickaxes give a plain one).
+    #[test]
+    fn grindstone_merge_at_the_default_max_damage_writes_no_component() {
+        let root = std::env::temp_dir().join(format!("horizon-grind-{}", std::process::id()));
+        fs::create_dir_all(&root).unwrap();
+        fs::write(
+            root.join("items.json"),
+            r#"{"minecraft:diamond_sword":{"minecraft:max_stack_size":1,"minecraft:max_damage":1561}}"#,
+        )
+        .unwrap();
+        let items = Items::catalog(&root, &PackOverlay::NONE).unwrap();
+        let e = sample();
+        let mut a = ItemStack::new("minecraft:diamond_sword", 1);
+        a.damage = 819;
+        let mut b = ItemStack::new("minecraft:diamond_sword", 1);
+        b.damage = 602;
+        let out = grindstone_result(&e, &items, Some(&a), Some(&b)).unwrap();
+        assert_eq!(
+            out.data().and_then(|d| d.other("minecraft:max_damage")),
+            None
+        );
+        // remaining 742 + 959 + 78 = 1779 > 1561 -> damage 0.
+        assert_eq!(out.damage, 0);
+        // A larger patched MAX_DAMAGE on the second stack still wins and is written.
+        let b = worn("minecraft:diamond_sword", 2000, 1990);
+        let out = grindstone_result(&e, &items, Some(&a), Some(&b)).unwrap();
+        assert_eq!(
+            out.data().unwrap().other("minecraft:max_damage"),
+            Some(&horizon_world::nbt::Tag::Int(2000))
+        );
+        let _ = fs::remove_dir_all(&root);
     }
 
     /// Anvil: merging two damaged items reads each stack's own max damage.
