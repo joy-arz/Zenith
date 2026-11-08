@@ -183,6 +183,12 @@ impl Game<'_> {
         self.server_trips.iter().any(|t| t.conn == conn)
     }
 
+    /// A command can already have placed the player while its trip still
+    /// tracks chunk loading. Only an unfinished landing blocks pad travel.
+    pub(super) fn awaiting_server_landing(&self, conn: u32) -> bool {
+        self.server_trips.iter().any(|t| t.is(conn) && !t.placed)
+    }
+
     /// Until a pad is placed, the last safe player position is the departure.
     pub(super) fn pad_departure(&self, conn: u32) -> Option<(Dim, [f64; 3])> {
         let trip = self.server_trips.iter().find(|t| t.conn == conn)?;

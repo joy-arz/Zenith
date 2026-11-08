@@ -23,7 +23,7 @@ impl Game<'_> {
             _ => return false,
         };
         if self.level_shapes.contains(destination)
-            && !self.on_server_trip(conn)
+            && !self.awaiting_server_landing(conn)
             && !self.level_teleports.iter().any(|trip| trip.conn == conn)
         {
             self.level_teleports.push(LevelTeleport {
