@@ -54,6 +54,7 @@ mod advancements_screen;
 mod agent;
 mod agent_settings;
 mod allays;
+mod allthemodium_pad;
 mod armor_stands;
 mod atlas_slots;
 mod attachment_sync;
@@ -3377,6 +3378,7 @@ enum Dim {
     Overworld,
     Nether,
     End,
+    Custom(&'static str),
 }
 impl Dim {
     fn id(self) -> &'static str {
@@ -3384,20 +3386,41 @@ impl Dim {
             Self::Overworld => "minecraft:overworld",
             Self::Nether => "minecraft:the_nether",
             Self::End => "minecraft:the_end",
+            Self::Custom(id) => id,
         }
     }
     fn from_id(id: &str) -> Self {
         match id {
+            "minecraft:overworld" => Self::Overworld,
             "minecraft:the_nether" => Self::Nether,
             "minecraft:the_end" => Self::End,
-            _ => Self::Overworld,
+            _ => Self::custom(id).unwrap_or(Self::Overworld),
         }
+    }
+    // Levels are copied through the tick loop and the native API borrows their names.
+    // Bound the intern pool because a remote server can supply level IDs too.
+    fn custom(id: &str) -> Option<Self> {
+        use std::sync::{Mutex, OnceLock};
+        static IDS: OnceLock<Mutex<std::collections::HashSet<&'static str>>> = OnceLock::new();
+        if !horizon_client::save::valid_dimension_id(id) {
+            return None;
+        }
+        let mut ids = IDS.get_or_init(Default::default).lock().unwrap();
+        if let Some(&name) = ids.get(id) {
+            return Some(Self::Custom(name));
+        }
+        if ids.len() >= 4096 {
+            return None;
+        }
+        let name = Box::leak(id.to_owned().into_boxed_str());
+        ids.insert(name);
+        Some(Self::Custom(name))
     }
     /// The level's shape in a world of vanilla's dimension types.
     fn shape(self) -> horizon_client::save::LevelShape {
         use horizon_client::save::LevelShape;
         match self {
-            Self::Overworld => LevelShape::OVERWORLD,
+            Self::Overworld | Self::Custom(_) => LevelShape::OVERWORLD,
             Self::Nether => LevelShape::NETHER,
             Self::End => LevelShape::END,
         }
@@ -4783,7 +4806,7 @@ impl Game<'_> {
             .is_some()
             .then(|| self.lan_building_boxes.boxes(self.dim));
         let dimension = match self.dim {
-            Dim::Overworld => LevelDimension::Overworld,
+            Dim::Overworld | Dim::Custom(_) => LevelDimension::Overworld,
             Dim::Nether => LevelDimension::Nether,
             Dim::End => LevelDimension::End,
         };
@@ -6740,6 +6763,13 @@ impl Game<'_> {
             && let Some(hit) = block_hit
         {
             let held = self.held().cloned();
+            if sneaking
+                && !hands_full
+                && self.hand == Hand::Main
+                && self.use_allthemodium_pad(hit.pos)
+            {
+                return Ok(true);
+            }
             if self.use_lectern(hit.pos, held.as_ref()) {
                 self.swing_arm();
                 return Ok(true);
@@ -9789,7 +9819,7 @@ impl Game<'_> {
             let ambient = match self.dim {
                 Dim::Nether => 0.1,
                 Dim::End => 0.25,
-                Dim::Overworld => 0.0,
+                Dim::Overworld | Dim::Custom(_) => 0.0,
             };
             let darken = self.sky_darken();
             let a = alpha;

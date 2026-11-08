@@ -4,7 +4,10 @@
 use horizon_core::paletted::{PalettedContainer, Strategy};
 use horizon_world::nbt::{Compound, Tag};
 use horizon_world::registry::BlockStateId;
-use std::sync::{Arc, OnceLock};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, OnceLock},
+};
 
 pub mod block_entity;
 
@@ -93,27 +96,37 @@ impl LevelShape {
     }
 }
 
-/// The shapes of a world's three levels, from its dimension types.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+/// The shapes of a world's levels, from its dimension types.
+#[derive(Clone, Debug, PartialEq)]
 pub struct LevelShapes {
     pub overworld: LevelShape,
     pub nether: LevelShape,
     pub end: LevelShape,
+    custom: BTreeMap<String, CustomLevel>,
+}
+#[derive(Clone, Debug, PartialEq)]
+struct CustomLevel {
+    shape: LevelShape,
+    dimension_type: String,
+    coordinate_scale: f64,
 }
 impl LevelShapes {
     pub const VANILLA: Self = Self {
         overworld: LevelShape::OVERWORLD,
         nether: LevelShape::NETHER,
         end: LevelShape::END,
+        custom: BTreeMap::new(),
     };
     /// The shape of the level `id` (`minecraft:overworld`,
-    /// `minecraft:the_nether`, `minecraft:the_end`); others get the
-    /// Overworld's.
+    /// `minecraft:the_nether`, `minecraft:the_end`, or a pack level).
     pub fn get(&self, id: &str) -> LevelShape {
         match id {
             "minecraft:the_nether" => self.nether,
             "minecraft:the_end" => self.end,
-            _ => self.overworld,
+            _ => self
+                .custom
+                .get(id)
+                .map_or(self.overworld, |level| level.shape),
         }
     }
     pub fn get_mut(&mut self, id: &str) -> &mut LevelShape {
@@ -122,6 +135,48 @@ impl LevelShapes {
             "minecraft:the_end" => &mut self.end,
             _ => &mut self.overworld,
         }
+    }
+    pub fn insert_custom(
+        &mut self,
+        id: String,
+        shape: LevelShape,
+        dimension_type: String,
+        coordinate_scale: f64,
+    ) {
+        self.custom.insert(
+            id,
+            CustomLevel {
+                shape,
+                dimension_type,
+                coordinate_scale,
+            },
+        );
+    }
+    pub fn custom_ids(&self) -> impl Iterator<Item = &str> {
+        self.custom.keys().map(String::as_str)
+    }
+    pub fn contains(&self, id: &str) -> bool {
+        matches!(
+            id,
+            "minecraft:overworld" | "minecraft:the_nether" | "minecraft:the_end"
+        ) || self.custom.contains_key(id)
+    }
+    pub fn dimension_type<'a>(&'a self, id: &'a str) -> &'a str {
+        self.custom
+            .get(id)
+            .map_or(id, |level| level.dimension_type.as_str())
+    }
+    pub fn coordinate_scale(&self, id: &str) -> f64 {
+        self.custom.get(id).map_or_else(
+            || {
+                if id == "minecraft:the_nether" {
+                    8.0
+                } else {
+                    1.0
+                }
+            },
+            |level| level.coordinate_scale,
+        )
     }
 }
 impl Default for LevelShapes {

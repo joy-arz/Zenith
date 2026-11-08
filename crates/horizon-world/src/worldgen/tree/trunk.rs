@@ -10,6 +10,7 @@ use crate::worldgen::{
     int_range, optional,
     placement::PlacementContext,
     required,
+    state_provider::BlockStateProvider,
     tree_blocks::{self as tb, Axis, TreeBlocks},
     value_provider::IntProvider,
 };
@@ -19,7 +20,9 @@ use std::{collections::BTreeSet, sync::Arc};
 
 #[derive(Clone, Debug)]
 enum Kind {
-    Straight,
+    Straight {
+        lower: Option<(i32, BlockStateProvider)>,
+    },
     Forking,
     Giant,
     MegaJungle,
@@ -70,7 +73,13 @@ impl TrunkPlacer {
         let height_rand_a = int_range(required(&object, "height_rand_a")?, "height_rand_a", 0, 24)?;
         let height_rand_b = int_range(required(&object, "height_rand_b")?, "height_rand_b", 0, 24)?;
         let kind = match kind(&object)?.as_str() {
-            "minecraft:straight_trunk_placer" => Kind::Straight,
+            "minecraft:straight_trunk_placer" => Kind::Straight { lower: None },
+            "horizon:segmented_straight_trunk_placer" => Kind::Straight {
+                lower: Some((
+                    int_range(required(&object, "top_height")?, "top height", 0, 32)?,
+                    decoder.provider(required(&object, "base_provider")?)?,
+                )),
+            },
             "minecraft:forking_trunk_placer" => Kind::Forking,
             "minecraft:giant_trunk_placer" => Kind::Giant,
             "minecraft:mega_jungle_trunk_placer" => Kind::MegaJungle,
@@ -165,11 +174,22 @@ impl TrunkPlacer {
         position: [i32; 3],
         axis: Option<Axis>,
     ) -> TreeResult<bool, W::Error> {
+        self.place_log_with(run, tree, position, axis, &tree.trunk_provider)
+    }
+
+    fn place_log_with<W: FeatureWorld + PlacementContext, R: RandomSource>(
+        &self,
+        run: &mut Run<'_, W, R>,
+        tree: &TreeFeature,
+        position: [i32; 3],
+        axis: Option<Axis>,
+        provider: &BlockStateProvider,
+    ) -> TreeResult<bool, W::Error> {
         let here = read(run.world, position)?;
         if !self.valid_tree_pos(&tree.blocks, here) {
             return Ok(false);
         }
-        let mut state = sample_state(&tree.trunk_provider, run.world, run.random, position)?;
+        let mut state = sample_state(provider, run.world, run.random, position)?;
         if let Some(axis) = axis {
             state = tree.blocks.try_axis(state, axis);
         }
@@ -209,10 +229,14 @@ impl TrunkPlacer {
     ) -> TreeResult<Vec<FoliageAttachment>, W::Error> {
         let below = tb::offset(origin, 0, -1, 0);
         match &self.kind {
-            Kind::Straight => {
+            Kind::Straight { lower } => {
                 Self::place_below_trunk(run, tree, below)?;
                 for y in 0..tree_height {
-                    self.place_log(run, tree, tb::offset(origin, 0, y, 0), None)?;
+                    let provider = match lower {
+                        Some((top_height, provider)) if y < tree_height - top_height => provider,
+                        _ => &tree.trunk_provider,
+                    };
+                    self.place_log_with(run, tree, tb::offset(origin, 0, y, 0), None, provider)?;
                 }
                 Ok(vec![FoliageAttachment::new(
                     tb::offset(origin, 0, tree_height, 0),

@@ -331,7 +331,7 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
         *self.random() = random;
         placed
     }
-    fn feature_exists(&self, name: &str) -> bool {
+    pub(crate) fn feature_exists(&self, name: &str) -> bool {
         self.b
             .live_features()
             .is_some_and(|f| f.configured(name).is_some())
@@ -411,6 +411,10 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
         let Some(feature) = weighted(list, self.random()) else {
             return false;
         };
+        self.grow_single_tree(feature, pos, state)
+    }
+
+    fn grow_single_tree(&mut self, feature: &str, pos: BlockPos, state: BlockStateId) -> bool {
         if !self.feature_exists(feature) {
             return false;
         }
@@ -446,7 +450,12 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
     pub(crate) fn tree_minimum_height(&self, grower: &TreeGrower) -> i32 {
         grower
             .shortest
-            .and_then(|name| self.b.live_features()?.configured_json(name))
+            .map_or(0, |name| self.feature_tree_height(name))
+    }
+    pub(crate) fn feature_tree_height(&self, name: &str) -> i32 {
+        self.b
+            .live_features()
+            .and_then(|features| features.configured_json(name))
             .filter(|json| json["type"] == "minecraft:tree")
             .and_then(|json| json["trunk_placer"]["base_height"].as_i64())
             .map_or(0, |h| h as i32)
@@ -462,6 +471,10 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
         let Some(name) = b.data(state).feature.clone() else {
             return;
         };
+        if name.contains(':') {
+            self.grow_single_tree(&name, pos, state);
+            return;
+        }
         match grower(&name) {
             Some(g) if b.live_features().is_some() => {
                 self.grow_tree(g, pos, state);

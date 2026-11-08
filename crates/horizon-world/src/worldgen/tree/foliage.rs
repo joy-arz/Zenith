@@ -1,6 +1,7 @@
 //! Foliage placers (FoliagePlacer subclasses), in native random-draw order.
 use super::{
-    Layer, Run, TreeDecoder, TreeFeature, TreeResult, kind, read, sample_state, unit_float,
+    Layer, Run, TreeDecoder, TreeFeature, TreeResult, kind, optional, read, sample_state,
+    unit_float,
 };
 use crate::worldgen::{
     DecodeError, Object,
@@ -8,6 +9,7 @@ use crate::worldgen::{
     int_range,
     placement::PlacementContext,
     required,
+    state_provider::BlockStateProvider,
     tree_blocks::{self as tb, Axis},
     value_provider::IntProvider,
 };
@@ -42,7 +44,10 @@ enum Kind {
     Fancy(i32),
     Bush(i32),
     Acacia,
-    Spruce(IntProvider),
+    Spruce {
+        trunk_height: IntProvider,
+        fruit: Option<BlockStateProvider>,
+    },
     Pine(IntProvider),
     MegaPine(IntProvider),
     MegaJungle(i32),
@@ -62,6 +67,26 @@ enum Kind {
         height: IntProvider,
         side_hole: f32,
     },
+    Layered(Vec<CanopyLayer>),
+}
+
+#[derive(Clone, Debug)]
+struct CanopyLayer {
+    y: i32,
+    radius: i32,
+    provider: Option<BlockStateProvider>,
+}
+
+impl CanopyLayer {
+    fn decode(object: &Object, decoder: &mut TreeDecoder<'_, '_>) -> Result<Self, DecodeError> {
+        Ok(Self {
+            y: int_range(required(object, "y")?, "canopy layer y", -16, 16)?,
+            radius: int_range(required(object, "radius")?, "canopy layer radius", 0, 8)?,
+            provider: optional(object, "provider")
+                .map(|raw| decoder.provider(raw))
+                .transpose()?,
+        })
+    }
 }
 #[derive(Clone, Debug)]
 pub(super) struct FoliagePlacer {
@@ -91,8 +116,18 @@ impl FoliagePlacer {
             "minecraft:jungle_foliage_placer" => Kind::MegaJungle(fixed_height()?),
             "minecraft:acacia_foliage_placer" => Kind::Acacia,
             "minecraft:dark_oak_foliage_placer" => Kind::DarkOak,
-            "minecraft:spruce_foliage_placer" => {
-                Kind::Spruce(decoder.int_provider(required(&object, "trunk_height")?, 0, 24)?)
+            spruce
+            @ ("minecraft:spruce_foliage_placer" | "horizon:fruit_spruce_foliage_placer") => {
+                Kind::Spruce {
+                    trunk_height: decoder.int_provider(
+                        required(&object, "trunk_height")?,
+                        0,
+                        24,
+                    )?,
+                    fruit: (spruce == "horizon:fruit_spruce_foliage_placer")
+                        .then(|| decoder.provider(required(&object, "fruit_provider")?))
+                        .transpose()?,
+                }
             }
             "minecraft:pine_foliage_placer" => {
                 Kind::Pine(decoder.int_provider(required(&object, "height")?, 0, 24)?)
@@ -124,6 +159,18 @@ impl FoliagePlacer {
                 height: decoder.int_provider(required(&object, "height")?, 5, 16)?,
                 side_hole: chance("side_hole_chance")?,
             },
+            "horizon:layered_foliage_placer" => {
+                let layers: Vec<Object> = serde_json::from_str(required(&object, "layers")?.get())?;
+                if layers.is_empty() || layers.len() > 16 {
+                    return Err(DecodeError::Field("canopy layer count"));
+                }
+                Kind::Layered(
+                    layers
+                        .iter()
+                        .map(|layer| CanopyLayer::decode(layer, decoder))
+                        .collect::<Result<_, _>>()?,
+                )
+            }
             _ => return Err(DecodeError::Field("foliage placer type")),
         };
         Ok(Self {
@@ -139,9 +186,9 @@ impl FoliagePlacer {
     ) -> TreeResult<i32, E> {
         Ok(match &self.kind {
             Kind::Blob(h) | Kind::Fancy(h) | Kind::Bush(h) | Kind::MegaJungle(h) => *h,
-            Kind::Acacia => 0,
+            Kind::Acacia | Kind::Layered(_) => 0,
             Kind::DarkOak => 4,
-            Kind::Spruce(trunk) => 4.max(tree_height - trunk.sample(random)?),
+            Kind::Spruce { trunk_height, .. } => 4.max(tree_height - trunk_height.sample(random)?),
             Kind::Pine(h) | Kind::MegaPine(h) => h.sample(random)?,
             Kind::RandomSpread { foliage_height, .. } => foliage_height.sample(random)?,
             Kind::Cherry { height, .. } | Kind::Poplar { height, .. } => height.sample(random)?,
@@ -184,7 +231,7 @@ impl FoliagePlacer {
                     dx == r && dz == r && r > 0
                 }
             }
-            Kind::Spruce(_) | Kind::Pine(_) => dx == r && dz == r && r > 0,
+            Kind::Spruce { .. } | Kind::Pine(_) => dx == r && dz == r && r > 0,
             Kind::MegaPine(_) | Kind::MegaJungle(_) => {
                 dx.wrapping_add(dz) >= 7
                     || dx.wrapping_mul(dx).wrapping_add(dz.wrapping_mul(dz)) > r.wrapping_mul(r)
@@ -198,7 +245,7 @@ impl FoliagePlacer {
                     false
                 }
             }
-            Kind::RandomSpread { .. } => false,
+            Kind::RandomSpread { .. } | Kind::Layered(_) => false,
             Kind::Cherry {
                 wide_bottom_hole,
                 corner_hole,
@@ -337,6 +384,20 @@ impl FoliagePlacer {
         let pos = attachment.pos;
         let with_offset = foliage_height + attachment.height_offset;
         match &self.kind {
+            Kind::Layered(layers) => {
+                let size = i32::from(double);
+                for layer in layers {
+                    for dx in -layer.radius..=layer.radius + size {
+                        for dz in -layer.radius..=layer.radius + size {
+                            tree.try_place_leaf_with(
+                                run,
+                                tb::offset(pos, dx, offset + layer.y, dz),
+                                layer.provider.as_ref(),
+                            )?;
+                        }
+                    }
+                }
+            }
             Kind::Blob(_) => {
                 let mut yo = offset;
                 while yo >= offset - with_offset {
@@ -381,7 +442,7 @@ impl FoliagePlacer {
                     double,
                 )?;
             }
-            Kind::Spruce(_) => {
+            Kind::Spruce { fruit, .. } => {
                 let mut r = run.random.next_int_bound(2)?;
                 let mut max_r = 1;
                 let mut min_r = 0;
@@ -396,6 +457,12 @@ impl FoliagePlacer {
                         r += 1;
                     }
                     yo -= 1;
+                }
+                if let Some(fruit) = fruit {
+                    for direction in tb::HORIZONTAL {
+                        let at = tb::relative(tb::offset(pos, 0, yo, 0), direction, 1);
+                        tree.try_place_leaf_with(run, at, Some(fruit))?;
+                    }
                 }
             }
             Kind::Pine(_) => {

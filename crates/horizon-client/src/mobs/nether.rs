@@ -31,10 +31,10 @@ pub fn register_blaze(m: &mut Mob) {
     m.ai.targets.add(1, HurtByTarget::new().alert());
     m.ai.targets.add(2, NearestTarget::player(true));
 }
-/// `Blaze.BlazeAttackGoal`: melee up close, otherwise a 3-second charge and
-/// three small fireballs, then a five-second rest.
+/// The blaze and Piglich both charge for 60 ticks, fire three times six
+/// ticks apart and rest for 100 ticks. Piglich fires three shots per volley.
 #[derive(Clone, Debug, Default)]
-struct BlazeAttack {
+pub(super) struct BlazeAttack {
     step: i32,
     time: i32,
     last_seen: i32,
@@ -104,25 +104,35 @@ impl Goal for BlazeAttack {
                     m.extra.flag = false;
                 }
                 if self.step > 1 {
-                    let sqd = d2.sqrt().sqrt() * 0.5;
+                    let piglich = m.species() == super::Species::Piglich;
+                    let spread = d2.sqrt().sqrt() * 0.5 * if piglich { 1.0 } else { 2.297 };
+                    let pitch = if piglich {
+                        1.0
+                    } else {
+                        (m.random.next_float() - m.random.next_float()) * 0.2 + 1.0
+                    };
                     cx.events.push(MobEvent::Sound(
                         "entity.blaze.shoot",
                         m.center(),
                         1.0,
-                        (m.random.next_float() - m.random.next_float()) * 0.2 + 1.0,
+                        pitch,
                     ));
-                    let dir = [
-                        triangle(m, xd, 2.297 * sqd),
-                        yd,
-                        triangle(m, zd, 2.297 * sqd),
-                    ];
-                    let start = Vec3::new(m.position.x, m.position.y + half + 0.5, m.position.z);
-                    cx.events.push(MobEvent::Projectile(Projectile::fireball(
-                        ProjectileKind::SmallFireball,
-                        start,
-                        Some(Who::Mob(m.id)),
-                        dir,
-                    )));
+                    let mut start =
+                        Vec3::new(m.position.x, m.position.y + half + 0.5, m.position.z);
+                    if piglich {
+                        let yaw = m.yaw.to_radians();
+                        start.x -= 2.0 * f64::from(yaw.msin());
+                        start.z += 2.0 * f64::from(yaw.mcos());
+                    }
+                    for _ in 0..if piglich { 3 } else { 1 } {
+                        let dir = [triangle(m, xd, spread), yd, triangle(m, zd, spread)];
+                        cx.events.push(MobEvent::Projectile(Projectile::fireball(
+                            ProjectileKind::SmallFireball,
+                            start,
+                            Some(Who::Mob(m.id)),
+                            dir,
+                        )));
+                    }
                 }
             }
             m.look_at_speed([t.position.x, t.eye_y, t.position.z], 10.0, 10.0);

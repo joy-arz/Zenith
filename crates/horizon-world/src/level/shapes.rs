@@ -6,6 +6,7 @@
 use super::{
     LevelAccess, Sim,
     classes::Class,
+    data::PlantSupport,
     query::{axis_of, clockwise, counter_clockwise, is_horizontal},
     states::BlockId,
     update::{above, below, rel},
@@ -47,6 +48,12 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
             && (new.0 as usize) < self.b.table.state_count()
         {
             return new;
+        }
+        if let Some(PlantSupport::Tagged(face, _)) = &self.b.data(state).plant_support
+            && *face == direction
+            && !self.can_survive(state, pos)
+        {
+            return self.b.air();
         }
         self.update_shape_at(0, state, pos, direction, neighbour_pos, neighbour)
     }

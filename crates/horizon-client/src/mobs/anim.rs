@@ -806,6 +806,10 @@ fn vanilla_setup(
     if super::body_anim::anim(m, s, p, w_anims) {
         return;
     }
+    if m.kind.texture == super::piglich::TEXTURE {
+        super::piglich::animate(s, p, w_anims);
+        return;
+    }
     match m.kind.anim {
         Anim::Camel => super::camel::anim(m, s, p, w_anims),
         Anim::Breeze => super::breeze::anim(m, s, p, w_anims),

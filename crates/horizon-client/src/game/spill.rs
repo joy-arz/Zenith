@@ -22,7 +22,7 @@ use horizon_world::{
     nbt::{Compound, JavaString, Tag},
     registry::BlockStateId,
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 /// What a broken block's entity gives its own dropped item (`copy_components`
 /// in the block loot tables): a shulker box's contents, a banner's layers, a
@@ -238,7 +238,7 @@ pub(super) struct UsedDrops {
     end: usize,
     pos: [i32; 3],
     state: BlockStateId,
-    table: &'static str,
+    table: Arc<str>,
 }
 
 impl Spill {
@@ -428,10 +428,10 @@ impl GameLevel<'_> {
         &mut self,
         pos: BlockPos,
         state: BlockStateId,
-        table: &'static str,
+        table: Arc<str>,
     ) {
         let drops = self.items.interact_loot(
-            table,
+            &table,
             self.registry,
             state,
             &mut self.world.random,
@@ -796,7 +796,7 @@ impl Game<'_> {
         let tool = self.held().cloned();
         retell_runs(&mut spill.spawns, &used, |used, origin, drops| {
             let block = Some((used.pos, used.state));
-            self.native_use_drops(used.table, origin, block, None, tool.as_ref(), drops);
+            self.native_use_drops(&used.table, origin, block, None, tool.as_ref(), drops);
         });
         for s in spill.spawns {
             let motion = s.motion.unwrap_or_else(new_item_motion);
@@ -844,10 +844,10 @@ mod tests {
             end: 3,
             pos: [4, 64, 4],
             state: BlockStateId(0),
-            table: "minecraft:harvest/sweet_berry_bush",
+            table: "minecraft:harvest/sweet_berry_bush".into(),
         }];
         retell_runs(&mut spawns, &used, |used, origin, drops| {
-            assert_eq!(used.table, "minecraft:harvest/sweet_berry_bush");
+            assert_eq!(used.table.as_ref(), "minecraft:harvest/sweet_berry_bush");
             assert_eq!(origin, [4.5, 64.5, 4.5]);
             assert_eq!(drops.len(), 2);
             drops.remove(0);

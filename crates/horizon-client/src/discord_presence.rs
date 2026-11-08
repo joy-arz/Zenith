@@ -44,6 +44,7 @@ pub enum Dimension {
     Overworld,
     Nether,
     End,
+    Custom,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -246,16 +247,17 @@ fn activity(status: Status, since: Option<u64>) -> Option<Value> {
                 assets["small_text"] = text.into();
             }
             let place = match dimension {
-                Dimension::Overworld => "In the Overworld",
-                Dimension::Nether => "In the Nether",
-                Dimension::End => "In the End",
+                Dimension::Overworld => Some("In the Overworld"),
+                Dimension::Nether => Some("In the Nether"),
+                Dimension::End => Some("In the End"),
+                Dimension::Custom => None,
             };
             let (details, party) = match play {
                 Play::Singleplayer => ("Singleplayer", None),
                 Play::Multiplayer => ("Multiplayer", None),
                 Play::Hosting { players } => ("Hosting a world", Some(players)),
             };
-            (details, Some(place), party)
+            (details, place, party)
         }
     };
     let mut a = json!({"details": details, "assets": assets});

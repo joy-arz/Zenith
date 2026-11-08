@@ -631,18 +631,7 @@ impl StructureSpawns {
     }
     pub fn load(root: &Path) -> Self {
         let mut overrides = FxHashMap::default();
-        let dir = root.join("data/minecraft/worldgen/structure");
-        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
-            let path = entry.path();
-            let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
-                continue;
-            };
-            let Some(v) = fs::read(&path)
-                .ok()
-                .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
-            else {
-                continue;
-            };
+        let insert = |overrides: &mut FxHashMap<_, _>, id, v: Value| {
             let map: FxHashMap<String, Override> = v["spawn_overrides"]
                 .as_object()
                 .into_iter()
@@ -658,7 +647,33 @@ impl StructureSpawns {
                 })
                 .collect();
             if !map.is_empty() {
-                overrides.insert(format!("minecraft:{stem}"), map);
+                overrides.insert(id, map);
+            }
+        };
+        let dir = root.join("data/minecraft/worldgen/structure");
+        for entry in fs::read_dir(dir).into_iter().flatten().flatten() {
+            let path = entry.path();
+            let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                continue;
+            };
+            let Some(v) = fs::read(&path)
+                .ok()
+                .and_then(|b| serde_json::from_slice::<Value>(&b).ok())
+            else {
+                continue;
+            };
+            insert(&mut overrides, format!("minecraft:{stem}"), v);
+        }
+        let structures = root.join("worldgen/structures.json");
+        if let Ok(bytes) = fs::read(structures)
+            && let Ok(rows) = serde_json::from_slice::<HashMap<String, String>>(&bytes)
+        {
+            for (id, text) in rows {
+                if !id.starts_with("minecraft:")
+                    && let Ok(v) = serde_json::from_str(&text)
+                {
+                    insert(&mut overrides, id, v);
+                }
             }
         }
         Self { overrides }
@@ -1482,6 +1497,36 @@ fn top_non_colliding<L: NaturalLevel>(l: &L, entity: &str, x: i32, z: i32) -> [i
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_mod_structures_piece_spawn_uses_its_namespaced_entity() {
+        let root =
+            std::env::temp_dir().join(format!("horizon-structure-spawns-{}", std::process::id()));
+        fs::create_dir_all(root.join("worldgen")).unwrap();
+        fs::write(
+            root.join("worldgen/structures.json"),
+            serde_json::to_vec(&HashMap::from([(
+                "sample:ruins/pyramid",
+                r#"{"spawn_overrides":{"monster":{"bounding_box":"piece","spawns":[
+                    {"type":"sample:guardian","weight":9,"count":2}
+                ]}}}"#,
+            )]))
+            .unwrap(),
+        )
+        .unwrap();
+        let spawns = StructureSpawns::load(&root);
+        fs::remove_dir_all(root).unwrap();
+        let entry = spawns.get("sample:ruins/pyramid", "monster").unwrap();
+        assert!(entry.piece);
+        assert_eq!(entry.spawns.len(), 1);
+        let spawn = &entry.spawns[0];
+        assert_eq!(spawn.entity, "sample:guardian");
+        assert_eq!(
+            (spawn.weight, spawn.min, spawn.max, spawn.constant),
+            (9, 2, 2, true)
+        );
+        assert!(spawns.get("sample:ruins/pyramid", "creature").is_none());
+    }
 
     /// The grid finds the players whose chunk is within 8 of a chunk on both
     /// axes, in their order, as a look at every player does.

@@ -133,6 +133,20 @@ pub fn dimension_dir(world: &Path, dimension: &str) -> PathBuf {
         .unwrap_or(("minecraft", dimension));
     world.join("dimensions").join(namespace).join(path)
 }
+/// A canonical level ID whose namespace and path are safe save components.
+pub fn valid_dimension_id(id: &str) -> bool {
+    let Some((namespace, path)) = id.split_once(':') else {
+        return false;
+    };
+    let valid = |part: &str| {
+        !part.is_empty()
+            && !part.ends_with('.')
+            && part.bytes().all(|b| {
+                b.is_ascii_lowercase() || b.is_ascii_digit() || matches!(b, b'_' | b'-' | b'.')
+            })
+    };
+    id.len() <= 256 && valid(namespace) && path.split('/').all(valid)
+}
 /// `DirectoryLock`: `session.lock` holds "\u{2603}" (UTF-16BE) under an exclusive
 /// file lock for as long as the world is open, so two instances cannot share it.
 pub struct SessionLock(fs::File);

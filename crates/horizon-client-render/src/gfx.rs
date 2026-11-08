@@ -1630,7 +1630,7 @@ fn layer_split(
     Ok(split)
 }
 /// Sprite arrays terrain.wgsl binds (`sprites`, `sprites_1`...).
-const SPRITE_ARRAYS: u32 = 8;
+const SPRITE_ARRAYS: u32 = 9;
 /// The layers to give a square texture of `count` layers viewed as a 2D
 /// array. wgpu's OpenGL backend picks a texture's target from its layer
 /// count when it is created: one layer makes a 2D texture and a multiple of
@@ -1739,6 +1739,7 @@ fn terrain_group(
             view(10, &sprites[6]),
             view(11, &sprites[7]),
             view(12, emission_thresholds),
+            view(13, &sprites[8]),
         ],
     })
 }
@@ -2862,6 +2863,7 @@ impl Renderer {
                         multisampled: false,
                     },
                 ),
+                entry(13, vf, sprite_array),
             ],
         });
         let layout = kept.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -14452,6 +14454,7 @@ mod sprite_upload_tests {
         assert_eq!(layer_split(8192, false, None, 1291), Ok(SPRITE_SPLIT));
         // HORIZON_SPRITE_SPLIT only lowers it.
         assert_eq!(layer_split(2048, false, Some(512), 1291), Ok(512));
+        assert_eq!(layer_split(2048, false, Some(512), 4273), Ok(512));
         assert_eq!(layer_split(256, false, Some(512), 1291), Ok(256));
         // OpenGL pads a multiple of 6 by a layer: a full array must still fit.
         assert_eq!(layer_split(600, true, None, 1291), Ok(599));

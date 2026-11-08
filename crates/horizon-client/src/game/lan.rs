@@ -1548,6 +1548,11 @@ impl Game<'_> {
         host: &LanHost,
         guest: &mut horizon_client::lan::guest::Guest,
     ) {
+        if let Some((source, position)) = self.pad_departure(guest.conn) {
+            guest.dimension = source.id().to_owned();
+            guest.position = position;
+            guest.previous_position = position;
+        }
         self.guest_attachments_into(guest);
         // A player a proxy moved to another server (`player-release moved`) is saved
         // there now, not here.
@@ -1796,6 +1801,9 @@ impl Game<'_> {
         let uuid = self.lan.as_ref().and_then(|h| h.owner.as_ref())?.uuid;
         let (riding, dim, others) = self.lan.as_ref().and_then(|h| {
             let g = h.hub.guests.iter().find(|g| g.uuid == uuid && g.placed)?;
+            if self.pad_departure(g.conn).is_some() {
+                return None;
+            }
             let others = self.ridden_by_others(&h.hub.guests, &g.dimension, Some(uuid), true);
             Some((g.vehicle, g.dimension.clone(), others))
         })?;
@@ -2893,13 +2901,14 @@ impl Game<'_> {
         // PlayerEvent.LoadFromFile: the player's data is read and applied,
         // the player not yet placed.
         self.native_player_load_from_file(g.uuid, &g.name, &playerdata::directory(&root));
+        let level_known = self.level_shapes.contains(&g.dimension);
         // PrepareSpawnTask: with no saved rotation the player faces the world
         // spawn's angle (`/setworldspawn ... <angle>`).
         playerdata::face_world_spawn(g, known, self.level.world_spawn_angle);
         if !known || force {
             g.game_mode = default_mode;
         }
-        if !known {
+        if !known || !level_known {
             // ServerPlayer.adjustSpawnLocation: a player new to the world
             // stands where PlayerSpawnFinder puts them, not all on one spot
             // (it reads the loaded level, which holds the spawn when it is
@@ -2919,8 +2928,10 @@ impl Game<'_> {
                 self.level.world_spawn_angle[1],
             );
             g.head_yaw = g.yaw;
-            g.health = 20.0;
-            g.food = 20;
+            if !known {
+                g.health = 20.0;
+                g.food = 20;
+            }
             g.dimension = super::Dim::Overworld.id().to_owned();
         }
         // Spigot's PlayerSpawnLocationEvent: the mods may place them elsewhere.
@@ -2933,7 +2944,7 @@ impl Game<'_> {
             &mut position,
             &mut rotation,
         );
-        if dimension != g.dimension && super::Dim::from_id(&dimension).id() == dimension {
+        if dimension != g.dimension && self.level_shapes.contains(&dimension) {
             g.dimension = dimension;
         }
         if position != g.position && position.iter().all(|v| v.is_finite()) {

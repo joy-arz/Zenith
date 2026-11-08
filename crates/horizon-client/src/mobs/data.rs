@@ -99,6 +99,7 @@ impl MobData {
         data.emissive = std::sync::RwLock::new(std::sync::Arc::new(emissive));
         data.blinks = std::sync::RwLock::new(blinks);
         data.random_textures = std::sync::RwLock::new(random);
+        data.animations.extend(super::piglich::animations(root));
         data
     }
     /// Only the keyframe animation definitions of `mob-data.json`.

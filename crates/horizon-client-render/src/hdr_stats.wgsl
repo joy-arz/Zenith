@@ -13,6 +13,7 @@
 @group(0) @binding(5) var sprites_5: texture_2d_array<f32>;
 @group(0) @binding(6) var sprites_6: texture_2d_array<f32>;
 @group(0) @binding(7) var sprites_7: texture_2d_array<f32>;
+@group(0) @binding(8) var sprites_8: texture_2d_array<f32>;
 
 struct Params {
     // Where between the sprite's darkest and brightest opaque pixel the
@@ -20,7 +21,7 @@ struct Params {
     parts: f32,
     whole: f32,
 };
-@group(0) @binding(8) var<uniform> params: Params;
+@group(0) @binding(9) var<uniform> params: Params;
 
 // hdr.wgsl's brightness: the mean of luminance and the brightest channel, in
 // linear light.
@@ -38,7 +39,8 @@ fn texel(array: u32, at: vec2<i32>, layer: i32) -> vec4<f32> {
         case 4u: { return textureLoad(sprites_4, at, layer, 0); }
         case 5u: { return textureLoad(sprites_5, at, layer, 0); }
         case 6u: { return textureLoad(sprites_6, at, layer, 0); }
-        default: { return textureLoad(sprites_7, at, layer, 0); }
+        case 7u: { return textureLoad(sprites_7, at, layer, 0); }
+        default: { return textureLoad(sprites_8, at, layer, 0); }
     }
 }
 

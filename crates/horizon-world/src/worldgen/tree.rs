@@ -683,11 +683,21 @@ impl TreeFeature {
         run: &mut Run<'_, W, R>,
         position: [i32; 3],
     ) -> TreeResult<bool, W::Error> {
+        self.try_place_leaf_with(run, position, None)
+    }
+
+    fn try_place_leaf_with<W: FeatureWorld + PlacementContext, R: RandomSource>(
+        &self,
+        run: &mut Run<'_, W, R>,
+        position: [i32; 3],
+        provider: Option<&BlockStateProvider>,
+    ) -> TreeResult<bool, W::Error> {
         let here = read(run.world, position)?;
         if self.blocks.has(here, tb::PERSISTENT) || !self.blocks.valid_tree_pos(here) {
             return Ok(false);
         }
-        let mut state = sample_state(&self.foliage_provider, run.world, run.random, position)?;
+        let provider = provider.unwrap_or(&self.foliage_provider);
+        let mut state = sample_state(provider, run.world, run.random, position)?;
         if self.blocks.has(state, tb::WATERLOGGABLE) {
             let here = read(run.world, position)?;
             state = self

@@ -1919,10 +1919,13 @@ impl Menu {
                 grid.iter()
                     .map(|cell| {
                         cell.as_ref().and_then(|stack| {
-                            env.items
-                                .get(&stack.item)
-                                .and_then(|i| i.crafting_remainder.as_deref())
-                                .map(|r| ItemStack::new(r, 1))
+                            env.items.get(&stack.item).and_then(|i| {
+                                stack.after_crafting(
+                                    i.crafting_remainder.as_deref(),
+                                    i.crafting_damage,
+                                    i.max_damage,
+                                )
+                            })
                         })
                     })
                     .collect()

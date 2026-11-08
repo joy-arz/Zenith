@@ -370,6 +370,7 @@ pub fn register(m: &mut Mob) {
         Family::Generic if m.species() == Species::Parrot => super::parrot::register(m),
         Family::Generic if m.species() == Species::Rabbit => super::rabbit::register(m),
         Family::Generic if m.species() == Species::Ocelot => super::tame::register_ocelot(m),
+        Family::Generic if m.species() == Species::Piglich => register_piglich(m),
         Family::Generic => {
             generic(m);
             if m.species() == Species::Frog {
@@ -448,6 +449,22 @@ pub fn register(m: &mut Mob) {
     {
         m.ai.nav.can_float = true;
     }
+}
+
+fn register_piglich(m: &mut Mob) {
+    use super::goals::*;
+    let g = &mut m.ai.goals;
+    g.add(1, super::nether::BlazeAttack::default());
+    g.add(2, super::golem::MoveTowardsTarget::new(0.9, 32.0));
+    g.add(3, MeleeAttack::new(3.0, true));
+    g.add(4, LookAtPlayer::new(8.0));
+    g.add(5, RandomLookAround::default());
+    g.add(6, Stroll::new(1.0));
+    let t = &mut m.ai.targets;
+    t.add(1, NearestTarget::species(&[Species::Skeleton], true));
+    t.add(1, NearestTarget::species(&[Species::WitherSkeleton], true));
+    t.add(2, HurtByTarget::new());
+    t.add(3, NearestTarget::player(true));
 }
 /// A new mob's goals (`Mob.registerGoals`): `mob.ai.goals` (vanilla's
 /// `goalSelector`) and `mob.ai.targets` (`targetSelector`) hold the goals of

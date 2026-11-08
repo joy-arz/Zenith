@@ -24,8 +24,8 @@ use std::{
 };
 
 const MAGIC: &[u8; 8] = b"HZBEHAV\0";
-const VERSION: u32 = 2;
-const FILE_NAME: &str = "behaviours-v2.bin";
+const VERSION: u32 = 3;
+const FILE_NAME: &str = "behaviours-v3.bin";
 const REGISTRY_MAGIC: &[u8; 8] = b"HZREGIS\0";
 const REGISTRY_VERSION: u32 = 1;
 const REGISTRY_FILE_NAME: &str = "registry-v1.bin";
@@ -108,6 +108,12 @@ struct SoundsSnapshot {
 }
 
 #[derive(Serialize, Deserialize)]
+enum PlantSupportSnapshot {
+    Unrestricted,
+    Tagged(u8, Vec<u64>),
+}
+
+#[derive(Serialize, Deserialize)]
 struct Block {
     chain: Vec<u16>,
     interfaces: u16,
@@ -122,6 +128,8 @@ struct Block {
     link2: Option<u16>,
     support_tag: Option<Vec<u64>>,
     support_tag2: Option<Vec<u64>>,
+    plant_support: Option<PlantSupportSnapshot>,
+    harvest_loot: Option<String>,
     feature: Option<String>,
     grow_probability: f64,
     growth_direction: u8,
@@ -521,7 +529,14 @@ impl Snapshot {
                 link2: block.link2.map(|v| v.0),
                 support_tag: block.support_tag.as_ref().map(|v| v.0.clone()),
                 support_tag2: block.support_tag2.as_ref().map(|v| v.0.clone()),
+                plant_support: block.plant_support.as_ref().map(|support| match support {
+                    PlantSupport::Unrestricted => PlantSupportSnapshot::Unrestricted,
+                    PlantSupport::Tagged(face, tag) => {
+                        PlantSupportSnapshot::Tagged(direction_index(*face), tag.0.clone())
+                    }
+                }),
                 feature: block.feature.as_ref().map(|v| v.to_string()),
+                harvest_loot: block.harvest_loot.as_ref().map(|v| v.to_string()),
                 grow_probability: block.grow_probability,
                 growth_direction: direction_index(block.growth_direction),
                 schedule_fluid_ticks: block.schedule_fluid_ticks,
@@ -685,7 +700,16 @@ impl Snapshot {
                     link2: wire.link2.map(BlockId),
                     support_tag: wire.support_tag.map(|v| Arc::new(BlockSet(v))),
                     support_tag2: wire.support_tag2.map(|v| Arc::new(BlockSet(v))),
+                    plant_support: wire
+                        .plant_support
+                        .map(|support| match support {
+                            PlantSupportSnapshot::Unrestricted => Ok(PlantSupport::Unrestricted),
+                            PlantSupportSnapshot::Tagged(face, tag) => direction(face)
+                                .map(|face| PlantSupport::Tagged(face, Arc::new(BlockSet(tag)))),
+                        })
+                        .transpose()?,
                     feature: wire.feature.map(Arc::from),
+                    harvest_loot: wire.harvest_loot.map(Arc::from),
                     grow_probability: wire.grow_probability,
                     growth_direction: direction(wire.growth_direction)?,
                     schedule_fluid_ticks: wire.schedule_fluid_ticks,

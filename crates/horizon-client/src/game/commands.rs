@@ -950,9 +950,10 @@ impl Game<'_> {
         let mut dims = vec![self.dim];
         dims.extend(self.levels.parked_dims());
         dims.sort_by_key(|d| match d {
-            Dim::Overworld => 0,
-            Dim::Nether => 1,
-            Dim::End => 2,
+            Dim::Overworld => (0, ""),
+            Dim::Nether => (1, ""),
+            Dim::End => (2, ""),
+            Dim::Custom(id) => (3, *id),
         });
         dims
     }
@@ -1842,6 +1843,7 @@ impl Game<'_> {
                 at: pos,
                 rotation,
                 vehicle: None,
+                pad: false,
                 cause: Some("command"),
             });
         Ok(true)
@@ -2085,9 +2087,9 @@ impl Game<'_> {
         // `time of <clock>` names the clock; otherwise the dimension's default clock.
         let clock = match ctx.get("clock") {
             Some(Arg::Resource(c)) => c.clone(),
-            _ => match self.dimension_type().default_clock.clone() {
-                Some(clock) => clock,
-                None => return Err(err("commands.time.no_default_clock", &[&self.dim.id()])),
+            _ => match self.dimension_type().default_clock.as_ref() {
+                Some(clock) if !matches!(self.dim, Dim::Custom(_)) => clock.clone(),
+                _ => return Err(err("commands.time.no_default_clock", &[&self.dim.id()])),
             },
         };
         let total = self.command_clock_time(&clock);

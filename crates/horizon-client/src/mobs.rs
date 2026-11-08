@@ -65,6 +65,7 @@ pub mod panda;
 pub mod parrot;
 pub mod path;
 pub mod phantom;
+mod piglich;
 pub mod piglin;
 pub mod polar_bear;
 pub mod rabbit;
@@ -565,7 +566,11 @@ impl MobTypes {
             .into_iter()
             .flatten()
             .filter_map(|(id, row)| {
-                let template = row["template"].as_str()?.strip_prefix("minecraft:")?;
+                let template = row["template"].as_str()?;
+                if id == horizon_mods::content::PIGLICH && template == id {
+                    return Some((id.clone(), &species::PIGLICH));
+                }
+                let template = template.strip_prefix("minecraft:")?;
                 let def = species::ALL.iter().find(|d| d.name == template)?;
                 Some((id.clone(), def))
             });
@@ -577,11 +582,19 @@ impl MobTypes {
             if t.is_null() {
                 continue;
             }
-            let model_key = format!("minecraft:{}", def.model);
+            let is_piglich = def.species == Species::Piglich;
+            let piglich = (is_piglich && models_needed)
+                .then(|| piglich::model(root).map(Arc::new))
+                .flatten();
+            let model_key = if is_piglich {
+                "minecraft:piglin_brute#main".to_owned()
+            } else {
+                format!("minecraft:{}", def.model)
+            };
             let model = models
                 .as_ref()
                 .and_then(|models| models.value().get(&model_key));
-            if models_needed && model.is_none() {
+            if models_needed && model.is_none() && piglich.is_none() {
                 continue;
             }
             let defaults = exact.get(&id).cloned().unwrap_or_default();
@@ -605,8 +618,18 @@ impl MobTypes {
                     }
                 }
             }
+            if let Some(part) = &piglich {
+                layers.insert(piglich::MODEL.to_owned(), part.clone());
+            }
             let category = t["category"].as_str().unwrap_or("creature").to_owned();
             let speed = attr("movement_speed").unwrap_or(0.25);
+            let max_health = attr("max_health").unwrap_or(10.0);
+            let max_health = if is_piglich {
+                let (min, max) = finalize::Attr::MaxHealth.range();
+                max_health.clamp(min, max)
+            } else {
+                max_health
+            };
             let flags = def.flags(t["fire_immune"].as_bool().unwrap_or(false));
             out.insert(
                 id.clone(),
@@ -616,7 +639,7 @@ impl MobTypes {
                     width: t["width"].as_f64().unwrap_or(0.6),
                     height: t["height"].as_f64().unwrap_or(1.8),
                     eye_height: t["eye_height"].as_f64().unwrap_or(1.6),
-                    max_health: attr("max_health").unwrap_or(10.0) as f32,
+                    max_health: max_health as f32,
                     speed,
                     flying_speed: attr("flying_speed").unwrap_or(0.4),
                     attack_damage: attr("attack_damage").unwrap_or(0.0) as f32,
@@ -640,20 +663,27 @@ impl MobTypes {
                     max_head_y_rot: def.max_head_y_rot(),
                     ambient_interval: def.ambient_interval(),
                     flags,
-                    model: model.map_or_else(
-                        || empty_model.clone(),
-                        |model| {
-                            Arc::new({
-                                let mut part = Part::parse("root", model);
-                                if culls_back_faces(&model_key) {
-                                    part.set_cull_back();
-                                }
-                                part
-                            })
-                        },
-                    ),
+                    model: piglich.clone().unwrap_or_else(|| {
+                        model.map_or_else(
+                            || empty_model.clone(),
+                            |model| {
+                                Arc::new({
+                                    let mut part = Part::parse("root", model);
+                                    if culls_back_faces(&model_key) {
+                                        part.set_cull_back();
+                                    }
+                                    part
+                                })
+                            },
+                        )
+                    }),
                     layers,
-                    texture: def.texture.to_owned(),
+                    texture: if piglich.is_some() {
+                        piglich::TEXTURE
+                    } else {
+                        def.texture
+                    }
+                    .to_owned(),
                     brain: def.brain(),
                     anim: def.anim,
                     sounds: def.sounds,
@@ -3357,6 +3387,7 @@ impl Mob {
             Species::Villager
                 | Species::Piglin
                 | Species::PiglinBrute
+                | Species::Piglich
                 | Species::Dolphin
                 | Species::Fox
                 | Species::Panda

@@ -528,8 +528,8 @@ pub fn import_player(hub: &mut Hub, uuid: u128, request: &Value) -> Result<Impor
     // A position in another dimension than the client's cannot be taken: the client
     // would have to change its world, and only a login does that.
     if request.parts.contains(&"position") {
-        let theirs = playerdata_dimension(&level);
-        if theirs != hub.guests[i].dimension {
+        let theirs = &level.dimension;
+        if theirs != &hub.guests[i].dimension {
             return Err(format!(
                 "the record is in {theirs}, the held player in {}: the position cannot be taken",
                 hub.guests[i].dimension
@@ -605,12 +605,4 @@ pub fn import_player(hub: &mut Hub, uuid: u128, request: &Value) -> Result<Impor
         handover,
         recentered,
     })
-}
-
-/// The dimension a record names, the way `playerdata::apply` places it.
-fn playerdata_dimension(level: &Level) -> String {
-    match level.dimension.as_str() {
-        d @ ("minecraft:the_nether" | "minecraft:the_end") => d.to_owned(),
-        _ => "minecraft:overworld".to_owned(),
-    }
 }

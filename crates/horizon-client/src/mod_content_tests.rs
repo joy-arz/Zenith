@@ -195,6 +195,37 @@ fn place_block_compiles_ordinary_bindings_without_changing_components() {
 }
 
 #[test]
+fn cloned_block_item_places_its_block_when_template_uses_a_different_item_id() {
+    let (base, mods) = block_base(
+        "separate-template-item",
+        &[r#"{"template":"minecraft:test"}"#],
+    );
+    fs::write(
+        base.join("gameplay-facts.json"),
+        r#"{"states":[{"item":"minecraft:test_seed"},{"item":"minecraft:test_seed"}]}"#,
+    )
+    .unwrap();
+    let plan = Plan::new(&base, &mods).unwrap();
+    let mut behaviours: J = serde_json::from_str(
+        r#"{"states":[{},{}],"blocks":[],"items":{
+            "minecraft:test_seed":{"class":["BlockItem","Item"],"fields":{"block":"minecraft:test"}}
+        }}"#,
+    )
+    .unwrap();
+    plan.json("block-behaviours.json", &mut behaviours).unwrap();
+    let behaviours = serde_json::to_value(behaviours).unwrap();
+    assert_eq!(
+        behaviours["items"]["testmod:test"]["fields"]["block"],
+        "testmod:test"
+    );
+    assert_eq!(
+        behaviours["items"]["minecraft:test_seed"]["fields"]["block"],
+        "minecraft:test"
+    );
+    fs::remove_dir_all(base.parent().unwrap()).unwrap();
+}
+
+#[test]
 fn renames_ids_keys_and_states() {
     let mut r = Rename::new("minecraft:iron_block", "ruby:ruby_block");
     r.states = 10..12;

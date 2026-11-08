@@ -123,7 +123,7 @@ impl LevelHeight {
             && height % 16 == 0
             && height >= 16
             && min_y >= -2032
-            && min_y + height <= 2032
+            && min_y <= 2032 - height
             && (0..=height).contains(&logical_height);
         valid.then_some(Self {
             min_y,

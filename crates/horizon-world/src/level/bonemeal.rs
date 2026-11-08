@@ -329,7 +329,14 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
         let up = above(pos);
         match kind {
             Kind::Sapling => {
-                let Some(g) = b.data(state).feature.as_deref().and_then(grower) else {
+                let Some(name) = b.data(state).feature.as_deref() else {
+                    return false;
+                };
+                if name.contains(':') {
+                    return self.feature_exists(name)
+                        && self.is_inside_build_height(pos.y + self.feature_tree_height(name));
+                }
+                let Some(g) = grower(name) else {
                     return false;
                 };
                 if b.live_features().is_none() || !self.tree_can_grow(g, pos, state) {

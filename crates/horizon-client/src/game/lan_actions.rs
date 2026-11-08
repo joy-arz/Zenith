@@ -3182,6 +3182,7 @@ impl Game<'_> {
                     at,
                     rotation: Some([yaw, pitch]),
                     vehicle: None,
+                    pad: false,
                     cause: Some("spectate"),
                 });
             return;
@@ -3981,7 +3982,7 @@ impl Game<'_> {
         let (uuid, name) = (host.hub.guests[i].uuid, host.hub.guests[i].name.clone());
         let [yaw, pitch] = &mut rotation;
         self.native_player_respawn_position(uuid, &name, &mut dimension, &mut at, yaw, pitch);
-        let known = super::Dim::from_id(&dimension).id() == dimension;
+        let known = self.level_shapes.contains(&dimension);
         let moved = at != spawn && at.iter().all(|v| v.is_finite());
         let chosen = (known && dimension != level.id()) || moved;
         if chosen {

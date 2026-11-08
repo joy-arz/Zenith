@@ -273,7 +273,12 @@ pub fn main() -> Result<(), Error> {
     let mut args = crate::args().skip(1);
     let resources = std::path::PathBuf::from(args.next().ok_or("client resource directory")?);
     let seed: i64 = args.next().ok_or("seed")?.parse()?;
-    let dimension = format!("minecraft:{}", args.next().ok_or("dimension")?);
+    let dimension = args.next().ok_or("dimension")?;
+    let dimension = if dimension.contains(':') {
+        dimension
+    } else {
+        format!("minecraft:{dimension}")
+    };
     let rects = args
         .map(|rect| {
             let v: Vec<i32> = rect.split(',').map(str::parse).collect::<Result<_, _>>()?;
@@ -327,6 +332,11 @@ pub fn main() -> Result<(), Error> {
     };
     // HORIZON_PHASE: terrain (no decoration), structures (pieces only) or full.
     let phase = std::env::var("HORIZON_PHASE").unwrap_or_else(|_| "full".into());
+    if phase == "full" {
+        for (name, reason) in generator.unsupported_features() {
+            eprintln!("unsupported feature {name}: {reason}");
+        }
+    }
     worker.set_structures_only(phase == "structures");
     if std::env::var_os("HORIZON_SCAN").is_some() {
         let [x0, z0, x1, z1] = rects[0];

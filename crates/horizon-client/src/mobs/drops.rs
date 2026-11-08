@@ -74,6 +74,7 @@ pub fn is_monster(s: Species) -> bool {
             | S::Parched
             | S::Piglin
             | S::PiglinBrute
+            | S::Piglich
             | S::Pillager
             | S::Ravager
             | S::Silverfish

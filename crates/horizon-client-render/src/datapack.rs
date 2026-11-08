@@ -207,10 +207,19 @@ pub fn feature_packs(resources: &Path) -> Vec<DataPack> {
     packs.sort_by(|a, b| a.id.cmp(&b.id));
     packs
 }
-/// The packs of `<world>/datapacks` plus the resources root's feature packs:
-/// the world's whole repository, as `PackRepository.reload` sees it.
+/// World data shipped in active content mods, below a world's selected packs.
+pub fn embedded_mod_packs(resources: &Path) -> Vec<DataPack> {
+    let mut packs = discover_folder(&resources.join("mod-world-packs"));
+    for pack in &mut packs {
+        pack.id = pack.id.replacen("file/", "mod/", 1);
+    }
+    packs
+}
+
+/// The world's repository, including embedded mod packs and feature packs.
 pub fn discover_with_features(world_root: &Path, resources: &Path) -> Vec<DataPack> {
-    let mut packs = discover(world_root);
+    let mut packs = embedded_mod_packs(resources);
+    packs.extend(discover(world_root));
     packs.extend(feature_packs(resources));
     packs
 }
@@ -679,7 +688,8 @@ fn content_id(file: &str) -> Option<String> {
     let (kind, rest) = rest.split_once('/')?;
     let kind = match kind {
         "recipe" | "recipe_filter" | "loot_table" | "advancement" | "trade_set"
-        | "villager_trade" | "dialog" | "damage_type" | "data_maps" | "enchantment" => kind,
+        | "villager_trade" | "dialog" | "damage_type" | "data_maps" | "dimension_type"
+        | "enchantment" => kind,
         // A tag id is `{ns}:{path-under-tags}` (`tags/worldgen/biome/
         // test:sub/mytag`), the whole path after the namespace, so nested
         // registries keep their directory (`TagLoader`'s id shape).
@@ -713,6 +723,7 @@ impl DataStore {
                 "damage_type",
                 "data_maps",
                 "dialog",
+                "dimension_type",
                 "enchantment",
                 "function",
                 "item_modifier",
@@ -911,16 +922,26 @@ pub fn enabled_ids(world: &Path, packs: &[DataPack], enabled_features: &[String]
             .unwrap_or_default()
     };
     let disabled = list("disabled");
-    let mut enabled: Vec<String> = list("enabled")
-        .into_iter()
-        .filter(|id| packs.iter().any(|p| &p.id == id))
-        .filter(|id| {
-            packs
-                .iter()
-                .find(|p| &p.id == id)
-                .is_none_or(|p| features_enabled(p, enabled_features))
+    let mut enabled: Vec<String> = packs
+        .iter()
+        .filter(|p| {
+            p.id.starts_with("mod/")
+                && !disabled.contains(&p.id)
+                && features_enabled(p, enabled_features)
         })
+        .map(|p| p.id.clone())
         .collect();
+    enabled.extend(
+        list("enabled")
+            .into_iter()
+            .filter(|id| !id.starts_with("mod/") && packs.iter().any(|p| &p.id == id))
+            .filter(|id| {
+                packs
+                    .iter()
+                    .find(|p| &p.id == id)
+                    .is_none_or(|p| features_enabled(p, enabled_features))
+            }),
+    );
     for p in packs {
         // A pack nobody mentions comes on (`PackRepository.reload` selects
         // every new pack), but a feature pack stays off until the world
@@ -934,7 +955,8 @@ pub fn enabled_ids(world: &Path, packs: &[DataPack], enabled_features: &[String]
         }
     }
     for p in packs {
-        let feature_pack = !p.id.starts_with("file/") && p.id != "vanilla";
+        let feature_pack =
+            !p.id.starts_with("file/") && !p.id.starts_with("mod/") && p.id != "vanilla";
         if feature_pack
             && !p.features().is_empty()
             && features_enabled(p, enabled_features)
@@ -1165,6 +1187,47 @@ mod tests {
         install_new_world_packs(&game, &old).unwrap();
         assert!(discover(&old).is_empty());
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn world_packs_can_override_or_disable_embedded_mod_worldgen() {
+        let root = temp_folder().unwrap();
+        let resources = root.join("resources");
+        let world = root.join("world");
+        let file = "data/test/dimension/mining.json";
+        for (path, ty) in [
+            (
+                resources.join("mod-world-packs/test"),
+                "minecraft:overworld",
+            ),
+            (world.join("datapacks/custom"), "minecraft:the_nether"),
+        ] {
+            let stem = path.join(file);
+            std::fs::create_dir_all(stem.parent().unwrap()).unwrap();
+            std::fs::write(stem, serde_json::json!({"type": ty}).to_string()).unwrap();
+            std::fs::write(
+                path.join("pack.mcmeta"),
+                r#"{"pack":{"description":"fixture"}}"#,
+            )
+            .unwrap();
+        }
+        let packs = discover_with_features(&world, &resources);
+        assert_eq!(
+            enabled_ids(&world, &packs, &[]),
+            ["mod/test", "file/custom"]
+        );
+        let enabled = packs.iter().collect::<Vec<_>>();
+        assert_eq!(
+            dimension_stems(&enabled)["test:mining"]["type"],
+            "minecraft:the_nether"
+        );
+        std::fs::write(
+            world.join("datapacks.json"),
+            r#"{"enabled":["mod/test"],"disabled":["mod/test"]}"#,
+        )
+        .unwrap();
+        assert_eq!(enabled_ids(&world, &packs, &[]), ["file/custom"]);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

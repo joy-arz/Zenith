@@ -978,6 +978,53 @@ pub struct FlatSettings {
     /// `lakes`: the lava lakes (`createLakesList`) take the biome's lakes step.
     pub lakes: bool,
 }
+impl FlatSettings {
+    fn from_json(settings: &Value) -> Result<Self, GeneratorError> {
+        #[derive(serde::Deserialize)]
+        struct Layer {
+            block: String,
+            height: u16,
+        }
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum StructureSets {
+            One(String),
+            Many(Vec<String>),
+        }
+        #[derive(serde::Deserialize)]
+        struct Settings {
+            layers: Vec<Layer>,
+            biome: Option<String>,
+            structure_overrides: Option<StructureSets>,
+            #[serde(default)]
+            features: bool,
+            #[serde(default)]
+            lakes: bool,
+        }
+        let settings: Settings = serde::Deserialize::deserialize(settings)?;
+        let id = |s: String| {
+            if s.contains(':') {
+                s
+            } else {
+                format!("minecraft:{s}")
+            }
+        };
+        Ok(Self {
+            layers: settings
+                .layers
+                .into_iter()
+                .map(|layer| (id(layer.block), i32::from(layer.height)))
+                .collect(),
+            biome: id(settings.biome.unwrap_or_else(|| "plains".to_owned())),
+            structure_overrides: settings.structure_overrides.map(|sets| match sets {
+                StructureSets::One(set) => vec![id(set)],
+                StructureSets::Many(sets) => sets.into_iter().map(id).collect(),
+            }),
+            features: settings.features,
+            lakes: settings.lakes,
+        })
+    }
+}
 const CACHE_LIMIT: usize = 16384;
 /// What a generator's shared caches hold ([`OverworldGenerator::cache_census`]).
 #[derive(Clone, Copy, Debug, Default)]
@@ -3457,19 +3504,38 @@ impl OverworldGenerator {
         flat: &FlatSettings,
         structures: bool,
     ) -> Result<Self, GeneratorError> {
-        let registry = data.registry;
         let (level_min_y, level_height) = overrides::LevelHeight::of_type(
             &Value::from("minecraft:overworld"),
             &data.dimension_types,
         )
         .map_or((-64, 384), |h| (h.min_y, h.height));
-        // The overworld's own noise settings give the level its sea level and the rest of
-        // the generator its data; no noise is ever sampled.
-        let settings_json: Value = serde_json::from_str(
+        Self::flat_dimension(
+            data,
+            seed,
+            flat,
+            structures,
+            "minecraft:overworld",
+            (level_min_y, level_height),
+        )
+    }
+    fn flat_dimension(
+        data: Arc<GeneratorData>,
+        seed: i64,
+        flat: &FlatSettings,
+        structures: bool,
+        dimension: &str,
+        (level_min_y, level_height): (i32, i32),
+    ) -> Result<Self, GeneratorError> {
+        let registry = data.registry;
+        // The shared pipeline needs placeholder noise settings even though flat terrain
+        // never samples noise. Keep their range inside this level's build height.
+        let mut settings_json: Value = serde_json::from_str(
             data.settings
                 .get("minecraft:overworld")
                 .ok_or_else(|| resource("missing noise settings minecraft:overworld"))?,
         )?;
+        settings_json["noise"]["min_y"] = level_min_y.into();
+        settings_json["noise"]["height"] = level_height.into();
         // `Biome.CODEC.lenientOptionalFieldOf("biome")`: an unknown biome is Plains.
         let biome = if data.biome_id(&flat.biome).is_some() {
             flat.biome.as_str()
@@ -3490,9 +3556,13 @@ impl OverworldGenerator {
             &settings_json,
             structures,
             Some((level_min_y, level_height)),
-        )?;
+        )?
+        .in_dimension(dimension);
         let mut states = Vec::new();
         let mut null = Vec::new();
+        // `updateLayers`: `voidGen` when every configured layer is air, even past build height.
+        let air = registry.default_state("minecraft:air");
+        let mut void_gen = true;
         for (block, height) in &flat.layers {
             let id = registry
                 .default_state(block)
@@ -3500,16 +3570,12 @@ impl OverworldGenerator {
             // `adjustGenerationSettings`: a layer that is not opaque to MOTION_BLOCKING is
             // `null` in the layers `FlatLevelSource` reads.
             let hole = !HeightmapType::MotionBlocking.is_opaque(data.states.get(id));
-            for _ in 0..(*height).max(0) {
-                states.push(id);
-                null.push(hole);
-            }
+            void_gen &= *height <= 0 || Some(id) == air;
+            let count = ((*height).max(0) as usize)
+                .min((level_height.max(0) as usize).saturating_sub(states.len()));
+            states.resize(states.len() + count, id);
+            null.resize(null.len() + count, hole);
         }
-        // `updateLayers`: `voidGen` when every layer is air (no layers at all, too).
-        let air = registry.default_state("minecraft:air");
-        let void_gen = states.iter().all(|&id| Some(id) == air);
-        states.truncate(level_height.max(0) as usize);
-        null.truncate(states.len());
         // `FlatLevelSource.getSeaLevel`; its minimum Y and depth are in `generation`.
         pipeline.settings.sea_level = -63;
         let top_layers: Vec<(i32, BlockStateId)> = null
@@ -3601,8 +3667,21 @@ impl OverworldGenerator {
         // over the vanilla one.
         let level = overrides::LevelHeight::of_type(&stem["type"], &data.dimension_types)
             .map(|h| (h.min_y, h.height));
-        if generator["type"].as_str() != Some("minecraft:noise") {
-            return Err(resource(format!("{dimension} is not a noise generator")));
+        match generator["type"].as_str() {
+            Some("minecraft:flat" | "flat") => {
+                let level = level.ok_or_else(|| {
+                    resource(format!("missing or invalid dimension type for {dimension}"))
+                })?;
+                let flat = FlatSettings::from_json(&generator["settings"])?;
+                return Self::flat_dimension(data, seed, &flat, with_structures, dimension, level);
+            }
+            Some("minecraft:noise" | "noise") => {}
+            other => {
+                return Err(resource(format!(
+                    "unsupported generator type for {dimension}: {}",
+                    other.unwrap_or("<missing>")
+                )));
+            }
         }
         let mut settings_json: Value = match &generator["settings"] {
             Value::String(name) => serde_json::from_str(
@@ -3667,6 +3746,9 @@ impl OverworldGenerator {
     }
     pub fn data(&self) -> &Arc<GeneratorData> {
         self.pipeline.data()
+    }
+    pub fn is_flat(&self) -> bool {
+        self.pipeline.native_context().2
     }
     /// The noise range the noise settings asked for and the part of it
     /// inside the dimension's build height, when the settings reach past it.
@@ -4053,6 +4135,66 @@ mod tests {
         assert_eq!((kept.min_y, kept.height), (-64, 384));
         let plain = OverworldGenerator::new(vanilla, 0).unwrap();
         assert!(plain.noise_clamped().is_none());
+    }
+    #[test]
+    fn named_flat_level_uses_its_stem_and_build_range() {
+        let root = std::env::var_os("HORIZON_TEST_RESOURCES")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| {
+                Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.local/horizon-client/26.3")
+            });
+        let dir = root.join("worldgen");
+        if !dir.join("world_presets.json").exists() {
+            eprintln!("skipping: no worldgen bundle at {}", root.display());
+            return;
+        }
+        let registry = Box::leak(Box::new(crate::level::data::load_registry(&root).unwrap()));
+        let mut ov = WorldgenOverrides::default();
+        ov.set(
+            overrides::DIMENSION_TYPES,
+            "test:low",
+            serde_json::json!({"min_y": -96, "height": 256}).to_string(),
+        );
+        let mut stem = serde_json::json!({
+            "type": "test:low",
+            "generator": {
+                "type": "minecraft:flat",
+                "settings": {
+                    "layers": [{"block": "bedrock", "height": 1},
+                               {"block": "minecraft:stone", "height": 64}],
+                    "biome": "minecraft:desert",
+                    "structure_overrides": []
+                }
+            }
+        });
+        ov.set(overrides::DIMENSIONS, "test:low", stem.to_string());
+        let data = GeneratorData::load_with(&dir, registry, &ov).unwrap();
+        stem["generator"]["settings"]["biome"] = "minecraft:plains".into();
+        let generator = OverworldGenerator::for_world_with_settings(
+            data,
+            42,
+            "minecraft:normal",
+            "test:low",
+            true,
+            Some(&stem),
+        )
+        .unwrap();
+        assert_eq!(generator.pipeline.native_context(), ("test:low", 42, true));
+        assert_eq!(generator.level(), (-96, 256));
+        let chunk = generator
+            .worker()
+            .generate_proto(ChunkPos::new(2, -3))
+            .unwrap();
+        assert_eq!(chunk.biome_at(0, -32, 0), "minecraft:desert");
+        for (y, block) in [
+            (-96, "minecraft:bedrock"),
+            (-95, "minecraft:stone"),
+            (-32, "minecraft:stone"),
+            (-31, "minecraft:air"),
+            (159, "minecraft:air"),
+        ] {
+            assert_eq!(chunk.block_name(0, y, 0), block, "at Y {y}");
+        }
     }
     #[test]
     fn end_identity_surface_matches_normal_surface_and_rejects_custom_rules() {

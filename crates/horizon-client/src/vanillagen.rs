@@ -63,8 +63,6 @@ pub struct VanillaTerrain {
     /// `created`: the ring search waits for a pause in generation.
     last_proto: std::sync::atomic::AtomicU64,
     created: std::time::Instant,
-    /// A superflat generator (`FlatLevelSource`).
-    flat: bool,
 }
 /// A proto chunk, or the position of one whose generation failed.
 enum VanillaProto {
@@ -230,7 +228,7 @@ impl VanillaTerrain {
     ) -> crate::Result<Self> {
         let data: Arc<GeneratorData> = shared_data_with(dir, overrides, registry)?;
         let generator = OverworldGenerator::flat(data, seed, flat, structures)?;
-        let mut terrain = Self::assemble(
+        Self::assemble(
             dir,
             registry,
             biomes,
@@ -238,13 +236,11 @@ impl VanillaTerrain {
             seed,
             "minecraft:normal",
             "minecraft:overworld",
-        )?;
-        terrain.flat = true;
-        Ok(terrain)
+        )
     }
     /// Whether this is a superflat generator, whose `spawnOriginalMobs` places nothing.
     pub fn is_flat(&self) -> bool {
-        self.flat
+        self.generator.is_flat()
     }
     /// `NoiseGeneratorSettings.disableMobGeneration`: whether the generator
     /// adds the creature packs of a freshly generated chunk. The End's preset
@@ -344,7 +340,6 @@ impl VanillaTerrain {
             dimension: dimension.to_owned(),
             last_proto: std::sync::atomic::AtomicU64::new(0),
             created: std::time::Instant::now(),
-            flat: false,
         })
     }
     /// The column the dimension's chunks hold (its build range's).

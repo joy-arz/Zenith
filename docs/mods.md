@@ -140,6 +140,17 @@ doesn't leave a hole in the floor under it. It is no longer a solid render eithe
 leaves: dampened by 1, or not at all if its template lets skylight down. Unset or `true`, it occludes as its template
 does.
 
+`"plant_support": {"direction": "above", "tag": "#minecraft:leaves"}` in `properties` makes a plant
+survive only below a block in that tag. Use `"below"` to check the block underneath. The rule
+replaces the template's survival check for item placement, feature placement, and neighbor updates.
+`{"direction": "none"}` lets the plant survive without a support block.
+
+`"tree_feature": "orchard:apple"` in a sapling's `properties` selects a configured feature to
+place on its second growth stage. A failed placement leaves the sapling in place.
+
+`"harvest_loot": "orchard:harvest/berries"` selects the loot table used when picking ripe berries
+from a block that copies cave vines or a sweet berry bush.
+
 A block copies its template's states. It can also declare state properties of
 its own, which its template does not have — how a pipe says which sides it
 connects to, or a machine whether it is running. Its states then become its
@@ -266,6 +277,10 @@ or drunk is the `minecraft:use_remainder` component instead:
 { "template": "minecraft:mushroom_stew", "crafting_remainder": "minecraft:bowl" }
 ```
 
+`crafting_damage` gives a reusable tool a durability cost per craft. The grid keeps a single copy
+of the input stack with that damage added. The tool breaks when the new damage reaches its limit.
+Use this field on a damageable item without `crafting_remainder`.
+
 A block's item takes the same `components`, over the components of its
 template block's item; a block with `"item": false` can't have them. Block files
 have no `max_stack_size` or `rarity` keys, so those two go in `components` here
@@ -368,6 +383,10 @@ not yet been tried in a running game. Not yet as data: its own model or texture 
 `native_mob_submit`) and its own goals (a native mod gives it them with
 [`register_goals`](native-mods.md#mob-goals)).
 
+The Allthemodium carry declares `allthemodium:piglich` with its reserved Rust template of the same name.
+It uses the mod's Piglich geometry, texture, animations and loot. The Ancient Pyramid's biome tag is part of
+the embedded world pack, so it loads with the content mod.
+
 #### Menu types
 
 A mod menu type (vanilla's `MenuType`) is declared in `data/<id>/horizon/menu/<name>.json`: its container's slot count
@@ -439,6 +458,13 @@ remain frozen for that world session. `/reload` rebuilds
 tag additions but keeps its registered types until the world is reopened.
 Player damage, damage predicates and synchronized damage tags use that same
 world snapshot; local catalog indices and network registry IDs are separate.
+
+An HMOD can provide dimension stems, dimension types and their world generation under
+`data/<namespace>/world_pack/`. Use the same paths inside that directory as under
+`data/<namespace>/` in a data pack. The mod must own the namespace. Zenith exposes
+the embedded data as `mod/<mod-id>` and enables it when opening a world with the mod
+enabled. A world pack in the world's `datapacks` folder can override that data.
+Reopen the world after changing the enabled world generation packs.
 
 A mod adds to structure sets, template pools and processor lists that are not its own (vanilla's villages, another
 mod's houses) with a set, pool or processor list file in its own namespace holding `horizon:add_to`, a key vanilla data

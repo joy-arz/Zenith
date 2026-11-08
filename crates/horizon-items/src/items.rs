@@ -215,6 +215,7 @@ pub struct ItemInfo {
     pub jukebox_song: Option<String>,
     /// `crafting_remainder`: what stays in the grid when the item is used in a recipe.
     pub crafting_remainder: Option<String>,
+    pub crafting_damage: u32,
     /// `dye`: the dye colour name (dyes, and anything else with the component).
     pub dye: Option<String>,
     /// `cushion/color`: the DyeColor name of a cushion item.
@@ -240,6 +241,13 @@ pub const CRAFT_REMAINDERS: [(&str, &str); 5] = [
 /// In a root built by `mod_content::build`: the content mods' items' crafting
 /// remainders, by item. Other roots have none.
 pub const MOD_CRAFT_REMAINDERS: &str = "horizon-mod-craft-remainders.json";
+
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum ModCraftRemainder {
+    Item(String),
+    Damage { damage: u32 },
+}
 /// A reduction of `blocks_attacks.damage_reductions`.
 #[derive(Clone, Debug)]
 pub struct BlockReduction {
@@ -340,6 +348,26 @@ pub struct ItemStack {
     pub damage: u32,
     /// Components beyond count and damage (see `item_data`); None when default.
     pub extra: Option<Box<crate::item_data::StackData>>,
+}
+
+impl ItemStack {
+    /// Keep a single copy of a reusable tool, until its last use breaks it.
+    pub fn after_crafting(
+        &self,
+        replacement: Option<&str>,
+        damage: u32,
+        max_damage: u32,
+    ) -> Option<Self> {
+        if damage == 0 {
+            return replacement.map(|id| Self::new(id, 1));
+        }
+        let damage = self.damage.checked_add(damage)?;
+        (damage < max_damage).then(|| Self {
+            count: 1,
+            damage,
+            ..self.clone()
+        })
+    }
 }
 /// `order`'s items in the registry's order (`command-registries.json`'s
 /// `items`, exported from the game); `order` itself when that is missing.
@@ -790,7 +818,7 @@ impl Items {
         let raw = horizon_world::item_defaults::shared(root)?;
         let entity_tags = load_tags(root, "entity_type", overlay)?;
         let path = root.join(MOD_CRAFT_REMAINDERS);
-        let mod_remainders: HashMap<String, String> = match fs::read(&path) {
+        let mod_remainders: HashMap<String, ModCraftRemainder> = match fs::read(&path) {
             Ok(bytes) => {
                 serde_json::from_slice(&bytes).map_err(|e| format!("{}: {e}", path.display()))?
             }
@@ -947,7 +975,14 @@ impl Items {
                         .iter()
                         .find(|(item, _)| *item == name)
                         .map(|(_, rest)| (*rest).to_owned())
-                        .or_else(|| mod_remainders.get(name).cloned()),
+                        .or_else(|| match mod_remainders.get(name) {
+                            Some(ModCraftRemainder::Item(item)) => Some(item.clone()),
+                            _ => None,
+                        }),
+                    crafting_damage: match mod_remainders.get(name) {
+                        Some(ModCraftRemainder::Damage { damage }) => *damage,
+                        _ => 0,
+                    },
                     villager_food: c["minecraft:villager_food"]["nutrition"]
                         .as_i64()
                         .map(|n| n as i32),

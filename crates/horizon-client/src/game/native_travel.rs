@@ -19,13 +19,6 @@ pub(super) enum NativeMove {
     Respawn,
 }
 
-/// The level a mod names, of the three a server keeps.
-fn native_dim(id: &str) -> Option<Dim> {
-    [Dim::Overworld, Dim::Nether, Dim::End]
-        .into_iter()
-        .find(|d| d.id() == id)
-}
-
 /// `/tp`'s world bounds (`Level.isInSpawnableBounds`).
 fn teleportable(pos: [f64; 3]) -> bool {
     pos.iter().all(|v| v.is_finite())
@@ -50,7 +43,7 @@ impl Game<'_> {
     /// players' packets of the server tick (the same tick when the hook heard a packet). Into
     /// another level it happens when the tick's level teleports run, as a command's does. True
     /// when it is done or queued; false for a player not on the server or dead (when that can
-    /// be seen), a dimension other than the three, a position outside `/tp`'s bounds, an angle
+    /// be seen), an unknown dimension, a position outside `/tp`'s bounds, an angle
     /// that is not finite, and on a client. API @API:teleport_player@.
     pub(super) fn native_teleport_player(
         &mut self,
@@ -60,9 +53,10 @@ impl Game<'_> {
         yaw: f32,
         pitch: f32,
     ) -> bool {
-        let Some(dim) = native_dim(dimension) else {
+        if !self.level_shapes.contains(dimension) {
             return false;
-        };
+        }
+        let dim = Dim::from_id(dimension);
         if !self.native_serves() || !teleportable(pos) || !yaw.is_finite() || !pitch.is_finite() {
             return false;
         }
@@ -87,6 +81,7 @@ impl Game<'_> {
                     at: pos,
                     rotation: Some(rotation),
                     vehicle: None,
+                    pad: false,
                     cause: Some("unknown"),
                 });
             }
@@ -355,6 +350,7 @@ impl Game<'_> {
                 at: pos,
                 rotation: Some(rotation),
                 vehicle: None,
+                pad: false,
                 cause: Some("unknown"),
             });
         }

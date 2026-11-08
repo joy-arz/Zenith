@@ -103,7 +103,7 @@ pub enum PlayerEffect {
     /// Pop the item at the block (composter bone meal).
     DropItem(Arc<str>),
     /// Evaluate the block-interaction loot table and pop the results.
-    InteractLoot(&'static str),
+    InteractLoot(Arc<str>),
     /// Try to sleep in the bed whose head is at the event position.
     Sleep,
     /// Respawn anchor: set the respawn point (or explode outside the Nether).
@@ -311,7 +311,12 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
                     self.player_effect(
                         pos,
                         state,
-                        PlayerEffect::InteractLoot("minecraft:harvest/cave_vine"),
+                        PlayerEffect::InteractLoot(
+                            b.data(state)
+                                .harvest_loot
+                                .clone()
+                                .unwrap_or_else(|| Arc::from("minecraft:harvest/cave_vine")),
+                        ),
                     );
                     let pitch = self.random().next_float() * 0.4 + 0.8;
                     self.emit(LevelEvent::Sound {
@@ -332,7 +337,12 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
                     self.player_effect(
                         pos,
                         state,
-                        PlayerEffect::InteractLoot("minecraft:harvest/sweet_berry_bush"),
+                        PlayerEffect::InteractLoot(
+                            b.data(state)
+                                .harvest_loot
+                                .clone()
+                                .unwrap_or_else(|| Arc::from("minecraft:harvest/sweet_berry_bush")),
+                        ),
                     );
                     let pitch = 0.8 + self.random().next_float() * 0.4;
                     self.emit(LevelEvent::Sound {

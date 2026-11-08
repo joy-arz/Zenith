@@ -228,6 +228,11 @@ impl Levels {
 impl Game<'_> {
     /// A new level for `dim`, opened from the save (`MinecraftServer.createLevels`).
     fn open_level(&self, dim: Dim) -> Result<Parked> {
+        if !self.level_shapes.contains(dim.id()) {
+            return Err(
+                horizon_client::lang::tr("argument.dimension.invalid", &[&dim.id()]).into(),
+            );
+        }
         let (streaming, save, locator) = super::world_loading::make_streaming(
             &self.res,
             &self.pack,
@@ -580,6 +585,7 @@ impl Game<'_> {
                 Dim::Overworld => "level_overworld",
                 Dim::Nether => "level_the_nether",
                 Dim::End => "level_the_end",
+                Dim::Custom(_) => "level_custom",
             });
             if let Err(e) = self.enter_level(None, dim) {
                 result = Err(e);
@@ -771,8 +777,8 @@ impl Game<'_> {
             .lan
             .as_ref()
             .map_or(&[][..], |h| h.hub.guests.as_slice());
-        let mut dims: Vec<Dim> = [Dim::Overworld, Dim::Nether, Dim::End]
-            .into_iter()
+        let mut dims: Vec<Dim> = self
+            .level_order()
             .filter(|d| {
                 // `/forceload`ed chunks, or a native mod's tickets.
                 let held = |s: &Streaming| !s.forced.is_empty() || !s.mod_forced.is_empty();
@@ -890,9 +896,16 @@ impl Game<'_> {
     /// (`MinecraftServer.stopServer`'s `level.close()` loop), in vanilla's
     /// order of its levels: the Overworld, the Nether, the End.
     pub(super) fn native_levels_closing(&mut self) {
-        for dim in [Dim::Overworld, Dim::Nether, Dim::End] {
+        let order: Vec<_> = self.level_order().collect();
+        for dim in order {
             self.native_level_closed(dim);
         }
+    }
+
+    fn level_order(&self) -> impl Iterator<Item = Dim> + '_ {
+        [Dim::Overworld, Dim::Nether, Dim::End]
+            .into_iter()
+            .chain(self.level_shapes.custom_ids().map(Dim::from_id))
     }
 
     /// Save every parked level (`MinecraftServer.saveAllChunks`); the level

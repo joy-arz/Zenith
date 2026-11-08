@@ -59,6 +59,7 @@ struct Globals {
 // pixels must reach to shine in HDR output: r where the bright parts shine, g
 // where all of it does (gfx/hdr_stats.rs, measured from the sprite itself).
 @group(0) @binding(12) var emission_thresholds: texture_2d<f32>;
+@group(0) @binding(13) var sprites_8: texture_2d_array<f32>;
 // How many sprite arrays hold layers (a pipeline constant): 1 for vanilla,
 // which then samples exactly as before.
 override SPRITE_ARRAYS: u32 = 1u;
@@ -82,7 +83,8 @@ fn sprite_grad(uv: vec2<f32>, layer: u32, dx: vec2<f32>, dy: vec2<f32>) -> vec4<
         case 4u: { return textureSampleGrad(sprites_4, sprite_sampler, uv, l, dx, dy); }
         case 5u: { return textureSampleGrad(sprites_5, sprite_sampler, uv, l, dx, dy); }
         case 6u: { return textureSampleGrad(sprites_6, sprite_sampler, uv, l, dx, dy); }
-        default: { return textureSampleGrad(sprites_7, sprite_sampler, uv, l, dx, dy); }
+        case 7u: { return textureSampleGrad(sprites_7, sprite_sampler, uv, l, dx, dy); }
+        default: { return textureSampleGrad(sprites_8, sprite_sampler, uv, l, dx, dy); }
     }
 }
 // The same at an explicit mip level.
@@ -99,7 +101,8 @@ fn sprite_level(uv: vec2<f32>, layer: u32, lod: f32) -> vec4<f32> {
         case 4u: { return textureSampleLevel(sprites_4, sprite_sampler, uv, l, lod); }
         case 5u: { return textureSampleLevel(sprites_5, sprite_sampler, uv, l, lod); }
         case 6u: { return textureSampleLevel(sprites_6, sprite_sampler, uv, l, lod); }
-        default: { return textureSampleLevel(sprites_7, sprite_sampler, uv, l, lod); }
+        case 7u: { return textureSampleLevel(sprites_7, sprite_sampler, uv, l, lod); }
+        default: { return textureSampleLevel(sprites_8, sprite_sampler, uv, l, lod); }
     }
 }
 // texture_sampling.glsl's sampleNearest: the sprite's texels stay square pixels, blending only

@@ -1110,7 +1110,19 @@ impl PlacementContext for World<'_> {
         state: BlockStateId,
         position: [i32; 3],
     ) -> Result<bool, PlacementQueryError> {
-        if let (None, Some(behaviours)) = (self.blocks, self.behaviours) {
+        if let Some(behaviours) = self.behaviours
+            && (self.blocks.is_none()
+                || behaviours.data(state).plant_support.is_some()
+                || behaviours
+                    .data(state)
+                    .is(crate::level::classes::Class::GrowingPlant)
+                    && self
+                        .decoration
+                        .bindings
+                        .registry()
+                        .state(state)
+                        .is_some_and(|block| !block.name.starts_with("minecraft:")))
+        {
             let mut level = ShapeLevel {
                 world: self,
                 random: horizon_core::random::LegacyRandom::new(0),

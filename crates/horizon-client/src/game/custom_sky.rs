@@ -32,7 +32,7 @@ impl Game<'_> {
         let world = match self.dim {
             Dim::Overworld => Some(0),
             Dim::End => Some(1),
-            Dim::Nether => None,
+            Dim::Nether | Dim::Custom(_) => None,
         };
         let now = std::time::Instant::now();
         let seconds = self

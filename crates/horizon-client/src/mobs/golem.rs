@@ -60,14 +60,7 @@ impl Goal for ResetUniversalAnger {
 pub fn register_iron(m: &mut Mob) {
     let g = &mut m.ai.goals;
     g.add(1, MeleeAttack::new(1.0, true));
-    g.add(
-        2,
-        MoveTowardsTarget {
-            speed: 0.9,
-            within: 32.0,
-            wanted: [0.0; 3],
-        },
-    );
+    g.add(2, MoveTowardsTarget::new(0.9, 32.0));
     let mut back = Stroll::new(0.6)
         .interval(10)
         .named("MoveBackToVillageGoal")
@@ -271,11 +264,20 @@ impl Goal for DefendVillage {
 }
 /// `MoveTowardsTargetGoal`: close in on a target within range.
 #[derive(Clone, Debug)]
-struct MoveTowardsTarget {
+pub(super) struct MoveTowardsTarget {
     speed: f64,
     within: f64,
     /// The spot `canUse` picked, which `start` walks to.
     wanted: [f64; 3],
+}
+impl MoveTowardsTarget {
+    pub(super) fn new(speed: f64, within: f64) -> Self {
+        Self {
+            speed,
+            within,
+            wanted: [0.0; 3],
+        }
+    }
 }
 impl Goal for MoveTowardsTarget {
     goal_clone!();

@@ -671,6 +671,7 @@ struct Facts {
     max_damage: u32,
     max_stack: u32,
     remainder: Option<Arc<str>>,
+    crafting_damage: u32,
 }
 /// The tables recipes consult.
 pub struct Context<'a> {
@@ -1756,6 +1757,7 @@ impl Recipes {
                         max_damage: info.max_damage,
                         max_stack: info.max_stack,
                         remainder: info.crafting_remainder.as_deref().map(Arc::from),
+                        crafting_damage: info.crafting_damage,
                     },
                 )
             })
@@ -1924,11 +1926,9 @@ impl Recipes {
         for (i, cell) in input.cells.iter().enumerate() {
             let Some(s) = cell else { continue };
             let at = (input.top + i / input.width) * size + input.left + i % input.width;
-            let rest = self
-                .facts
-                .get(&s.item)
-                .and_then(|f| f.remainder.as_deref())
-                .map(|r| ItemStack::new(r, 1));
+            let rest = self.facts.get(&s.item).and_then(|f| {
+                s.after_crafting(f.remainder.as_deref(), f.crafting_damage, f.max_damage)
+            });
             if rest.is_some() {
                 out[at] = rest;
                 continue;
@@ -1998,6 +1998,60 @@ mod tests {
     use super::*;
     use crate::banner::BannerLayer;
     use std::fs;
+
+    #[test]
+    fn a_crafting_tool_keeps_its_components_and_breaks_after_its_last_use() {
+        let root =
+            std::env::temp_dir().join(format!("horizon-craft-damage-{}", std::process::id()));
+        let folder = root.join("data/minecraft/recipe");
+        fs::create_dir_all(&folder).unwrap();
+        fs::create_dir_all(root.join("data/minecraft/loot_table")).unwrap();
+        fs::write(
+            root.join("items.json"),
+            r#"{"ruby:hammer":{"minecraft:max_stack_size":1,"minecraft:max_damage":3},
+                "ruby:ore":{},"ruby:dust":{}}"#,
+        )
+        .unwrap();
+        fs::write(
+            root.join(horizon_items::items::MOD_CRAFT_REMAINDERS),
+            r#"{"ruby:hammer":{"damage":1}}"#,
+        )
+        .unwrap();
+        fs::write(
+            folder.join("crush.json"),
+            r#"{"type":"minecraft:crafting_shapeless","ingredients":["ruby:ore","ruby:hammer"],
+                "result":{"id":"ruby:dust","count":2}}"#,
+        )
+        .unwrap();
+        let items = Items::catalog(&root, &PackOverlay::NONE).unwrap();
+        let recipes = Recipes::load(&root, &items, &PackOverlay::NONE).unwrap();
+        let mut hammer = ItemStack::new("ruby:hammer", 1);
+        hammer.damage = 1;
+        hammer
+            .data_mut()
+            .set_loot_component("minecraft:custom_name", &serde_json::json!("My Hammer"));
+        let mut grid = vec![
+            Some(hammer.clone()),
+            Some(ItemStack::new("ruby:ore", 1)),
+            None,
+            None,
+        ];
+        let (recipe, result) = recipes.find(&grid, 2).unwrap();
+        assert_eq!(result, ItemStack::new("ruby:dust", 2));
+        let mut left = recipes.remainders(recipe, &grid, 2);
+        hammer.damage = 2;
+        assert_eq!(left[0].as_ref(), Some(&hammer));
+        assert!(left[1..].iter().all(Option::is_none));
+        grid[0] = left[0].take();
+        assert!(recipes.find(&grid, 2).is_some());
+        assert!(
+            recipes
+                .remainders(recipe, &grid, 2)
+                .iter()
+                .all(Option::is_none)
+        );
+        fs::remove_dir_all(root).unwrap();
+    }
 
     /// ItemStackTemplate.apply applies the result patch after the input patch.
     #[test]

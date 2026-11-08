@@ -628,9 +628,11 @@ struct NewItem {
     rarity: Option<Rarity>,
     components: Vec<(String, J)>,
     crafting_remainder: Option<String>,
+    crafting_damage: Option<u32>,
     /// `StandingAndWallBlockItem.wallBlock`, when its block declares it.
     wall_block: Option<String>,
     place_block: Option<String>,
+    own_block: bool,
 }
 
 struct Plan<'a> {
@@ -846,7 +848,12 @@ impl Plan<'_> {
             if rows.contains_key(&t.id) {
                 continue;
             }
-            let Some(row) = rows.get(&t.template) else {
+            let base = if t.template == horizon_mods::content::PIGLICH {
+                "minecraft:giant"
+            } else {
+                &t.template
+            };
+            let Some(row) = rows.get(base) else {
                 continue;
             };
             if !std::mem::take(&mut empty) {
@@ -872,6 +879,12 @@ fn mod_entity_row(
     type Raw = BTreeMap<String, Box<RawValue>>;
     let fail = |e: serde_json::Error| format!("{}: {e}", t.template);
     let mut fields: Raw = serde_json::from_str(row.get()).map_err(fail)?;
+    if t.template == horizon_mods::content::PIGLICH {
+        fields.insert("width".into(), to_raw_value(&0.6).map_err(fail)?);
+        fields.insert("height".into(), to_raw_value(&3.0).map_err(fail)?);
+        fields.insert("eye_height".into(), to_raw_value(&2.5500002).map_err(fail)?);
+        fields.insert("fire_immune".into(), to_raw_value(&true).map_err(fail)?);
+    }
     if !t.attributes.is_empty() {
         let mut attributes: Raw = match fields.get("attributes") {
             Some(a) => serde_json::from_str(a.get()).map_err(fail)?,
@@ -1166,8 +1179,10 @@ impl<'a> Plan<'a> {
                     rarity: None,
                     components: component_patch(&b.decl.id, &b.decl.components)?,
                     crafting_remainder: None,
+                    crafting_damage: None,
                     wall_block: b.decl.wall_block.clone(),
                     place_block: None,
+                    own_block: true,
                 });
             }
         }
@@ -1185,8 +1200,10 @@ impl<'a> Plan<'a> {
                     rarity: i.rarity,
                     components: component_patch(&i.id, &i.components)?,
                     crafting_remainder: i.crafting_remainder.clone(),
+                    crafting_damage: i.crafting_damage,
                     wall_block: None,
                     place_block: i.place_block.clone(),
+                    own_block: false,
                 });
             }
         }
@@ -1387,6 +1404,13 @@ impl<'a> Plan<'a> {
             };
             let mut v = v.clone();
             v.rename(&i.rename, false);
+            if !components
+                && i.own_block
+                && let Some(fields) = v.get_mut("fields")
+            {
+                // A template can use an item with a different id (wheat seeds).
+                fields.set("block", J::Str(i.rename.to.clone()));
+            }
             if let Some(wall) = &i.wall_block
                 && let Some(fields) = v.get_mut("fields")
             {
@@ -1407,6 +1431,15 @@ impl<'a> Plan<'a> {
                 }
                 patch_components(&mut v, &i.components, &known)
                     .map_err(|e| format!("{}: {e}", i.rename.to))?;
+                if i.crafting_damage.is_some()
+                    && !matches!(v.get("minecraft:max_damage"), Some(J::Num(n)) if n.as_u64().is_some_and(|n| n > 0))
+                {
+                    return Err(format!(
+                        "{}: crafting_damage needs a damageable item",
+                        i.rename.to
+                    )
+                    .into());
+                }
             }
             map.set(&i.rename.to, v);
         }
@@ -1471,14 +1504,41 @@ impl<'a> Plan<'a> {
                         }
                         // A connecting block: the chorus plant's PipeBlock
                         // without its rules, joining the declared tag.
-                        if let Some(tag) = &b.decl.connects_to {
-                            let classes = ["PipeBlock", "Block"].map(|c| J::Str(c.into()));
-                            v.set("class", J::Arr(classes.into()));
+                        let plant_support = &b.decl.properties.plant_support;
+                        let tree_feature = &b.decl.properties.tree_feature;
+                        let harvest_loot = &b.decl.properties.harvest_loot;
+                        if b.decl.connects_to.is_some()
+                            || plant_support.is_some()
+                            || tree_feature.is_some()
+                            || harvest_loot.is_some()
+                        {
                             let mut fields = v
                                 .get("fields")
                                 .cloned()
                                 .unwrap_or(J::Obj(Default::default()));
-                            fields.set("connectsTo", J::Str(tag.clone()));
+                            if let Some(tag) = &b.decl.connects_to {
+                                let classes = ["PipeBlock", "Block"].map(|c| J::Str(c.into()));
+                                v.set("class", J::Arr(classes.into()));
+                                fields.set("connectsTo", J::Str(tag.clone()));
+                            }
+                            if let Some(support) = plant_support {
+                                use horizon_mods::content::PlantSupport;
+                                let (direction, tag) = match support {
+                                    PlantSupport::Above { tag } => ("UP", Some(tag)),
+                                    PlantSupport::Below { tag } => ("DOWN", Some(tag)),
+                                    PlantSupport::None => ("NONE", None),
+                                };
+                                if let Some(tag) = tag {
+                                    fields.set("plantSupportTag", J::Str(tag.clone()));
+                                }
+                                fields.set("plantSupportDirection", J::Str(direction.into()));
+                            }
+                            if let Some(feature) = tree_feature {
+                                fields.set("feature", J::Str(feature.clone()));
+                            }
+                            if let Some(table) = harvest_loot {
+                                fields.set("harvestLoot", J::Str(table.clone()));
+                            }
                             v.set("fields", fields);
                         }
                         blocks.push(v);
@@ -1540,8 +1600,16 @@ impl<'a> Plan<'a> {
                     }
                 }
             }
-            "landing-definitions.json" | "worldgen/blocks/survival-rules.json" => {
-                self.names(doc, false)
+            "landing-definitions.json" => self.names(doc, false),
+            "worldgen/blocks/survival-rules.json" => {
+                self.names(doc, false);
+                // The exported GrowingPlant rule only knows vanilla families.
+                // Worldgen asks the cloned block's live behaviour for these.
+                for block in &self.blocks {
+                    if doc.get(&block.decl.id).and_then(J::as_str) == Some("GrowingPlant") {
+                        doc.remove(&block.decl.id);
+                    }
+                }
             }
             "worldgen/blocks/survival-extra-definitions.json" => {
                 if let Some(map) = doc.at("ignition_odds") {
@@ -2515,9 +2583,22 @@ pub fn build(base: &Path, mods: &[ContentMod], out: &Path) -> Result<Vec<String>
     let mut atlases: BTreeMap<String, Vec<J>> = BTreeMap::new();
     for m in mods {
         let declarations = format!("data/{}/horizon/", m.id);
+        let mut embedded_pack = false;
         let mut reader = m.content.reader()?;
         for file in &m.content.files {
             let bytes = reader.read(file)?;
+            if let Some((namespace, data)) = file
+                .strip_prefix("data/")
+                .and_then(|path| path.split_once('/'))
+                .and_then(|(ns, path)| Some((ns, path.strip_prefix("world_pack/")?)))
+            {
+                overlay.write(
+                    &format!("mod-world-packs/{}/data/{namespace}/{data}", m.id),
+                    &bytes,
+                )?;
+                embedded_pack = true;
+                continue;
+            }
             let is_tag = file.starts_with("data/") && file.contains("/tags/");
             if is_tag && file.ends_with(".json") {
                 let doc: J = serde_json::from_slice(&bytes).map_err(|e| format!("{file}: {e}"))?;
@@ -2560,6 +2641,16 @@ pub fn build(base: &Path, mods: &[ContentMod], out: &Path) -> Result<Vec<String>
                     overlay.write(&format!("worldgen/structure/{ns}/{path}"), &bytes)?;
                 }
             }
+        }
+        if embedded_pack {
+            let metadata = serde_json::json!({"pack": {
+                "description": m.id,
+                "pack_format": horizon_core::version::DATA_PACK_FORMAT,
+            }});
+            overlay.write(
+                &format!("mod-world-packs/{}/pack.mcmeta", m.id),
+                &serde_json::to_vec(&metadata)?,
+            )?;
         }
     }
     // A reload appends every pack's sources for an atlas to the ones below it.
@@ -2723,10 +2814,16 @@ pub fn build(base: &Path, mods: &[ContentMod], out: &Path) -> Result<Vec<String>
         horizon_items::content_namespaces::MOD_IDS_MARKER,
         &serde_json::to_vec(&mod_ids)?,
     )?;
-    let remainders: BTreeMap<&str, &str> = plan
+    let remainders: BTreeMap<&str, serde_json::Value> = plan
         .items
         .iter()
-        .filter_map(|i| Some((i.rename.to.as_str(), i.crafting_remainder.as_deref()?)))
+        .filter_map(|i| {
+            let remainder = match i.crafting_damage {
+                Some(damage) => serde_json::json!({"damage": damage}),
+                None => serde_json::json!(i.crafting_remainder.as_deref()?),
+            };
+            Some((i.rename.to.as_str(), remainder))
+        })
         .collect();
     if !remainders.is_empty() {
         overlay.write(
@@ -2853,8 +2950,10 @@ pub fn live_switch(content: &Content) -> std::result::Result<(), &'static str> {
         let mut parts = file.split('/');
         parts.next() == Some("data")
             && parts.nth(1).is_some_and(|folder| {
-                matches!(folder, "worldgen" | "dimension" | "dimension_type")
-                    || folder == "tags" && file.contains("/tags/worldgen/")
+                matches!(
+                    folder,
+                    "worldgen" | "dimension" | "dimension_type" | "world_pack"
+                ) || folder == "tags" && file.contains("/tags/worldgen/")
                     || matches!(folder, "neoforge" | "forge") && file.contains("/biome_modifier/")
             })
     };

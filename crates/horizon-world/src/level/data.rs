@@ -177,6 +177,12 @@ impl BlockSet {
 }
 
 #[derive(Clone, Debug)]
+pub enum PlantSupport {
+    Unrestricted,
+    Tagged(Direction, Arc<BlockSet>),
+}
+
+#[derive(Clone, Debug)]
 pub struct BlockData {
     pub class: Class,
     /// Recognised classes of the Java class chain, most derived first; ported
@@ -200,6 +206,9 @@ pub struct BlockData {
     /// `connects_to` (a `PipeBlock` alone in its chain).
     pub support_tag: Option<Arc<BlockSet>>,
     pub support_tag2: Option<Arc<BlockSet>>,
+    /// A content plant's support rule, independent of its template.
+    pub plant_support: Option<PlantSupport>,
+    pub harvest_loot: Option<Arc<str>>,
     pub feature: Option<Arc<str>>,
     pub grow_probability: f64,
     pub growth_direction: Direction,
@@ -971,6 +980,23 @@ fn build_with_gameplay<G: GameplayStateSource>(
         let support_tag2 = field("fruitSupportBlocks")
             .and_then(Value::as_str)
             .and_then(tag);
+        let plant_support = match field("plantSupportDirection").and_then(Value::as_str) {
+            Some("NONE") => Some(PlantSupport::Unrestricted),
+            Some(direction @ ("UP" | "DOWN")) => {
+                let direction = if direction == "UP" {
+                    Direction::Up
+                } else {
+                    Direction::Down
+                };
+                // An absent tag has no valid supports.
+                let supports = field("plantSupportTag")
+                    .and_then(Value::as_str)
+                    .and_then(tag)
+                    .unwrap_or_else(|| Arc::new(BlockSet(Vec::new())));
+                Some(PlantSupport::Tagged(direction, supports))
+            }
+            _ => None,
+        };
         let feature = field("feature")
             .and_then(Value::as_str)
             .or_else(|| {
@@ -1010,6 +1036,8 @@ fn build_with_gameplay<G: GameplayStateSource>(
             link2,
             support_tag,
             support_tag2,
+            plant_support,
+            harvest_loot: text(field("harvestLoot"), &mut strings),
             feature,
             grow_probability: field("growPerTickProbability")
                 .and_then(Value::as_f64)

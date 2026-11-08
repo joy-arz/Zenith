@@ -218,12 +218,29 @@ impl WorldRequest {
         if created {
             level.allow_commands.get_or_insert(creative);
         }
+        let shapes = level_shapes(
+            &save_root,
+            &options.resources,
+            res.biomes(),
+            &level.enabled_features,
+        );
         if let Some(d) = &options.dimension {
+            if !shapes.contains(d) {
+                return Err(horizon_client::lang::tr("argument.dimension.invalid", &[d]).into());
+            }
             level.dimension = d.clone();
+            level.position = None;
+        } else if !shapes.contains(&level.dimension) {
+            if !level.dimension.is_empty() {
+                log::warn!(
+                    "Horizon: the saved dimension {} is unavailable",
+                    level.dimension
+                );
+            }
+            level.dimension = Dim::Overworld.id().to_owned();
             level.position = None;
         }
         let dim = Dim::from_id(&level.dimension);
-        let shapes = level_shapes(&save_root, res.biomes());
         let shape = shapes.get(dim.id());
         let streaming_step = startup::step("world.make_streaming");
         let (mut streaming, save, locator) = make_streaming(
@@ -559,15 +576,19 @@ pub(super) fn creation_worldgen_overrides(
     data_packs: &[String],
     biomes: &horizon_client::biome::Biomes,
 ) -> horizon_world::worldgen::overrides::WorldgenOverrides {
-    let empty = std::path::PathBuf::new();
-    let packs =
-        horizon_client::datapack::discover_with_features(pack_dir.unwrap_or(&empty), resources);
-    let enabled: Vec<_> = data_packs
+    use horizon_client::datapack;
+    let embedded = datapack::embedded_mod_packs(resources);
+    let mut selectable = pack_dir.map(datapack::discover_folder).unwrap_or_default();
+    selectable.extend(datapack::feature_packs(resources));
+    let enabled: Vec<_> = embedded
         .iter()
-        .filter_map(|id| packs.iter().find(|p| &p.id == id))
+        .chain(
+            data_packs
+                .iter()
+                .filter_map(|id| selectable.iter().find(|p| &p.id == id)),
+        )
         .collect();
-    let (overrides, _) =
-        horizon_client::datapack::worldgen_overrides(&enabled, |b| biomes.contains(b));
+    let (overrides, _) = datapack::worldgen_overrides(&enabled, |b| biomes.contains(b));
     overrides
 }
 /// The worldgen entries of the world's enabled data packs, logging what
@@ -609,48 +630,60 @@ fn worldgen_overrides_of(
 /// The shapes of the world's levels: their dimension types, the world's
 /// enabled data packs' over vanilla's. A type the codec refuses keeps the
 /// vanilla shape, with a warning.
-pub(super) fn level_shapes(
+fn level_shapes(
     world_root: &std::path::Path,
+    resources: &std::path::Path,
     biomes: &horizon_client::biome::Biomes,
+    enabled_features: &[String],
 ) -> horizon_client::chunk::LevelShapes {
     use horizon_client::chunk::{LevelShape, LevelShapes};
-    let packs = horizon_client::datapack::discover(world_root);
-    let enabled_features = horizon_client::save::Level::read(world_root)
-        .map(|l| l.enabled_features)
-        .unwrap_or_default();
-    let enabled = horizon_client::datapack::enabled_ids(world_root, &packs, &enabled_features);
-    let enabled: Vec<_> = enabled
-        .iter()
-        .filter_map(|id| packs.iter().find(|p| &p.id == id))
-        .collect();
     let mut shapes = LevelShapes::VANILLA;
-    if enabled.is_empty() {
-        return shapes;
-    }
-    // What the packs leave out is logged when the generator reads them.
-    let (overrides, _) =
-        horizon_client::datapack::worldgen_overrides(&enabled, |b| biomes.contains(b));
+    let (overrides, _) = worldgen_overrides_of(world_root, resources, biomes, enabled_features);
+    let shape_of = |id: &str| {
+        let h = overrides.level_height(id)?;
+        LevelShape::new(
+            h.min_y,
+            h.height,
+            h.logical_height,
+            h.has_skylight,
+            h.has_ceiling,
+        )
+        .ok()
+    };
     for level in [
         "minecraft:overworld",
         "minecraft:the_nether",
         "minecraft:the_end",
     ] {
-        let shape = overrides.level_height(level).and_then(|h| {
-            LevelShape::new(
-                h.min_y,
-                h.height,
-                h.logical_height,
-                h.has_skylight,
-                h.has_ceiling,
-            )
-            .ok()
-        });
-        match shape {
+        match shape_of(level) {
             Some(shape) => *shapes.get_mut(level) = shape,
             None => log::warn!(
                 "Horizon: data pack worldgen: the dimension type of {level} is not one the \
                  game accepts; the level keeps the vanilla build height"
             ),
+        }
+    }
+    use horizon_world::worldgen::overrides::{DIMENSION_TYPES, DIMENSIONS};
+    let types: std::collections::BTreeMap<_, _> = overrides.entries(DIMENSION_TYPES).collect();
+    for (id, json) in overrides.entries(DIMENSIONS) {
+        if shapes.contains(id) {
+            continue;
+        }
+        let ty = serde_json::from_str::<serde_json::Value>(json)
+            .ok()
+            .and_then(|stem| stem["type"].as_str().map(str::to_owned));
+        if let (Some(ty), Some(shape), Some(_)) = (ty, shape_of(id), Dim::custom(id)) {
+            let scale = types
+                .get(ty.as_str())
+                .and_then(|json| serde_json::from_str::<serde_json::Value>(json).ok())
+                .and_then(|data| data["coordinate_scale"].as_f64())
+                .filter(|scale| (0.00001..=30_000_000.0).contains(scale))
+                .unwrap_or_else(|| shapes.coordinate_scale(&ty));
+            shapes.insert_custom(id.to_owned(), shape, ty, scale);
+        } else {
+            log::warn!(
+                "Horizon: data pack dimension {id} needs a valid ID and a named dimension type"
+            );
         }
     }
     shapes
@@ -845,10 +878,16 @@ pub(super) fn make_streaming(
                 inner.generator_data().clone(),
             )));
         }
-        inner.set_reference_file(world_root.join("data").join(format!(
-            "horizon_structure_references_{}.json",
-            dim.id().replace(':', "_")
-        )));
+        let references = if matches!(dim, Dim::Custom(_)) {
+            horizon_client::save::dimension_dir(world_root, dim.id())
+                .join("data/horizon_structure_references.json")
+        } else {
+            world_root.join("data").join(format!(
+                "horizon_structure_references_{}.json",
+                dim.id().replace(':', "_")
+            ))
+        };
+        inner.set_reference_file(references);
         {
             let save = save.clone();
             inner.set_saved_references(Arc::new(move |name, x, z| {

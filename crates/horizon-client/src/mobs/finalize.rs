@@ -456,7 +456,7 @@ impl Attr {
         }
     }
     /// `RangedAttribute` bounds.
-    fn range(self) -> (f64, f64) {
+    pub(super) fn range(self) -> (f64, f64) {
         match self {
             Self::MaxHealth => (1.0, 1024.0),
             Self::MovementSpeed => (0.0, 1024.0),

@@ -95,6 +95,7 @@ pub enum Species {
     ZombieNautilus,
     SulfurCube,
     Mannequin,
+    Piglich,
 }
 /// Baby bounding boxes (each class's BABY_DIMENSIONS).
 #[derive(Clone, Copy, Debug)]
@@ -1322,8 +1323,23 @@ pub const ALL: &[Def] = &[
     ),
 ];
 pub fn def(s: Species) -> &'static Def {
-    ALL.iter().find(|d| d.species == s).unwrap_or(&ALL[0])
+    if s == Species::Piglich {
+        &PIGLICH
+    } else {
+        ALL.iter().find(|d| d.species == s).unwrap_or(&ALL[0])
+    }
 }
+
+pub const PIGLICH: Def = def!(
+    Piglich,
+    "piglich",
+    "piglich#main",
+    "entity/piglin/piglin_brute",
+    A::Humanoid { zombie_arms: false },
+    ["", "entity.hostile.hurt", "entity.hostile.death"],
+    None,
+    Baby::None
+);
 /// `AgeableMob.canBeABaby`: the species `Mob::is_baby` can ever answer `true`
 /// for, which is what lets `getAge() < 0` mean "a baby" rather than "an age".
 ///
@@ -1385,6 +1401,9 @@ pub fn can_be_a_baby(s: Species) -> bool {
 }
 /// The vanilla entity type of a species, `minecraft:` and its [`Def::name`].
 pub fn vanilla_id(s: Species) -> &'static str {
+    if s == Species::Piglich {
+        return horizon_mods::content::PIGLICH;
+    }
     static IDS: std::sync::LazyLock<Vec<String>> = std::sync::LazyLock::new(|| {
         ALL.iter()
             .map(|d| format!("minecraft:{}", d.name))
@@ -1627,6 +1646,7 @@ impl Def {
                 | S::Warden
                 | S::Breeze
                 | S::Creaking
+                | S::Piglich
         )
     }
     /// The item tag Animal.isFood tests.

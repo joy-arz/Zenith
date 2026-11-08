@@ -11,7 +11,8 @@ The Zenith launcher and its downloadable Rust Edition game will have their own r
 ## First pinned game release
 
 - [x] Merge Horizon through `6c2498236` on the isolated `zenith/upstream-sync` branch. Preserve Zenith launcher translations and both projects' license notices.
-- [ ] Carry the local Zenith port changes onto the merge. Reconcile overlapping engine changes before selecting a release candidate.
+- [x] Carry the local ATM10 converter and gameplay changes onto `zenith/atm10-integration`. Retain upstream stateful block entity handling and reconcile the embedded world pack loader, dimension commands, and server autosaves.
+- [ ] Verify the integrated port in-game with prepared resources. Confirm that existing saves reopen and the embedded world data loads without a separate datapack.
 - [ ] Use the newest merged Horizon revision that passes Zenith's release checks. Record the upstream commit, Zenith source commit, native hooks API, and Mixins revision in the release.
 - [ ] Build and publish signed game archives for supported Windows, macOS, and Linux targets. Include client and dedicated server smoke tests.
 - [ ] Add a Zenith game channel to the launcher. Install the game version declared by a pack or profile and keep save locations scoped to their profile.

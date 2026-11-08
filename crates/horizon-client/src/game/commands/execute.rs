@@ -626,19 +626,16 @@ impl Game<'_> {
                 let Some(Arg::Resource(dim)) = c.get("dimension") else {
                     return Ok(vec![s]);
                 };
-                if !matches!(
-                    dim.as_str(),
-                    "minecraft:overworld" | "minecraft:the_nether" | "minecraft:the_end"
-                ) {
+                if !self.level_shapes.contains(dim) {
                     return Err(err("argument.dimension.invalid", &[dim]));
                 }
                 let dimension = Dim::from_id(dim);
-                let coordinate_scale = |dim| if dim == Dim::Nether { 8.0 } else { 1.0 };
-                let scale = coordinate_scale(s.dimension) / coordinate_scale(dimension);
+                let scale = self.level_shapes.coordinate_scale(s.dimension.id())
+                    / self.level_shapes.coordinate_scale(dimension.id());
                 vec![Source {
                     pos: [s.pos[0] * scale, s.pos[1], s.pos[2] * scale],
                     dimension,
-                    level: Some(super::super::Dim::from_id(dim)),
+                    level: Some(dimension),
                     ..s
                 }]
             }

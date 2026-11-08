@@ -44,6 +44,7 @@ pub(super) struct Trip {
     finder: Option<PlayerSpawnFinder>,
     /// Sent by a command: the player is already where it goes.
     placed: bool,
+    pad_origin: Option<[f64; 3]>,
     /// The level the player left for another one: the mods are told they
     /// changed dimension when the trip ends (`tell_mods_changed_dimension`).
     pub(super) left: Option<Dim>,
@@ -144,6 +145,7 @@ pub(super) struct LevelTeleport {
     pub vehicle: Option<u32>,
     /// What `native_player_teleport` hears as its cause; none: not heard.
     pub cause: Option<&'static str>,
+    pub pad: bool,
 }
 
 /// A teleport a command made inside a level: told to the mods once it has
@@ -179,6 +181,12 @@ impl Game<'_> {
     /// alone until it arrives.
     pub(super) fn on_server_trip(&self, conn: u32) -> bool {
         self.server_trips.iter().any(|t| t.conn == conn)
+    }
+
+    /// Until a pad is placed, the last safe player position is the departure.
+    pub(super) fn pad_departure(&self, conn: u32) -> Option<(Dim, [f64; 3])> {
+        let trip = self.server_trips.iter().find(|t| t.conn == conn)?;
+        Some((trip.source, trip.pad_origin?))
     }
 
     /// Whether a vehicle waits in `dim` for its rider to arrive elsewhere:
@@ -612,6 +620,7 @@ impl Game<'_> {
             world_spawn: false,
             finder: None,
             placed: false,
+            pad_origin: None,
             left: Some(source),
         });
         if let Err(e) = self.enter_level(Some(host), source) {
@@ -636,6 +645,7 @@ impl Game<'_> {
             world_spawn: false,
             finder: None,
             placed: false,
+            pad_origin: None,
             left: None,
         });
     }
@@ -704,6 +714,7 @@ impl Game<'_> {
             world_spawn: true,
             finder: None,
             placed: false,
+            pad_origin: None,
             left: None,
         });
     }
@@ -721,6 +732,7 @@ impl Game<'_> {
             at,
             rotation: None,
             vehicle: None,
+            pad: false,
             cause: None,
         });
         self.run_level_teleports(host);
@@ -755,6 +767,7 @@ impl Game<'_> {
             world_spawn: false,
             finder: None,
             placed: false,
+            pad_origin: None,
             left: None,
         });
     }
@@ -791,10 +804,30 @@ impl Game<'_> {
                 continue;
             }
             // A portal's trip (`start_server_trip`): its client waits to land.
-            let portal = trip.end || trip.plan.is_some();
+            let portal = trip.end || trip.plan.is_some() || trip.pad_origin.is_some();
             self.resolve_arrivals();
             let yaw = host.hub.guests[i].yaw;
-            let (position, yaw) = if let Some(config) = trip.respawn {
+            let (position, yaw) = if let Some(origin) = trip.pad_origin {
+                match self.allthemodium_pad_arrival(trip.target) {
+                    Ok(Some(at)) => (at, yaw),
+                    result => {
+                        if let Err(e) = result {
+                            log::warn!("Horizon: teleport pad arrival failed: {e}");
+                        }
+                        self.level_teleports.push(LevelTeleport {
+                            conn: trip.conn,
+                            dim: trip.source,
+                            at: origin,
+                            rotation: None,
+                            vehicle: None,
+                            cause: None,
+                            pad: false,
+                        });
+                        self.run_level_teleports(host);
+                        continue;
+                    }
+                }
+            } else if let Some(config) = trip.respawn {
                 match self.as_guest(host, trip.conn, |g| g.resolve_server_respawn(config)) {
                     Some(Some(found)) => found,
                     _ => {
@@ -891,6 +924,14 @@ impl Game<'_> {
                 host.hub.land(i, at);
             } else {
                 host.hub.teleport(i, Some(at));
+            }
+            if let Some(origin) = trip.pad_origin {
+                let g = &host.hub.guests[i];
+                let (uuid, name) = (g.uuid, g.name.clone());
+                self.as_guest(host, trip.conn, |g| {
+                    g.trigger_dimension(trip.source, trip.dim, origin);
+                    g.native_player_teleported(uuid, &name, origin, at, trip.dim.id());
+                });
             }
             self.tell_mods_changed_dimension(host, trip.conn, trip.left, trip.dim);
         }
@@ -1004,19 +1045,21 @@ impl Game<'_> {
             let cooldown = host.play.get(&t.conn).map_or(0, |p| p.portal.cooldown);
             let ctx = self.server_ctx();
             host.hub
-                .change_level(i, t.at, yaw, Some(pitch), false, cooldown, &ctx);
+                .change_level(i, t.at, yaw, Some(pitch), t.pad, cooldown, &ctx);
             let g = &mut host.hub.guests[i];
             g.vehicle = t.vehicle;
             if let Some(mut body) = passenger_body {
                 body.position = Vec3::new(t.at[0], t.at[1], t.at[2]);
                 g.motion = Some(body);
             }
-            self.as_guest(host, t.conn, |g| {
-                g.trigger_dimension(source, t.dim, origin);
-                // The mods hear the teleport into another level, with the
-                // player's state swapped in.
-                g.native_player_teleported(uuid, &name, origin, t.at, t.dim.id());
-            });
+            if !t.pad {
+                self.as_guest(host, t.conn, |g| {
+                    g.trigger_dimension(source, t.dim, origin);
+                    // The mods hear the teleport into another level, with the
+                    // player's state swapped in.
+                    g.native_player_teleported(uuid, &name, origin, t.at, t.dim.id());
+                });
+            }
             self.server_trips.retain(|trip| !trip.is(t.conn));
             self.server_trips.push(Trip {
                 conn: t.conn,
@@ -1032,7 +1075,8 @@ impl Game<'_> {
                 respawn: None,
                 world_spawn: false,
                 finder: None,
-                placed: true,
+                placed: !t.pad,
+                pad_origin: t.pad.then_some(origin),
                 left: Some(source),
             });
             if let Err(e) = self.enter_level(Some(host), source) {

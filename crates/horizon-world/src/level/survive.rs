@@ -4,6 +4,7 @@
 use super::{
     LevelAccess, Sim,
     classes::Class,
+    data::PlantSupport,
     query::is_horizontal,
     update::{HORIZONTAL, above, below, rel},
 };
@@ -15,7 +16,13 @@ impl<L: LevelAccess + ?Sized> Sim<'_, L> {
     pub fn can_survive(&self, state: BlockStateId, pos: BlockPos) -> bool {
         let mut survives = None;
         self.level.before_can_survive(pos, state, &mut survives);
-        survives.unwrap_or_else(|| self.can_survive_at(0, state, pos))
+        survives.unwrap_or_else(|| match &self.b.data(state).plant_support {
+            Some(PlantSupport::Unrestricted) => true,
+            Some(PlantSupport::Tagged(direction, supports)) => {
+                self.b.in_set(self.rel_state(pos, *direction), supports)
+            }
+            None => self.can_survive_at(0, state, pos),
+        })
     }
     fn can_survive_at(&self, depth: usize, state: BlockStateId, pos: BlockPos) -> bool {
         let chain = &self.b.data(state).chain;

@@ -74,6 +74,9 @@ impl Game<'_> {
             // (`take_parent_vehicle`); here it stays in the chunk saves.
             let mut host = host;
             for g in host.hub.guests.iter_mut().filter(|g| g.placed) {
+                if self.pad_departure(g.conn).is_some() {
+                    continue;
+                }
                 // Read-only fixture input, correlated with the real save receipt.
                 // Keep this identical on the untouched/fixed selector builds.
                 if std::env::var_os("HORIZON_DEV_ADVANCEMENT_SELECTOR_AUDIT").is_some() {

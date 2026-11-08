@@ -148,18 +148,7 @@ fn horizon_block_size() -> vec2<f32> {
     return vec2<f32>(textureDimensions(horizon_terrain_sprites).xy);
 }
 fn horizon_block_sample(uv: vec2<f32>, layer: u32, lod: f32) -> vec4<f32> {
-    let s = horizon_terrain_sprite_sampler;
-    let l = i32(layer % horizon_terrain_SPRITE_SPLIT);
-    switch layer / horizon_terrain_SPRITE_SPLIT {
-        case 0u: { return textureSampleLevel(horizon_terrain_sprites, s, uv, l, lod); }
-        case 1u: { return textureSampleLevel(horizon_terrain_sprites_1, s, uv, l, lod); }
-        case 2u: { return textureSampleLevel(horizon_terrain_sprites_2, s, uv, l, lod); }
-        case 3u: { return textureSampleLevel(horizon_terrain_sprites_3, s, uv, l, lod); }
-        case 4u: { return textureSampleLevel(horizon_terrain_sprites_4, s, uv, l, lod); }
-        case 5u: { return textureSampleLevel(horizon_terrain_sprites_5, s, uv, l, lod); }
-        case 6u: { return textureSampleLevel(horizon_terrain_sprites_6, s, uv, l, lod); }
-        default: { return textureSampleLevel(horizon_terrain_sprites_7, s, uv, l, lod); }
-    }
+    return horizon_terrain_sprite_level(uv, layer, lod);
 }
 fn horizon_material_color(in: HorizonMaterialOut, translucent: bool) -> vec4<f32> {
     let albedo = horizon_terrain_sprite(in.uv, in.layer & 0x7fffu);
