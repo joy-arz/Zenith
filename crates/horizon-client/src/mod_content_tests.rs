@@ -3125,6 +3125,42 @@ fn content_block_state_properties_fan_out_its_states() {
     fs::remove_dir_all(base.parent().unwrap().join("mod0")).ok();
 }
 
+#[test]
+fn content_block_state_light_overrides_the_block_light() {
+    let declaration = r#"{"template":"minecraft:test","item":false,
+      "properties":{"light":2},
+      "state_properties":{"active":{"type":"boolean"}},
+      "state_light":{"property":"active","values":{"true":15}}}"#;
+    let (base, mods) = block_base("state-light", &[declaration]);
+    let plan = Plan::new(&base, &mods).unwrap();
+    let mut gameplay: J =
+        serde_json::from_slice(&fs::read(base.join("gameplay-facts.json")).unwrap()).unwrap();
+    plan.json("gameplay-facts.json", &mut gameplay).unwrap();
+    let Some(J::Arr(rows)) = gameplay.get("states") else {
+        panic!("no states");
+    };
+    let mut facts: J = serde_json::from_slice(&fs::read(base.join("facts.json")).unwrap()).unwrap();
+    plan.json("facts.json", &mut facts).unwrap();
+    let Some(J::Arr(states)) = facts.get("states") else {
+        panic!("no block states");
+    };
+    assert_eq!(rows.len(), 6);
+    assert_eq!(states.len(), rows.len());
+    for (state, row) in states[2..].iter().zip(&rows[2..]) {
+        let J::Arr(state) = state else {
+            panic!("invalid state row");
+        };
+        let active = state[4].get("properties").unwrap().get("active").unwrap();
+        let expected = match active {
+            J::Str(value) if value == "true" => 15,
+            J::Str(value) if value == "false" => 2,
+            _ => panic!("invalid active property"),
+        };
+        assert_eq!(row.get("emission"), Some(&J::Num(expected.into())));
+    }
+    fs::remove_dir_all(base.parent().unwrap()).unwrap();
+}
+
 /// A declared property whose name sorts before the template's goes in vanilla's order
 /// (`StateDefinition`): all the names sorted, the first slowest, so `alpha` varies slower than the
 /// template's `axis`. A state table that read the rows in the other order stopped the game at

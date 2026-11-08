@@ -1343,7 +1343,13 @@ impl<'a> Plan<'a> {
         if let Some(v) = p.explosion_resistance {
             row.set("explosion_resistance", J::f64(v as f64));
         }
-        if let Some(v) = p.light {
+        let state_light = b.decl.state_light.as_ref().and_then(|light| {
+            combo
+                .iter()
+                .find(|(name, _)| name == &light.property)
+                .and_then(|(_, value)| light.values.get(value).copied())
+        });
+        if let Some(v) = state_light.or(p.light) {
             row.set("emission", J::Num(v.into()));
         }
         if let Some(v) = p.requires_tool {

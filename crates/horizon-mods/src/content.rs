@@ -262,6 +262,14 @@ fn state_name(s: &str) -> bool {
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
 
+/// Light emission overrides for values of a declared block state property.
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+pub struct StateLight {
+    pub property: String,
+    pub values: BTreeMap<String, u8>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BlockFile {
@@ -275,6 +283,7 @@ struct BlockFile {
     #[serde(default)]
     collision_context_shapes: BTreeMap<ShapeEntityKind, BlockShapes>,
     interaction_shapes: Option<BlockShapes>,
+    state_light: Option<StateLight>,
     #[serde(default)]
     state_properties: BTreeMap<String, StateProperty>,
     #[serde(default)]
@@ -314,6 +323,7 @@ pub struct Block {
     pub collision_context_shapes: BTreeMap<ShapeEntityKind, BlockShapes>,
     /// Ray-face override; does not replace the outline hit point or create a hit.
     pub interaction_shapes: Option<BlockShapes>,
+    pub state_light: Option<StateLight>,
     /// State properties of its own, which its template does not have.
     pub state_properties: BTreeMap<String, StateProperty>,
     /// State properties overlaid on the template default.
@@ -852,6 +862,7 @@ impl Content {
                 outline_context_shapes: file.outline_context_shapes,
                 collision_context_shapes: file.collision_context_shapes,
                 interaction_shapes: file.interaction_shapes,
+                state_light: file.state_light,
                 state_properties: file.state_properties,
                 default_state: file.default_state,
                 item: file.item,
@@ -1177,6 +1188,23 @@ fn check_block(file: &Block) -> Result<(), String> {
     }
     if p.friction.is_some_and(|f| !(0.0..=2.0).contains(&f)) {
         return Err("friction is 0 to 2".into());
+    }
+    if let Some(light) = &file.state_light {
+        let declared = file
+            .state_properties
+            .get(&light.property)
+            .map(StateProperty::values);
+        if declared.is_none_or(|values| {
+            light.values.is_empty()
+                || light
+                    .values
+                    .iter()
+                    .any(|(value, level)| *level > 15 || !values.contains(&value.as_str()))
+        }) {
+            return Err(
+                "state_light needs levels 0 to 15 for values of a declared state property".into(),
+            );
+        }
     }
     if p.light.is_some_and(|l| l > 15) {
         return Err("light is 0 to 15".into());
