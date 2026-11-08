@@ -86,3 +86,10 @@ From a terminal, `horizon-launcher install latest` installs Zenith;
 `horizon-launcher install horizon-latest` selects the Horizon compatibility
 channel. Maintainers with access to the private engine repository can still
 use `horizon-launcher zenith-access` for earlier private previews.
+
+Maintainers can run the engine preview workflow on the public Zenith
+repository when the private runners are unavailable. Dispatch it with
+`publish_preview=false` and the reviewed engine commit. Once all five build
+jobs and verification pass, run `tools/ci/promote_zenith_preview.sh` with
+the run ID, commit, and preview version. The promotion verifies the
+archives and uses the launcher channel's signing key locally.
