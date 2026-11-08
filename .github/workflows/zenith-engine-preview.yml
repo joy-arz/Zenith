@@ -1,0 +1,136 @@
+name: Zenith engine preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Preview version in the form X.Y.Z-preview.N
+        required: true
+        default: 0.1.0-preview.1
+
+permissions:
+  contents: read
+
+env:
+  HORIZON_VERSION: ${{ inputs.version }}
+  HORIZON_TELEMETRY_URL: 'off'
+  CARGO_INCREMENTAL: '0'
+
+jobs:
+  build:
+    if: github.repository == 'joy-arz/zenith-rust-edition'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: windows-latest
+            platform: windows-x64
+            exe: .exe
+          - os: windows-11-vs2026-arm
+            platform: windows-arm64
+            target: aarch64-pc-windows-msvc
+            exe: .exe
+          - os: macos-15
+            platform: macos-arm64
+          - os: macos-15-intel
+            platform: macos-x64
+    env:
+      BUILD_TARGET: ${{ matrix.target }}
+      OUTPUT: target/${{ matrix.target && format('{0}/', matrix.target) || '' }}fast
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Configure the Windows ARM64 LLVM assembler
+        if: matrix.target == 'aarch64-pc-windows-msvc'
+        shell: pwsh
+        run: |
+          $llvmBin = Join-Path $env:ProgramFiles 'LLVM\bin'
+          if (-not (Get-Command clang -ErrorAction SilentlyContinue) -and (Test-Path (Join-Path $llvmBin 'clang.exe'))) {
+            "$llvmBin" >> $env:GITHUB_PATH
+          }
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+      - name: Validate version and build the game
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$HORIZON_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+$ ]]
+          python3 tools/check_public_tree.py
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            export RUSTFLAGS="-C target-feature=+crt-static"
+          fi
+          cargo build --profile fast --locked ${BUILD_TARGET:+--target "$BUILD_TARGET"} -p horizon-client -p horizon-client-lib \
+            -p horizon-prepare -p horizon-server \
+            --bin horizon-client --bin horizon-ctl --bin horizon-prepare --bin horizon-server
+      - name: Package and check the client
+        shell: bash
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          EXE: ${{ matrix.exe }}
+        run: |
+          set -euo pipefail
+          folder="zenith-$PLATFORM"
+          cargo run --locked -p xtask -- package-source "$OUTPUT/horizon-client$EXE" "dist/$folder"
+          [[ "$("dist/$folder/horizon-client$EXE" --help)" == *--resources* ]]
+          [[ "$("dist/$folder/horizon-prepare$EXE" --version)" == *"$HORIZON_VERSION"* ]]
+          (cd dist && tar -czf "$folder.tar.gz" "$folder")
+      - name: Package and check the Linux server
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --profile fast --locked -p horizon-client --no-default-features --bin horizon-client
+          folder=zenith-server-linux-x86_64
+          cargo run --locked -p xtask -- package-server-source "$OUTPUT/horizon-client" "dist/$folder"
+          [[ "$("dist/$folder/horizon-server" --version)" == "horizon-server $HORIZON_VERSION" ]]
+          (cd dist && tar -czf "$folder.tar.gz" "$folder")
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zenith-${{ matrix.platform }}
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  verify:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: zenith-*
+          path: dist
+          merge-multiple: true
+      - name: Record the exact source and verify preview signatures
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="zenith-game@$HORIZON_VERSION"
+          git archive --format=tar.gz --output=dist/zenith-source.tar.gz HEAD
+          jq -n --arg commit "$GITHUB_SHA" --arg tag "$tag" \
+            '{source_commit:$commit,tag:$tag,channel:"preview"}' > dist/preview.json
+          EPHEMERAL=yes bash tools/ci/sign_release.sh "$tag" dist/*.tar.gz dist/preview.json
+          cargo run --locked --quiet -p horizon-release-sign -- verify \
+            --tag "$tag" --key "$(cat dist/ephemeral.pub)" dist
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zenith-preview-verification
+          path: |
+            dist/preview.json
+            dist/zenith-source.tar.gz
+            dist/SHA256SUMS
+            dist/SHA256SUMS.sig
+            dist/ephemeral.pub
+          if-no-files-found: error

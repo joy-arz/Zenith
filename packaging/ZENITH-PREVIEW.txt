@@ -1,0 +1,18 @@
+Zenith Rust Edition engine preview
+
+Install the JDK major version listed in research-lock.json. Use your own
+installation of the pinned Minecraft version and its matching server JAR.
+Run these commands from the extracted folder:
+
+  ./horizon-prepare --prepare --server-jar /path/to/server.jar
+  ./horizon-client
+
+Add --minecraft-dir if your Minecraft installation uses a custom directory.
+On Windows use the .exe filenames. Run horizon-prepare --help for other
+supported installation layouts.
+
+Server archives include horizon-server and horizon-engine. Prepare resources
+first, then run horizon-server --help for configuration and startup commands.
+
+These archives are for compatibility checks. The preview signing key is
+generated for each run. See the workflow logs for verification.

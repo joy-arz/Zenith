@@ -10,6 +10,9 @@
 //! (`cargo build --release -p horizon-client --no-default-features`, without sound or controllers)
 //! as horizon-engine, with horizon-prepare and horizon-server from beside it and the same sources.
 //!
+//! `package-source` and `package-server-source` omit precompiled exporters for previews.
+//! Players prepare those previews with the pinned Java development kit.
+//!
 //! `tokens`: writes `crates/horizon-theme/tokens.css`, the design tokens of `crates/horizon-theme` as CSS
 //! custom properties (a horizon-theme test fails when the file is out of date).
 //!
@@ -23,15 +26,16 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::{Command, ExitCode};
 
-const USAGE: &str = "usage: cargo run -p xtask -- package BINARY OUTDIR | package-server ENGINE OUTDIR | tokens | icons";
+const USAGE: &str = "usage: cargo run -p xtask -- package BINARY OUTDIR | package-server ENGINE OUTDIR | package-source BINARY OUTDIR | package-server-source ENGINE OUTDIR | tokens | icons";
 
 /// What the release folder takes from the repository at HEAD, as `git archive` writes it.
-const ARCHIVED: [&str; 5] = [
+const ARCHIVED: [&str; 6] = [
     "tools",
     "mods/horizon/src/test/java",
     "crates/horizon-prepare",
     "research-lock.json",
     "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
 ];
 
 /// The programs that sit beside the client: horizon-ctl, the command line and MCP server that
@@ -46,9 +50,13 @@ const SERVER_TOOLS: [&str; 2] = ["horizon-prepare", "horizon-server"];
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let result = match args.as_slice() {
-        [task, binary, out] if task == "package" => package(Path::new(binary), Path::new(out)),
-        [task, engine, out] if task == "package-server" => {
-            package_server(Path::new(engine), Path::new(out))
+        [task, binary, out] if matches!(task.as_str(), "package" | "package-source") => {
+            package(Path::new(binary), Path::new(out), task == "package")
+        }
+        [task, engine, out]
+            if matches!(task.as_str(), "package-server" | "package-server-source") =>
+        {
+            package_server(Path::new(engine), Path::new(out), task == "package-server")
         }
         [task] if task == "mod-api" => mod_api::run(),
         [task] if task == "tokens" => tokens(),
@@ -221,18 +229,29 @@ fn icons() -> Result<(), String> {
     Ok(())
 }
 
-fn package(binary: &Path, out: &Path) -> Result<(), String> {
+fn package(binary: &Path, out: &Path, bundled_exporters: bool) -> Result<(), String> {
     let repo = new_folder(out)?;
     copy_into(binary, out)?;
     copy_beside(binary, &TOOLS, out)?;
-    copy_exporters(&repo.join("exporters"), &out.join("exporters"))?;
-    let play = repo.join("packaging/PLAY.txt");
-    copy(&play, &out.join("PLAY.txt"))
+    let play = if bundled_exporters {
+        copy_exporters(&repo.join("exporters"), &out.join("exporters"))?;
+        "packaging/PLAY.txt"
+    } else {
+        "packaging/ZENITH-PREVIEW.txt"
+    };
+    copy(&repo.join(play), &out.join("PLAY.txt"))
 }
 
-fn package_server(engine: &Path, out: &Path) -> Result<(), String> {
+fn package_server(engine: &Path, out: &Path, bundled_exporters: bool) -> Result<(), String> {
     let repo = new_folder(out)?;
-    copy_exporters(&repo.join("exporters"), &out.join("exporters"))?;
+    if bundled_exporters {
+        copy_exporters(&repo.join("exporters"), &out.join("exporters"))?;
+    } else {
+        copy(
+            &repo.join("packaging/ZENITH-PREVIEW.txt"),
+            &out.join("PLAY.txt"),
+        )?;
+    }
     copy(engine, &out.join(program_name(engine, "horizon-engine")))?;
     copy_beside(engine, &SERVER_TOOLS, out)
 }
