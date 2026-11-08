@@ -553,19 +553,23 @@ pub(crate) fn get(url: &str) -> Result<ureq::Response, String> {
             request = request.set("Authorization", &format!("Bearer {token}"));
         }
     }
-    request
-        .call()
-        .or_else(|error| crate::github::release_asset(url).ok_or(error))
-        .map_err(|e| match e {
-            ureq::Error::Status(code, r)
-                if url.starts_with("https://api.github.com/")
-                    && crate::github::rate_limited(code, |h| r.header(h).map(str::to_owned)) =>
-            {
-                "GitHub's rate limit was reached. Try again in a few minutes.".into()
-            }
-            ureq::Error::Status(code, _) => format!("{url} answered {code}"),
-            ureq::Error::Transport(t) => format!("No connection: {t}"),
-        })
+    let error = match request.call() {
+        Ok(response) => return Ok(response),
+        Err(error) => error,
+    };
+    if let Some(response) = crate::github::release_asset(url) {
+        return Ok(response);
+    }
+    Err(match error {
+        ureq::Error::Status(code, r)
+            if url.starts_with("https://api.github.com/")
+                && crate::github::rate_limited(code, |h| r.header(h).map(str::to_owned)) =>
+        {
+            "GitHub's rate limit was reached. Try again in a few minutes.".into()
+        }
+        ureq::Error::Status(code, _) => format!("{url} answered {code}"),
+        ureq::Error::Transport(t) => format!("No connection: {t}"),
+    })
 }
 
 /// A Horizon game tag: `v` then a digit (`v2026.10.13`). Launcher tags never match.

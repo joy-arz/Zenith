@@ -9,17 +9,24 @@ on:
         description: 'Launcher version, for example 0.3.1 (must be newer than the installed release)'
         required: true
         type: string
+      recovery_run:
+        description: Reuse all five successful build artifacts from this Zenith release run ID
+        type: string
+        default: ''
 
 permissions:
   contents: read
 
 concurrency:
-  group: fork-release-${{ github.ref }}-${{ inputs.version }}
+  group: fork-release-${{ inputs.version && format('launcher@{0}', inputs.version) || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   version:
     if: github.repository == 'joy-arz/Zenith'
+    permissions:
+      contents: read
+      actions: read
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -29,13 +36,32 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           REF_NAME: ${{ github.ref_name }}
+          RECOVERY_RUN: ${{ inputs.recovery_run }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           version="${INPUT_VERSION:-${REF_NAME#launcher@}}"
           [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || exit 1
           tag="launcher@$version"
           refs=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY.git" "refs/tags/$tag" "refs/tags/$tag^{}")
-          if [[ -n "$refs" ]]; then
-            tagged_sha=$(printf '%s\n' "$refs" | tail -1 | cut -f1)
+          [[ -n "$refs" ]] || {
+            echo "::error::Push $tag at $GITHUB_SHA before releasing. The release runner cannot create the tag."
+            exit 1
+          }
+          tagged_sha=$(printf '%s\n' "$refs" | tail -1 | cut -f1)
+          if [[ -n "$RECOVERY_RUN" ]]; then
+            [[ "$RECOVERY_RUN" =~ ^[1-9][0-9]*$ ]]
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RECOVERY_RUN" |
+              jq -e --arg sha "$tagged_sha" --arg repo "$GITHUB_REPOSITORY" '
+                .path == ".github/workflows/fork-release.yml" and .head_sha == $sha
+                and .head_repository.full_name == $repo and .status == "completed"
+              ' >/dev/null
+            gh run view "$RECOVERY_RUN" --repo "$GITHUB_REPOSITORY" --json jobs |
+              jq -e '
+                any(.jobs[]; .name == "version" and .conclusion == "success")
+                and ([.jobs[] | select(.name | startswith("build ("))] |
+                  length == 5 and all(.conclusion == "success"))
+              ' >/dev/null
+          else
             [[ "$tagged_sha" == "$GITHUB_SHA" ]] || { echo 'Version tag already points to another commit; choose a new version.' >&2; exit 1; }
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -43,6 +69,7 @@ jobs:
 
   build:
     needs: version
+    if: ${{ !inputs.recovery_run }}
     strategy:
       fail-fast: false
       matrix:
@@ -176,8 +203,12 @@ jobs:
 
   publish:
     needs: [version, build]
+    if: >-
+      ${{ !cancelled() && needs.version.result == 'success' &&
+      (needs.build.result == 'success' || (inputs.recovery_run && needs.build.result == 'skipped')) }}
     runs-on: ubuntu-24.04
     permissions:
+      actions: read
       contents: write
     steps:
       - uses: actions/checkout@v7
@@ -188,6 +219,21 @@ jobs:
           pattern: fork-*
           merge-multiple: true
           path: dist
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.recovery_run || github.run_id }}
+      - name: Check recovered launcher version
+        if: inputs.recovery_run != ''
+        env:
+          RELEASE_VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          scratch=$(mktemp -d)
+          tar -xzf dist/zenith-launcher-linux-x86_64.tar.gz -C "$scratch" horizon-launcher
+          export HORIZON_HOME="$scratch/game" HORIZON_LAUNCHER_HOME="$scratch/launcher"
+          export XDG_DATA_HOME="$scratch/data" XDG_CONFIG_HOME="$scratch/config"
+          export HORIZON_LAUNCHER_NO_SELF_UPDATE=1 HORIZON_NO_AUDIO=1
+          export HORIZON_LAUNCHER_TRASH="$scratch/trash" HORIZON_LAUNCHER_CLIPBOARD="$scratch/clipboard"
+          export HORIZON_LAUNCHER_DESKTOP="$scratch/desktop"
+          [[ "$("$scratch/horizon-launcher" --version)" == "horizon-launcher $RELEASE_VERSION" ]]
       - name: Sign release checksums
         env:
           RELEASE_SIGNING_KEY: ${{ secrets.FORK_RELEASE_SIGNING_KEY }}
@@ -210,11 +256,19 @@ jobs:
           { printf 'horizon release %s\n' "$RELEASE_TAG"; cat dist/SHA256SUMS; } > release-message
           openssl pkeyutl -verify -rawin -pubin -keyform DER -inkey release-public.der -in release-message -sigfile release-signature.bin
           (cd dist && sha256sum --check SHA256SUMS)
+      - name: Retain verified checksums for release recovery
+        uses: actions/upload-artifact@v7
+        with:
+          name: zenith-launcher-signed-checksums
+          path: |
+            dist/SHA256SUMS
+            dist/SHA256SUMS.sig
+          if-no-files-found: error
+          overwrite: true
       - name: Publish immutable launcher release
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.version.outputs.tag }}
-          RELEASE_SHA: ${{ github.sha }}
         run: |
           cat > release-notes.md <<'NOTES'
           Offline accounts, custom local skins, self-hosted offline servers, and owner-managed port-forwarding invitations.
@@ -223,4 +277,4 @@ jobs:
 
           See FORK.md in the repository for setup and hosting instructions. PNG skins render locally; they are not distributed to other clients.
           NOTES
-          gh release create "$RELEASE_TAG" dist/* --target "$RELEASE_SHA" --title "Zenith ${RELEASE_TAG#launcher@}" --notes-file release-notes.md --latest
+          gh release create "$RELEASE_TAG" dist/* --verify-tag --title "Zenith ${RELEASE_TAG#launcher@}" --notes-file release-notes.md --latest
