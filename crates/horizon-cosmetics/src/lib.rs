@@ -20,6 +20,7 @@ pub mod mark;
 mod pose;
 pub mod prefs;
 pub mod preview;
+pub mod skin_layers;
 pub mod trail;
 pub mod viewer;
 
