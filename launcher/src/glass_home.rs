@@ -99,7 +99,7 @@ impl Launcher {
             .pt(px(64. - crate::glass::CONTENT_INSET))
             .child(self.edition_tabs(java.is_some(), cx))
             .child(self.home_title(cx))
-            .child(self.played_text(cx))
+            .child(self.played_text())
             .child(actions)
     }
 
@@ -209,9 +209,8 @@ impl Launcher {
             )
     }
 
-    /// "You've played for 41 h 06 min! Last played today.", or how long it has run now; then
-    /// the players counts the launcher knows (not in the mockup).
-    fn played_text(&self, cx: &mut Context<Self>) -> Div {
+    /// Local play time for the selected instance.
+    fn played_text(&self) -> Div {
         let line = match (self.client_since, self.selected_instance()) {
             (Some(since), _) => trf(
                 "Playing for {time} now. Have fun!",
@@ -229,49 +228,12 @@ impl Launcher {
             },
             (None, None) => String::new(),
         };
-        let link = |id: &'static str, label: String| {
-            div()
-                .id(id)
-                .cursor_pointer()
-                .hover(|s| s.text_color(white(ink::FULL)))
-                .child(label)
-        };
-        let playing = self.playing.map(|count| {
-            let label = format!(
-                "· {}",
-                trf("{count} playing now", &[("count", &thousands(count))])
-            );
-            let url = telemetry::stats_url(&self.links.website);
-            link("playing-now", label).on_click(move |_: &ClickEvent, _, cx| {
-                if let Some(url) = &url {
-                    cx.open_url(url);
-                }
-            })
-        });
-        let official = self.official_players.map(|count| {
-            link(
-                "official-players",
-                format!(
-                    "· {}",
-                    trf(
-                        "{count} on the official SMP",
-                        &[("count", &thousands(count))]
-                    )
-                ),
-            )
-            .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                this.go(Page::Servers);
-                cx.notify();
-            }))
-        });
         ui::text(15., FontWeight::NORMAL, ink::STRONG)
             .mt(px(16.))
             .flex()
             .flex_wrap()
             .gap(px(4.))
             .child(line)
-            .children(playing)
-            .children(official)
     }
 
     /// Play and its ⋯ menu (`PlayGroup`): Stop while the game runs, Update when the launcher's

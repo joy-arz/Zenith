@@ -1,5 +1,5 @@
 //! The glass look's frame (the mockup's `launcher-app.tsx`): the sidebar plate with the
-//! instances, the launcher's update, Sculk's card, Discord and the links; the top bar with the
+//! instances, the launcher's update, Discord and the links; the top bar with the
 //! pages in a glass tab strip, the player, Microsoft sign-in and Settings; and the menus they open.
 //! Dark appearance only for now (`docs/design-system.md`, "Glass").
 use super::*;
@@ -274,7 +274,7 @@ impl Launcher {
     }
 
     /// The glass sidebar: a plate 248 wide, 14 from the window's edges.
-    pub(super) fn glass_sidebar(&mut self, window: &Window, cx: &mut Context<Self>) -> Div {
+    pub(super) fn glass_sidebar(&mut self, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let soft = self.look.accent_soft;
         self.load_packs();
@@ -470,36 +470,6 @@ impl Launcher {
             _ => {}
         }
 
-        // Sculk's card (not in the mockup, kept: a sponsor), where the old sidebar had it: at
-        // the sidebar's foot above the links, on every page (Servers shows the wide banner too).
-        // Tall where the sidebar has the height for it besides its rows, compact otherwise.
-        if !self.settings.partner_hidden {
-            let rows = self.instances.list.len() + servers.len();
-            let free = f32::from(window.viewport_size().height)
-                - 2. * MARGIN
-                - 52.
-                - 56. * rows as f32
-                - 190.;
-            let mut side = div().relative().mt(px(12.)).child(partner::card(
-                "partner-side",
-                SIDEBAR - 20.,
-                free < partner::TALL_HEIGHT,
-                &t,
-            ));
-            if self.settings.partner_seen_secs >= partner::SEEN_BEFORE_HIDE {
-                side = side.child(
-                    partner::hide_button("partner-hide", &t).on_click(cx.listener(
-                        |this, _: &ClickEvent, _, cx| {
-                            this.settings.partner_hidden = true;
-                            this.save_settings();
-                            cx.notify();
-                        },
-                    )),
-                );
-            }
-            foot = foot.child(side);
-        }
-
         if !self.links.discord.is_empty() {
             let url = self.links.discord.clone();
             foot = foot.child(keyboard(
@@ -559,7 +529,7 @@ impl Launcher {
         if !self.links.sponsor.is_empty() {
             links = links.child(link(
                 "sponsor",
-                tr("Sponsor"),
+                tr("Support"),
                 "favourite",
                 self.links.sponsor.clone(),
             ));
@@ -597,8 +567,7 @@ impl Launcher {
             .child(foot.relative())
     }
 
-    /// The glass top bar: the pages in a glass strip, then the player, Microsoft sign-in and
-    /// Settings (`px-8 pt-3.5`).
+    /// The glass top bar: the page tabs, the player menu and Settings.
     pub(super) fn glass_topbar(&mut self, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
         let wide = self.window_width >= crate::glass_home::TOP_BAR_WIDE;
@@ -696,33 +665,6 @@ impl Launcher {
             .child(keyboard(chip, &t))
             .children(self.glass_account_menu(cx));
 
-        // Signing in with Microsoft, while nobody is: the mockup's button.
-        let sign_in = (!matches!(self.accounts.player(), Player::Microsoft(_))).then(|| {
-            keyboard(
-                div()
-                    .id("topbar-sign-in")
-                    .relative()
-                    .flex()
-                    .items_center()
-                    .gap(px(10.))
-                    .h(px(44.))
-                    .px(px(16.))
-                    .rounded(px(radius::ROW))
-                    .bg(white(fill::BUTTON))
-                    .hover(|s| s.bg(white(fill::BUTTON_HOVER)))
-                    .cursor_pointer()
-                    .child(microsoft::logo(16.))
-                    .child(
-                        ui::text(14., FontWeight::MEDIUM, ink::FULL)
-                            .child(tr("Sign in with Microsoft")),
-                    )
-                    .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                        this.start_sign_in();
-                        cx.notify();
-                    })),
-                &t,
-            )
-        });
         let settings = ui::icon_button(
             "nav-Settings",
             "sliders-horizontal",
@@ -779,7 +721,6 @@ impl Launcher {
                     .gap(px(6.))
                     .children(build_log)
                     .child(account)
-                    .children(sign_in)
                     .child(settings),
             )
     }
@@ -870,8 +811,7 @@ impl Launcher {
         menu = menu.child(div().mt(px(4.)).child(
             ui::menu_row("account-manage", "user", tr("Manage accounts"), false, &t).on_click(
                 cx.listener(|this, _: &ClickEvent, _, cx| {
-                    this.account_menu = false;
-                    this.go(Page::Settings);
+                    this.manage_accounts();
                     cx.notify();
                 }),
             ),

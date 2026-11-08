@@ -14,7 +14,7 @@ use crate::glass_ui::{self as ui, white};
 use horizon_theme::glass::{fill, ink, radius};
 
 /// The list's entries: name and icon. The mockup's seven, then data collection.
-const SECTIONS: [(&str, &str); 8] = [
+const SECTIONS: [(&str, &str); 7] = [
     ("Account", "user"),
     ("Updates", "refresh"),
     ("Launcher", "computer"),
@@ -22,7 +22,6 @@ const SECTIONS: [(&str, &str); 8] = [
     ("Game", "game-controller-01"),
     ("AI", "ai-chat-02"),
     ("About", "information-circle"),
-    ("Data collection", "view"),
 ];
 
 /// What `settings_page` builds before it knows which look draws it.
@@ -506,8 +505,7 @@ impl Launcher {
                 ))
             })
             .children(self.dev_options_section(cx));
-        let data = card().child(self.collection_section(cx));
-        vec![account, updates, launcher, network, game, ai, about, data]
+        vec![account, updates, launcher, network, game, ai, about]
     }
 }
 

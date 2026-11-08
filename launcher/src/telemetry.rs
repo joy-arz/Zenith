@@ -36,61 +36,6 @@ pub const SWITCHES: [(Kind, &str, &str); 4] = [
     ),
 ];
 
-/// Never sent, whatever the switches say.
-pub const NEVER: &str = "Never sent: your account name or UUID, world names, server addresses, chat, or your IP address. Each report is dated to the day, under a random install ID you can delete.";
-
-/// The anonymous "I'm playing" ping the game sends whatever the switches say (Ludovic's
-/// decision, 2026-10-22: count everyone, and tell them). Shown on the first-run question, in
-/// Settings, and once on the Play page to players who answered before it existed.
-pub const PING_NAME: &str = "\"I'm playing\" ping";
-pub const PING: &str = "While you play, the game sends an anonymous \"I'm playing\" ping once a minute, so the launcher can show how many people play Horizon right now. It holds: a random number made when the game starts and forgotten when it closes, the Horizon version, your OS (Linux, macOS or Windows), and whether you have a world open to LAN or friends. It doesn't hold: your account, your install ID, world or server names, or anything you do in the game, and the server doesn't keep your IP address. It is sent whatever the switches say.";
-
-/// How many play Horizon now (exact), if the server says.
-pub fn playing_now() -> Option<u64> {
-    let endpoint = horizon_telemetry::endpoint()?;
-    horizon_telemetry::live::fetch(&endpoint)
-        .ok()
-        .map(|count| count.playing)
-}
-
-/// The page with the count over time and its peaks, on the website `links.json` names; None when
-/// it names none.
-pub fn stats_url(website: &str) -> Option<String> {
-    let site = website.trim().trim_end_matches('/');
-    site.starts_with("https://")
-        .then(|| format!("{site}/stats"))
-}
-
-/// Sends [`playing_now`] to the window as `Msg::Playing` now and every minute, on its own
-/// thread. Nothing at all when sending is turned off.
-pub fn watch_playing(tx: std::sync::mpsc::Sender<backend::Msg>) {
-    if horizon_telemetry::endpoint().is_none() {
-        return;
-    }
-    std::thread::spawn(move || {
-        while tx.send(backend::Msg::Playing(playing_now())).is_ok() {
-            std::thread::sleep(horizon_telemetry::live::INTERVAL);
-        }
-    });
-}
-
-/// The official server's address from links.json once read (`set_official_server`; empty: none),
-/// the built-in one until then.
-static OFFICIAL_SERVER: std::sync::RwLock<Option<String>> = std::sync::RwLock::new(None);
-
-/// The official server [`watch_official`] asks from now on: `Links::official_server`.
-pub fn set_official_server(address: &str) {
-    *OFFICIAL_SERVER.write().unwrap_or_else(|e| e.into_inner()) = Some(address.trim().to_owned());
-}
-
-fn official_server() -> String {
-    OFFICIAL_SERVER
-        .read()
-        .unwrap_or_else(|e| e.into_inner())
-        .clone()
-        .unwrap_or_else(|| crate::server_list::OFFICIAL_ADDRESS.to_owned())
-}
-
 /// A server's players by its server-list status ping, as the game's Multiplayer list sends it
 /// (through the address's SRV record), with a 3-second timeout. None when it doesn't answer.
 pub fn server_players(address: &str) -> Option<horizon_telemetry::server_status::Players> {
@@ -104,37 +49,14 @@ pub fn server_players(address: &str) -> Option<horizon_telemetry::server_status:
     .ok()
 }
 
-/// How many play on the official server now ([`server_players`]). None when it doesn't answer
-/// or there is no official server.
-pub fn official_players(address: &str) -> Option<u64> {
-    server_players(address).map(|players| players.online)
-}
-
-/// Sends [`official_players`] to the window as `Msg::OfficialPlayers` now and every minute, on
-/// its own thread. Nothing when `HORIZON_TELEMETRY_URL=off` (tests and automated runs) turns the
-/// live count off too.
-pub fn watch_official(tx: std::sync::mpsc::Sender<backend::Msg>) {
-    if horizon_telemetry::endpoint().is_none() {
-        return;
-    }
-    std::thread::spawn(move || {
-        while tx
-            .send(backend::Msg::OfficialPlayers(official_players(
-                &official_server(),
-            )))
-            .is_ok()
-        {
-            std::thread::sleep(horizon_telemetry::live::INTERVAL);
-        }
-    });
-}
-
 pub fn home() -> PathBuf {
     backend::game_home()
 }
 
 pub fn consent() -> Consent {
-    Consent::load(&home())
+    let mut consent = Consent::load(&home());
+    consent.choices = Choices::NONE;
+    consent
 }
 
 /// Records the player's answer. Waiting items of kinds now off are deleted at once.
@@ -294,14 +216,8 @@ pub fn bug_report(text: &str, with_log: bool) -> Result<Item, String> {
 }
 
 /// An error unless the player allows `kind`.
-pub fn ensure_allowed(kind: Kind) -> Result<(), String> {
-    if consent().allows(kind) {
-        return Ok(());
-    }
-    Err(format!(
-        "{} are off: turn them on in Settings → Data collection first.",
-        label(kind)
-    ))
+pub fn ensure_allowed(_kind: Kind) -> Result<(), String> {
+    Err("Data collection is disabled in Zenith.".into())
 }
 
 /// Keeps `item` and sends the outbox; says what happened.
@@ -345,11 +261,6 @@ pub fn send() -> Flush {
     }
 }
 
-/// [`send`] on its own thread, at start and when the window closes.
-pub fn send_in_background() -> std::thread::JoinHandle<()> {
-    std::thread::spawn(|| drop(send()))
-}
-
 /// The status as `telemetry status` and the MCP tool give it.
 pub fn status_json() -> serde_json::Value {
     let consent = consent();
@@ -361,18 +272,8 @@ pub fn status_json() -> serde_json::Value {
         "install_id": consent.install_id,
         "waiting": outbox::pending(&home()).len(),
         "server": horizon_telemetry::endpoint(),
-        "ping": PING,
+        "enabled": false,
     })
-}
-
-/// [`send`] as the launcher closes, waiting at most a few seconds for it.
-pub fn send_before_exit() {
-    let (tx, rx) = std::sync::mpsc::channel();
-    std::thread::spawn(move || {
-        send();
-        let _ = tx.send(());
-    });
-    let _ = rx.recv_timeout(std::time::Duration::from_secs(3));
 }
 
 /// The kinds named as the CLI and MCP take them: `performance`, `crashes`, `bugs`,
@@ -396,6 +297,9 @@ pub fn parse_kinds(names: &[String]) -> Result<Vec<Kind>, String> {
 
 /// Turns `kinds` on or off, keeping the other switches as they are (off if never asked).
 pub fn set(kinds: &[Kind], on: bool) -> Result<Consent, String> {
+    if on {
+        return Err("Data collection is disabled in Zenith.".into());
+    }
     let current = consent();
     let mut choices = if current.needs_asking() {
         Choices::NONE
@@ -423,22 +327,8 @@ mod tests {
             (host.trim_end_matches('.'), port),
             ("play.playhorizon.dev", 24454)
         );
-        assert!(official_players(crate::server_list::OFFICIAL_ADDRESS).is_some());
-        assert_eq!(official_players(""), None);
-    }
-
-    #[test]
-    fn the_stats_page_is_on_the_website() {
-        assert_eq!(
-            stats_url("https://playhorizon.dev").as_deref(),
-            Some("https://playhorizon.dev/stats")
-        );
-        assert_eq!(
-            stats_url("https://example.org/horizon/").as_deref(),
-            Some("https://example.org/horizon/stats")
-        );
-        assert_eq!(stats_url(""), None);
-        assert_eq!(stats_url("javascript:alert(1)"), None);
+        assert!(server_players(crate::server_list::OFFICIAL_ADDRESS).is_some());
+        assert!(server_players("").is_none());
     }
 
     #[test]

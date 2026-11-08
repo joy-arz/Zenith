@@ -10,6 +10,7 @@ use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
 pub const REPO: &str = "horizon-rust/horizon";
+pub const ZENITH_ENGINE_PREVIEW: &str = "0.1.0-preview.1";
 /// This fork publishes launcher updates independently of the upstream game.
 pub const LAUNCHER_REPO: &str = "joy-arz/horizon";
 pub const README_URL: &str = "https://github.com/joy-arz/horizon/blob/main/FORK.md";
@@ -2973,15 +2974,31 @@ fn strip_launcher_render_env(cmd: &mut Command) {
     }
 }
 
+/// Previously installed Horizon binaries also read their saved consent for local reports.
+pub(crate) fn disable_legacy_telemetry(home: &Path) {
+    use horizon_telemetry::{Choices, Consent};
+    if Consent::path(home).is_file() {
+        let mut consent = Consent::load(home);
+        if consent.choices != Choices::NONE {
+            consent.answer(Choices::NONE);
+            if let Err(error) = consent.save(home) {
+                eprintln!("Could not turn off legacy telemetry: {error}");
+            }
+        }
+    }
+}
+
 pub fn client_command(tag: &str) -> Command {
     let home = game_home();
     let _ = fs::create_dir_all(&home);
+    disable_legacy_telemetry(&home);
     let mut cmd = Command::new(client_program(tag));
     #[cfg(windows)]
     crate::windows_runtime::mark(&mut cmd, &version_dir(tag));
     strip_launcher_render_env(&mut cmd);
     cmd.current_dir(&home)
         .env("HORIZON_HOME", &home)
+        .env("HORIZON_TELEMETRY_URL", "off")
         .env_remove("HORIZON_ACCOUNT_SESSIONS")
         .arg("--resources")
         .arg(resources(tag));
@@ -3016,6 +3033,7 @@ fn client_program(tag: &str) -> PathBuf {
 pub fn server_command(tag: &str, folder: &Path) -> Command {
     let mut cmd = Command::new(version_dir(tag).join(CLIENT));
     cmd.current_dir(folder)
+        .env("HORIZON_TELEMETRY_URL", "off")
         .arg("--resources")
         .arg(resources(tag))
         .args(["--dedicated", "--nogui"]);
@@ -4299,11 +4317,6 @@ pub enum Msg {
     PackDone(Result<Box<crate::modpacks::Imported>, String>),
     /// The modpacks other launchers keep on this computer (`modpacks::found_on_this_computer`).
     FoundPacks(Vec<crate::other_launchers::Found>),
-    /// How many play Horizon now, or none when the server can't be reached (`telemetry`).
-    Playing(Option<u64>),
-    /// How many play on the official server now, or none when it doesn't answer its status ping
-    /// (`telemetry::watch_official`).
-    OfficialPlayers(Option<u64>),
     /// Where the native-mods build is (`native_mods::Step::label`).
     NativeProgress(String),
     /// The native-mods build ended: the version built, or why not.
@@ -4509,21 +4522,10 @@ pub struct Settings {
     /// Dark, Light, or the system's: the launcher's look. Dark by default.
     #[serde(default)]
     pub appearance: Appearance,
-    /// The player has read what the "I'm playing" ping holds (`telemetry::PING`): on the
-    /// first-run question, or on the Play page once if they answered that before it existed.
-    #[serde(default)]
-    pub ping_notice_seen: bool,
     /// The player without an account that owns the game has read, once, why the launcher needs
     /// one now (the owner gate's screen).
     #[serde(default)]
     pub owner_notice_seen: bool,
-    /// Seconds a partner banner (the sidebar's card or the Servers page's banner) has been on
-    /// screen, over every start, up to `partner::SEEN_BEFORE_HIDE`: only then can the player hide it.
-    #[serde(default)]
-    pub partner_seen_secs: u64,
-    /// The player hid a partner banner: the sidebar's card and the Servers page's banner are both gone for good.
-    #[serde(default)]
-    pub partner_hidden: bool,
     /// What the window does while the game runs. Stays by default.
     #[serde(default)]
     pub while_playing: WhilePlaying,
