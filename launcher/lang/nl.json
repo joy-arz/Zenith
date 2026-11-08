@@ -1261,5 +1261,9 @@
   "Join on this computer": "Join on this computer",
   "Tailscale has no address for this server yet.": "Tailscale has no address for this server yet.",
   "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.": "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.",
-  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "For an offline Minecraft skin, open Settings, Account, then Custom skin."
+  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "For an offline Minecraft skin, open Settings, Account, then Custom skin.",
+  "Your system keyring didn't answer within {seconds} seconds. Make sure it is running and unlocked, then restart the launcher.": "De sleutelbos van je systeem heeft niet binnen {seconds} seconden geantwoord. Zorg dat hij draait en ontgrendeld is en start daarna de launcher opnieuw.",
+  "Can't read {name}'s sign-in: {why}": "Kan de aanmelding van {name} niet lezen: {why}",
+  "Horizon runs a data pack's functions, function tags, predicates, item modifiers, recipes, loot tables, advancements, villager trades, damage types, most tags and most worldgen (biomes, features, structures, dimensions). Other files, such as world presets, are not read yet.": "Horizon voert de functies, functietags, predicaten, voorwerpwijzigers, recepten, buittabellen, vorderingen, dorpelingenhandel, schadetypen, de meeste tags en het grootste deel van de wereldgeneratie (biomen, kenmerken, structuren, dimensies) van een datapack uit. Andere bestanden, zoals wereldvoorinstellingen, worden nog niet gelezen.",
+  "{title} would change nothing in Horizon yet: Horizon doesn't read its {files}.": "{title} zou in Horizon nog niets veranderen: Horizon leest de {files} ervan nog niet."
 }

@@ -1261,5 +1261,9 @@
   "Join on this computer": "Join on this computer",
   "Tailscale has no address for this server yet.": "Tailscale has no address for this server yet.",
   "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.": "Friends can paste this link into Multiplayer after you share this computer in Tailscale and they connect to Tailscale.",
-  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "For an offline Minecraft skin, open Settings, Account, then Custom skin."
+  "For an offline Minecraft skin, open Settings, Account, then Custom skin.": "For an offline Minecraft skin, open Settings, Account, then Custom skin.",
+  "Your system keyring didn't answer within {seconds} seconds. Make sure it is running and unlocked, then restart the launcher.": "دسته‌کلید سیستم شما در {seconds} ثانیه پاسخ نداد. مطمئن شوید که در حال اجرا و باز است، سپس لانچر را دوباره راه‌اندازی کنید.",
+  "Can't read {name}'s sign-in: {why}": "خواندن ورود {name} ممکن نیست: {why}",
+  "Horizon runs a data pack's functions, function tags, predicates, item modifiers, recipes, loot tables, advancements, villager trades, damage types, most tags and most worldgen (biomes, features, structures, dimensions). Other files, such as world presets, are not read yet.": "Horizon runs a data pack's functions, function tags, predicates, item modifiers, recipes, loot tables, advancements, villager trades, damage types, most tags and most worldgen (biomes, features, structures, dimensions). Other files, such as world presets, are not read yet.",
+  "{title} would change nothing in Horizon yet: Horizon doesn't read its {files}.": "{title} would change nothing in Horizon yet: Horizon doesn't read its {files}."
 }
