@@ -34,7 +34,7 @@ impl Game<'_> {
     }
     /// Whether this game simulates a world, as `native_set_block` asks
     /// (the fluid helpers ask it too).
-    pub(super) fn native_simulates(&self) -> bool {
+    pub(in crate::game) fn native_simulates(&self) -> bool {
         self.serving.is_some() || self.options.dedicated.is_some()
     }
     /// The container at `pos` in the level in place, `dimension`, if this

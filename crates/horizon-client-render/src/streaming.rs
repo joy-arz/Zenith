@@ -1186,7 +1186,8 @@ impl Streaming {
     /// from before its relight, then the new light; another server's is already
     /// right, which matters where the neighbours this light needs aren't all
     /// here).
-    pub fn replace_remote(&mut self, world: &mut World, chunk: Chunk) {
+    #[allow(unused_mut)] // Native chunk mixins can update the incoming chunk.
+    pub fn replace_remote(&mut self, world: &mut World, mut chunk: Chunk) {
         let key = (chunk.x, chunk.z);
         let Some(old) = world.chunks.get(&key).cloned() else {
             return self.insert_remote(world, chunk);

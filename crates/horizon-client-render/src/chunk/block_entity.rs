@@ -137,6 +137,12 @@ pub struct ModRevision {
     born: u64,
     changes: u64,
 }
+impl ModRevision {
+    /// Whether both revisions belong to the same block entity instance.
+    pub fn same_entity(self, other: Self) -> bool {
+        self.born == other.born
+    }
+}
 static MOD_BLOCK_ENTITIES_MADE: AtomicU64 = AtomicU64::new(0);
 impl ModBlockEntity {
     pub fn new(fields: ModBlockEntityFields) -> Self {
@@ -862,6 +868,7 @@ mod tests {
         for change in changes {
             change(&mut machine);
             assert!(!seen.contains(&machine.revision()));
+            assert!(made.same_entity(machine.revision()));
             seen.push(machine.revision());
         }
         // Another entity, or a clone, never shares one, even with equal
@@ -869,6 +876,7 @@ mod tests {
         let copy = machine.clone();
         assert_eq!(copy, machine);
         assert!(!seen.contains(&copy.revision()));
+        assert!(!made.same_entity(copy.revision()));
         let fresh = ModBlockEntity::default();
         assert_ne!(fresh.revision(), ModBlockEntity::default().revision());
     }

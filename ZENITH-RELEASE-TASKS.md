@@ -12,7 +12,8 @@ The Zenith launcher and its downloadable Rust Edition game will have their own r
 
 - [x] Merge Horizon through `6c2498236` on the isolated `zenith/upstream-sync` branch. Preserve Zenith launcher translations and both projects' license notices.
 - [x] Carry the local ATM10 converter and gameplay changes onto `zenith/atm10-integration`. Retain upstream stateful block entity handling and reconcile the embedded world pack loader, dimension commands, and server autosaves.
-- [ ] Verify the integrated port in-game with prepared resources. Confirm that existing saves reopen and the embedded world data loads without a separate datapack.
+- [x] Verify Allthemodium dimension travel and save reopen on the integrated engine. Confirm a dedicated server accepts an offline profile and restores that profile's custom dimension on reconnect. These checks use the embedded world data in the `.hmod`.
+- [ ] Recheck the rest of the port in-game on the integrated engine, including Teleport Pads, Piglich combat, and a combined pack install.
 - [ ] Use the newest merged Horizon revision that passes Zenith's release checks. Record the upstream commit, Zenith source commit, native hooks API, and Mixins revision in the release.
 - [ ] Build and publish signed game archives for supported Windows, macOS, and Linux targets. Include client and dedicated server smoke tests.
 - [ ] Add a Zenith game channel to the launcher. Install the game version declared by a pack or profile and keep save locations scoped to their profile.
@@ -26,6 +27,7 @@ The Zenith launcher and its downloadable Rust Edition game will have their own r
 - [ ] Inventory the original Horizon registry and official bundles at the selected upstream revision. Record project, artifact version, format, checksum, dependencies, and license. Include native and content mods, modpacks, shaders, resource packs, and datapacks.
 - [ ] Verify Horizon registry installs and updates against the pinned Zenith game. Test content registration, shader loading, resource reload, and datapack activation on world creation and reopen. Keep compatible artifacts installable directly from their original source.
 - [ ] Verify the upstream native suite (Coordinates HUD, FPS Counter, Keystrokes, Minimap, Recipes, and Zoom) using the pinned Zenith source and Mixins revision. Port incompatible hooks and publish a separately versioned Zenith build where the license permits.
+- [x] Type-check the adapted Create 0.8.0-alpha.16 bundle with the integrated Zenith engine and all 95 Mixins injections.
 - [ ] Validate Create and Allthemodium against the pinned engine on single-player and dedicated servers, including offline client joins and world reopen.
 - [ ] Pin compatible mod, shader, resource pack, and datapack versions and checksums in each pack manifest.
 - [ ] Track compatibility per artifact with verified, port required, and blocked states. Show the reason in the launcher when an artifact cannot be installed for the selected Zenith release.
