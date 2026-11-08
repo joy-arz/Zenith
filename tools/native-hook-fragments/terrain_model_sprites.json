@@ -1,0 +1,16 @@
+{
+  "hooks": [
+    {
+      "name": "terrain_model_sprites",
+      "target": "horizon_client::game::native_hooks::Game<'_>::native_terrain_model_sprites",
+      "side": "client",
+      "cancellable": false,
+      "mod_api": {
+        "contract": "collect",
+        "out": "sprites"
+      }
+    }
+  ],
+  "rust_summary": "registration of extra terrain sprites for native standalone models.",
+  "doc_summary": "`native_terrain_model_sprites(sprites)` collects namespaced terrain sprites sampled by native standalone models. It runs before the first resource load, and each resource reload reads the sprites from the active packs. Bundles using the named hook need \"hooks\": @API:terrain_model_sprites@."
+}
