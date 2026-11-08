@@ -284,7 +284,7 @@ pub fn ingredient(v: &Value) -> Option<Value> {
 /// a vanilla type or one of its ingredients has no 26.3 form.
 pub fn upgrade_recipe(recipe: &mut Value) -> bool {
     let kind = recipe["type"].as_str().unwrap_or("");
-    if !kind.starts_with("minecraft:") || recipe.get("neoforge:conditions").is_some() {
+    if !kind.starts_with("minecraft:") {
         return false;
     }
     let mut out = recipe.clone();
@@ -956,6 +956,7 @@ pub fn carry(
         return Err(OLD_LAYOUT.into());
     }
     let mut blockstates: BTreeMap<String, Value> = BTreeMap::new();
+    let mut allthemodium_world = BTreeMap::new();
     let mut item_models = BTreeSet::new();
     // Models another item model's `overrides` switch to (trim looks, a bow's pull): variants, not items.
     let mut model_overrides: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
@@ -992,6 +993,13 @@ pub fn carry(
             None
         };
         let keep = keep && unreadable.is_none();
+        if keep
+            && facts.is_some()
+            && id == "allthemodium"
+            && crate::allthemodium::dimension_source(&name)
+        {
+            allthemodium_world.insert(name.clone(), bytes.clone());
+        }
         if let Some(why) = unreadable {
             report.unreadable.insert(name.clone(), why);
         }
@@ -1047,6 +1055,22 @@ pub fn carry(
                 .filter(|_| name.starts_with("data/") && name.ends_with(".json"))
             {
                 if let Ok(mut v) = serde_json::from_slice::<Value>(&bytes) {
+                    let patch = (kind == "configured_feature")
+                        .then(|| {
+                            let name = Path::new(rel).file_stem()?.to_str()?;
+                            facts
+                                .and_then(|_| crate::harvestcraft::tree(id, name, &v))
+                                .or_else(|| crate::upgrade::legacy_tree(&v))
+                                .or_else(|| {
+                                    crate::upgrade::random_patch(&v, &mut Default::default())
+                                })
+                                .or_else(|| crate::upgrade::ore(&v))
+                        })
+                        .flatten();
+                    let patched = patch.is_some();
+                    if let Some(patch) = patch {
+                        v = patch;
+                    }
                     if kind == "structure" {
                         crate::worldgen::convention_tags(&v["biomes"], &mut biome_conventions);
                     }
@@ -1061,13 +1085,19 @@ pub fn carry(
                         &mut v,
                         &mut types.rule_tests_carried,
                     );
-                    let mut changed =
-                        crate::worldgen::upgrade(kind, &mut v, types, &set_tags) || carried;
+                    let mut changed = crate::worldgen::upgrade(kind, &mut v, types, &set_tags)
+                        || carried
+                        || patched;
                     if kind == "structure" {
                         let path = rel.trim_start_matches("worldgen/structure/");
                         let structure = format!("{ns}:{}", path.trim_end_matches(".json"));
                         changed |=
                             crate::worldgen::add_piece_counts(&structure, &mut v, &piece_counts);
+                        if structure == "allthemodium:ancient_pyramid" {
+                            let upgraded = crate::upgrade::structure(&v);
+                            changed |= upgraded != v;
+                            v = upgraded;
+                        }
                     }
                     if changed {
                         bytes = serde_json::to_vec_pretty(&v).unwrap_or(bytes);
@@ -1109,6 +1139,14 @@ pub fn carry(
                     && crate::processors::upgrade_trial_spawner(&mut config)
                 {
                     bytes = serde_json::to_vec_pretty(&config).unwrap_or(bytes);
+                }
+            } else if (rel.starts_with("neoforge/biome_modifier/")
+                || rel.starts_with("forge/biome_modifier/"))
+                && name.starts_with("data/")
+                && name.ends_with(".json")
+            {
+                if let Ok(v) = serde_json::from_slice::<Value>(&bytes) {
+                    crate::worldgen::convention_tags(&v["biomes"], &mut biome_conventions);
                 }
             } else if rel.starts_with("tags/worldgen/biome/") && name.starts_with("data/") {
                 if let Ok(v) = serde_json::from_slice::<Value>(&bytes) {
@@ -1228,6 +1266,16 @@ pub fn carry(
             report.convention_biome_tags += 1;
         }
     }
+    if id == "allthemodium" {
+        for (file, bytes) in crate::allthemodium::world_pack(allthemodium_world) {
+            if let Some(file) = file.strip_prefix("data/allthemodium/") {
+                write(
+                    &inside.join("data/allthemodium/world_pack").join(file),
+                    &bytes,
+                )?;
+            }
+        }
+    }
     let decl = inside.join(format!("data/{id}/horizon"));
     let write_decl = |kind: &str, name: &str, v: &Value| {
         let text = serde_json::to_vec_pretty(v).unwrap_or_default();
@@ -1236,12 +1284,46 @@ pub fn carry(
     if let Some(facts) = facts {
         report.oracle = true;
         let prefix = format!("{id}:");
+        for (tag, values) in crate::harvestcraft::support_tags(id) {
+            let file = inside.join(format!("data/{id}/tags/block/{tag}.json"));
+            let values: Vec<_> = values.into_iter().filter(|name| allowed(name)).collect();
+            write(
+                &file,
+                &serde_json::to_vec_pretty(&json!({"values": values})).unwrap_or_default(),
+            )?;
+        }
+        if id == "allthemodium" {
+            if inside
+                .join("data/allthemodium/loot_table/entities/piglich.json")
+                .is_file()
+                && facts.items.contains_key("allthemodium:piglich_heart")
+            {
+                write_decl("entity_type", "piglich", &crate::allthemodium::piglich())?;
+            }
+            let values = [
+                "allthemodium:ancient_dirt",
+                "allthemodium:ancient_grass",
+                "allthemodium:ancient_podzol",
+                "minecraft:crimson_nylium",
+                "minecraft:warped_nylium",
+            ];
+            write(
+                &inside.join("data/allthemodium/tags/block/sapling_support.json"),
+                &serde_json::to_vec_pretty(&json!({"values": values}))
+                    .map_err(|e| e.to_string())?,
+            )?;
+        }
         let mut declared = BTreeSet::new();
         for (full, block) in facts.blocks.range(prefix.clone()..) {
             let Some(b) = full.strip_prefix(&prefix) else {
                 break;
             };
-            let Some(choice) = facts.template(full, allowed) else {
+            let choice = facts.template(full, allowed).or_else(|| {
+                crate::harvestcraft::garden_template(id, b, block)
+                    .or_else(|| crate::allthemodium::pad_template(full, block))
+                    .filter(|choice| allowed(&choice.template))
+            });
+            let Some(choice) = choice else {
                 let props: Vec<&str> = block.properties.keys().map(String::as_str).collect();
                 let why = format!(
                     "no vanilla {} with properties [{}]",
@@ -1252,6 +1334,37 @@ pub fn carry(
                 continue;
             };
             let mut v = json!({"template": choice.template, "properties": choice.properties});
+            if full == crate::allthemodium::TELEPORT_PAD {
+                crate::allthemodium::pad_shape(block, &mut v);
+            }
+            crate::harvestcraft::block(id, b, block, &inside, &mut v);
+            if id == "allthemodium"
+                && let Some(tree) = b.strip_suffix("_sapling")
+                && matches!(tree, "ancient" | "demonic" | "soul")
+            {
+                v["properties"]["plant_support"] =
+                    json!({"direction":"below","tag":"#allthemodium:sapling_support"});
+                v["properties"]["tree_feature"] = json!(format!("allthemodium:{tree}_tree"));
+            }
+            if id == "allthemodium" && matches!(b, "ancient_cavevines" | "ancient_cavevines_plant")
+            {
+                if let Some(properties) = v["properties"].as_object_mut() {
+                    // Both vines have the template's berry-dependent emission.
+                    properties.remove("light");
+                }
+                v["properties"]["harvest_loot"] = json!("allthemodium:harvest/ancient_cavevine");
+                let table = json!({
+                    "type": "minecraft:block_interact",
+                    "pools": [{
+                        "entries": [{"type":"minecraft:item", "name":"allthemodium:ancient_soulberries"}],
+                        "rolls": 1
+                    }]
+                });
+                write(
+                    &inside.join("data/allthemodium/loot_table/harvest/ancient_cavevine.json"),
+                    &serde_json::to_vec_pretty(&table).unwrap_or_default(),
+                )?;
+            }
             if block.item == "minecraft:air" {
                 v["item"] = json!(false);
             } else if block.item != *full {
@@ -1263,6 +1376,9 @@ pub fn carry(
                     .push(format!("its item is {}", block.item));
             } else {
                 declared.insert(full.clone());
+                if let Some(fuel) = facts.compressed_fuel(full, &choice.template) {
+                    v["components"] = fuel;
+                }
                 let drop = (!block_loot.contains(b))
                     .then(|| block.drops_itself(full))
                     .flatten();
@@ -1309,15 +1425,16 @@ pub fn carry(
             if declared.contains(full) {
                 continue;
             }
-            if item
-                .block
-                .as_ref()
-                .is_some_and(|b| facts.blocks.contains_key(b))
-                && report.blocks_unknown.contains_key(name)
+            if let Some(block) = &item.block
+                && !block.strip_prefix(&prefix).map_or_else(
+                    || block.starts_with("minecraft:") && allowed(block),
+                    |target| report.blocks.contains_key(target),
+                )
             {
-                report
-                    .items_unknown
-                    .insert(name.to_owned(), "its block is left out".into());
+                report.items_unknown.insert(
+                    name.to_owned(),
+                    format!("placement target {block} is not available"),
+                );
                 continue;
             }
             match facts.item(full, &owned) {
@@ -1840,11 +1957,14 @@ mod tests {
 
     #[test]
     fn upgrades_ingredients() {
+        let conditions = json!([{"type": "neoforge:mod_loaded", "modid": "gem"}]);
         let mut r = json!({"type": "minecraft:crafting_shaped", "pattern": ["##"],
             "key": {"#": {"item": "gem:gem"}, "s": {"tag": "c:rods/wooden"}},
+            "neoforge:conditions": conditions,
             "result": {"id": "gem:gem_block", "count": 1}});
         assert!(upgrade_recipe(&mut r));
         assert_eq!(r["key"], json!({"#": "gem:gem", "s": "#c:rods/wooden"}));
+        assert_eq!(r["neoforge:conditions"], conditions);
         let mut custom = json!({"type": "gem:infuse", "ingredient": {"item": "gem:gem"}});
         assert!(!upgrade_recipe(&mut custom));
         let mut tag_list = json!({"type": "minecraft:smelting",

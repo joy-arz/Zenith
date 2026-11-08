@@ -342,13 +342,23 @@ public final class FactsExporter {
                 json.name(id.toString());
                 json.beginObject();
                 json.name("class").value(item.getClass().getName());
+                json.name("classes");
+                json.beginArray();
+                for (Class<?> c = item.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                    json.value(c.getName());
+                }
+                json.endArray();
                 json.name("max_stack_size").value(stack.getMaxStackSize());
                 json.name("rarity").value(stack.getRarity().getSerializedName());
+                json.name("burn_time").value(stack.getBurnTime(net.minecraft.world.item.crafting.RecipeType.SMELTING));
                 if (item instanceof BlockItem bi) {
                     json.name("block").value(BuiltInRegistries.BLOCK.getKey(bi.getBlock()).toString());
                 }
                 var food = stack.get(net.minecraft.core.component.DataComponents.FOOD);
                 if (food != null) {
+                    json.name("use_animation").value(item.getUseAnimation(stack).name().toLowerCase(java.util.Locale.ROOT));
+                    json.name("use_ticks").value(item.getUseDuration(stack,
+                            net.neoforged.neoforge.common.util.FakePlayerFactory.getMinecraft(level)));
                     json.name("food");
                     json.beginObject();
                     json.name("nutrition").value(food.nutrition());
@@ -376,6 +386,9 @@ public final class FactsExporter {
             json.endObject();
             // Armor's come from ArmorItem.getDefaultAttributeModifiers, not a component.
             raw("attribute_modifiers", ItemAttributeModifiers.CODEC.encodeStart(ops, stack.getAttributeModifiers()));
+            if (stack.hasCraftingRemainingItem()) {
+                raw("crafting_remainder", ItemStack.CODEC.encodeStart(ops, stack.getCraftingRemainingItem()));
+            }
             json.name("enchantment_value").value(item.getEnchantmentValue());
             Ingredient repair = null;
             if (item instanceof TieredItem tiered) {

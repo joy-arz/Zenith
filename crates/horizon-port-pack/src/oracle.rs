@@ -75,12 +75,23 @@ pub struct State {
 #[derive(Debug, Deserialize)]
 pub struct Item {
     pub class: String,
+    /// Observed class hierarchy, most derived first. Old facts omit it.
+    #[serde(default)]
+    pub classes: Vec<String>,
     pub max_stack_size: u8,
     pub rarity: String,
     #[serde(default)]
     pub block: Option<String>,
     #[serde(default)]
     pub food: Option<Value>,
+    #[serde(default)]
+    pub use_animation: Option<String>,
+    #[serde(default)]
+    pub use_ticks: Option<u32>,
+    #[serde(default)]
+    pub burn_time: Option<u32>,
+    #[serde(default)]
+    pub crafting_remainder: Option<Value>,
     /// The default data components in 1.21.1's form; empty in facts from before they were exported.
     #[serde(default)]
     pub components: Map<String, Value>,
@@ -159,13 +170,16 @@ impl Armor {
 
 /// The vanilla item standing in for an item of a vanilla class, for the behaviour the class gives.
 fn item_template(item: &Item) -> &'static str {
-    let class = item.class.strip_prefix("net.minecraft.world.item.");
+    let class = std::iter::once(&item.class)
+        .chain(&item.classes)
+        .find_map(|class| class.strip_prefix("net.minecraft.world.item."));
     match (class, item.armor.as_ref().map(|a| a.slot.as_str())) {
         (Some("SwordItem"), _) => "minecraft:iron_sword",
         (Some("PickaxeItem"), _) => "minecraft:iron_pickaxe",
         (Some("AxeItem"), _) => "minecraft:iron_axe",
         (Some("ShovelItem"), _) => "minecraft:iron_shovel",
         (Some("HoeItem"), _) => "minecraft:iron_hoe",
+        (Some("ShieldItem"), _) => "minecraft:shield",
         (Some("ArmorItem"), Some("head")) => "minecraft:iron_helmet",
         (Some("ArmorItem"), Some("chest")) => "minecraft:iron_chestplate",
         (Some("ArmorItem"), Some("legs")) => "minecraft:iron_leggings",
@@ -317,13 +331,46 @@ impl Facts {
         serde_json::from_slice(&bytes).map_err(|e| format!("{}: {e}", path.display()))
     }
 
+    /// Preserve the runtime fuel value of a compressed block's item, including
+    /// non-fuels that otherwise inherit the template's cooking component.
+    pub(crate) fn compressed_fuel(&self, item: &str, template: &str) -> Option<Value> {
+        if !item.starts_with("allthecompressed:") {
+            return None;
+        }
+        let ticks = self.items.get(item)?.burn_time?;
+        let template_item = &self.blocks.get(template)?.item;
+        let inherited = self
+            .vanilla_items
+            .get(template_item)
+            .and_then(|item| item.get("minecraft:cooking_fuel"));
+        if ticks > 0 {
+            Some(json!({"minecraft:cooking_fuel":{"burn_time":ticks,"speed_multiplier":1.0}}))
+        } else {
+            inherited.map(|_| json!({"!minecraft:cooking_fuel":{}}))
+        }
+    }
+
     /// The vanilla block that best stands in for `id`: the same vanilla
     /// class and states, then the most states with the same outline and
     /// collision, then the same sounds, set type, wood type and hardness.
     /// `None` when no vanilla block has its class and states.
     pub fn template(&self, id: &str, allowed: &dyn Fn(&str) -> bool) -> Option<Choice> {
         let block = self.blocks.get(id)?;
-        let class = block.vanilla_class();
+        let class = match id {
+            "allthemodium:ancient_cavevines" => "net.minecraft.world.level.block.CaveVinesBlock",
+            "allthemodium:ancient_cavevines_plant" => {
+                "net.minecraft.world.level.block.CaveVinesPlantBlock"
+            }
+            _ if id.starts_with("allthecompressed:")
+                && block
+                    .class
+                    .first()
+                    .is_some_and(|class| class.ends_with(".OverlayPillarBlock")) =>
+            {
+                "net.minecraft.world.level.block.RotatedPillarBlock"
+            }
+            _ => block.vanilla_class(),
+        };
         let own = block.by_key();
         let ours = block.default_state()?;
         let mut best: Option<(i64, &str, &Block)> = None;
@@ -463,18 +510,22 @@ impl Facts {
     /// and what it does not reproduce.
     pub fn item(&self, id: &str, owned: &[&str]) -> Result<(Value, Vec<String>), String> {
         let item = self.items.get(id).ok_or("not in the oracle")?;
-        if item.block.is_some() {
-            return Err("a block item without a block".into());
-        }
         let mut differences = Vec::new();
         if !item.class.starts_with(VANILLA_PACKAGE) {
             differences.push(format!("class {} (behaviour beyond Item)", item.class));
         }
-        if item.food.is_some() {
-            return Err("food (no food template yet)".into());
-        }
         let template = item_template(item);
         let mut decl = json!({"template": template});
+        if let Some(block) = &item.block {
+            let namespace = id.split_once(':').map(|(namespace, _)| namespace);
+            let allowed = block
+                .split_once(':')
+                .is_some_and(|(target, _)| target == "minecraft" || Some(target) == namespace);
+            if !allowed {
+                return Err(format!("cannot place block {block} from another mod"));
+            }
+            decl["place_block"] = json!(block);
+        }
         if item.max_stack_size != 64 {
             decl["max_stack_size"] = json!(item.max_stack_size);
         }
@@ -484,6 +535,40 @@ impl Facts {
             // NeoForge lets mods add rarities; the game refuses the whole mod for one.
             other => differences.push(format!("rarity {other} (not vanilla's)")),
         }
+        if let Some(remainder) = &item.crafting_remainder {
+            let rest = remainder["id"]
+                .as_str()
+                .ok_or("crafting remainder: no id")?;
+            let allowed = rest
+                .split_once(':')
+                .is_some_and(|(ns, _)| ns == "minecraft" || owned.contains(&ns));
+            let components = remainder.get("components");
+            let hammer_wear = components
+                .and_then(Value::as_object)
+                .filter(|patch| patch.len() == 1)
+                .and_then(|patch| patch.get("minecraft:damage"))
+                .and_then(Value::as_u64)
+                .filter(|&damage| damage == 1)
+                .filter(|_| {
+                    id.starts_with("alltheores:")
+                        && item.class == "net.allthemods.alltheores.content.items.OreHammer"
+                        && rest == id
+                });
+            if !allowed
+                || remainder
+                    .get("count")
+                    .is_some_and(|c| c.as_u64() != Some(1))
+                || hammer_wear.is_none()
+                    && components.is_some_and(|c| c.as_object().is_none_or(|c| !c.is_empty()))
+            {
+                return Err("crafting remainder: foreign, multiple or component-bearing stack needs native logic".into());
+            }
+            if let Some(wear) = hammer_wear {
+                decl["crafting_damage"] = json!(wear);
+            } else {
+                decl["crafting_remainder"] = json!(rest);
+            }
+        }
         if let Some(armor) = item.armor.as_ref().filter(|a| !a.material.is_empty())
             && !self.armor_asset_exists(armor, owned)
         {
@@ -492,7 +577,21 @@ impl Facts {
                 armor.material
             ));
         }
-        let components = self.item_components(item, template, owned);
+        let mut components = self.item_components(item, template, owned);
+        if item.food.is_some() {
+            let food = item
+                .components
+                .get("minecraft:food")
+                .ok_or("food: oracle has no full FoodProperties component; export fresh facts")?;
+            components.extend(crate::food::components(
+                food,
+                item.use_animation.as_deref(),
+                item.use_ticks,
+            )?);
+            if item.use_animation.is_none() || item.use_ticks.is_none() {
+                differences.push("food: use animation and duration were not observed; FoodProperties defaults used".into());
+            }
+        }
         if !components.is_empty() {
             decl["components"] = Value::Object(components);
         }
@@ -513,6 +612,16 @@ impl Facts {
         }
         let base = self.vanilla_items.get(template);
         let mut want = Map::new();
+        if let Some(ticks) = item.burn_time {
+            want.insert(
+                "minecraft:cooking_fuel".into(),
+                if ticks == 0 {
+                    Value::Null
+                } else {
+                    json!({"burn_time": ticks, "speed_multiplier": 1.0})
+                },
+            );
+        }
         want.insert(
             "minecraft:max_damage".into(),
             item.components
@@ -783,6 +892,28 @@ mod tests {
     }
 
     #[test]
+    fn block_item_alias_keeps_placement_and_food_properties() {
+        let facts: Facts = serde_json::from_value(json!({"blocks": {}, "items": {
+            "farm:onion": {"class": "farm.PlantableFood", "max_stack_size": 64,
+                "rarity": "common", "block": "farm:onion_crop",
+                "food": {"nutrition": 1, "saturation": 0.6},
+                "use_animation": "eat", "use_ticks": 32,
+                "components": {"minecraft:food": {"nutrition": 1, "saturation": 0.6}}},
+            "farm:foreign_seed": {"class": "farm.Seed", "max_stack_size": 64,
+                "rarity": "common", "block": "other:crop"}
+        }}))
+        .unwrap();
+        let (onion, _) = facts.item("farm:onion", &["farm"]).unwrap();
+        assert_eq!(onion["place_block"], "farm:onion_crop");
+        assert_eq!(onion["components"]["minecraft:food"]["nutrition"], 1);
+        assert_eq!(
+            onion["components"]["minecraft:consumable"]["consume_seconds"],
+            1.6
+        );
+        assert!(facts.item("farm:foreign_seed", &["farm"]).is_err());
+    }
+
+    #[test]
     fn items_of_vanilla_classes_take_their_template_and_numbers() {
         let mut facts: Facts = serde_json::from_value(json!({
             "blocks": {},
@@ -836,6 +967,86 @@ mod tests {
         // Facts without components (exported before they were) keep the plain template.
         let (gem, _) = facts.item("m:gem", &["m"]).unwrap();
         assert_eq!(gem, json!({"template": "minecraft:stick"}));
+    }
+
+    #[test]
+    fn measured_food_and_subclassed_tools_get_consumption_and_tool_behaviour() {
+        let facts: Facts = serde_json::from_value(json!({"blocks": {}, "items": {
+            "m:meal": {"class": "net.minecraft.world.item.Item", "max_stack_size": 16,
+                "rarity": "common", "food": {"nutrition": 9, "saturation": 21.6},
+                "use_animation": "eat", "use_ticks": 32,
+                "components": {"minecraft:food": {"nutrition": 9, "saturation": 21.6}}},
+            "m:axe": {"class": "m.CustomAxe", "max_stack_size": 1, "rarity": "common",
+                "classes": ["m.CustomAxe", "net.minecraft.world.item.AxeItem", "net.minecraft.world.item.DiggerItem"],
+                "components": {"minecraft:max_damage": 375}},
+            "m:old_food": {"class": "net.minecraft.world.item.Item", "max_stack_size": 64,
+                "rarity": "common", "food": {"nutrition": 2, "saturation": 1.2}}
+        }})).unwrap();
+        let (meal, differences) = facts.item("m:meal", &["m"]).unwrap();
+        assert!(differences.is_empty());
+        assert_eq!(meal["max_stack_size"], 16);
+        assert_eq!(
+            meal["components"]["minecraft:food"],
+            json!({"nutrition": 9, "saturation": 21.6})
+        );
+        assert_eq!(
+            meal["components"]["minecraft:consumable"],
+            json!({"animation": "eat", "consume_seconds": 1.6})
+        );
+        let (axe, differences) = facts.item("m:axe", &["m"]).unwrap();
+        assert_eq!(axe["template"], "minecraft:iron_axe");
+        assert_eq!(axe["components"]["minecraft:max_damage"], 375);
+        assert!(
+            !differences.is_empty(),
+            "subclass overrides still require a native port"
+        );
+        assert!(facts.item("m:old_food", &["m"]).is_err());
+    }
+
+    #[test]
+    fn measured_fuel_replaces_or_removes_the_templates_fuel() {
+        let mut facts: Facts = serde_json::from_value(json!({"blocks": {}, "items": {
+            "m:meal": {"class": "net.minecraft.world.item.Item", "max_stack_size": 64,
+                "rarity": "common", "burn_time": 0, "components": {"minecraft:max_stack_size": 64}},
+            "m:fuel": {"class": "net.minecraft.world.item.Item", "max_stack_size": 64,
+                "rarity": "common", "burn_time": 2400, "components": {"minecraft:max_stack_size": 64}}
+        }})).unwrap();
+        facts.vanilla_items = serde_json::from_value(json!({"minecraft:stick": {
+            "minecraft:cooking_fuel": {"burn_time": "minecraft:cooking/time_dry_plants", "speed_multiplier": "minecraft:cooking/speed_default"}
+        }})).unwrap();
+        let (meal, _) = facts.item("m:meal", &["m"]).unwrap();
+        assert_eq!(meal["components"]["!minecraft:cooking_fuel"], json!({}));
+        let (fuel, _) = facts.item("m:fuel", &["m"]).unwrap();
+        assert_eq!(
+            fuel["components"]["minecraft:cooking_fuel"],
+            json!({"burn_time": 2400, "speed_multiplier": 1.0})
+        );
+    }
+
+    #[test]
+    fn reusable_crafting_tools_keep_the_observed_plain_remainder() {
+        let item = |rest: Value| {
+            json!({"class": "m.KitchenTool", "max_stack_size": 1,
+            "rarity": "common", "crafting_remainder": rest})
+        };
+        let facts: Facts = serde_json::from_value(json!({"blocks": {}, "items": {
+            "m:grinder": item(json!({"id": "m:grinder", "count": 1})),
+            "m:bucket": item(json!({"id": "minecraft:bucket"})),
+            "m:damaged": item(json!({"id": "m:damaged", "components": {"minecraft:damage": 1}})),
+            "m:foreign": item(json!({"id": "missing:tool"})),
+            "m:multiple": item(json!({"id": "m:multiple", "count": 2}))
+        }}))
+        .unwrap();
+        let (grinder, differences) = facts.item("m:grinder", &["m"]).unwrap();
+        assert_eq!(grinder["crafting_remainder"], "m:grinder");
+        assert!(!differences.is_empty());
+        assert_eq!(
+            facts.item("m:bucket", &["m"]).unwrap().0["crafting_remainder"],
+            "minecraft:bucket"
+        );
+        for id in ["m:damaged", "m:foreign", "m:multiple"] {
+            assert!(facts.item(id, &["m"]).is_err(), "{id}");
+        }
     }
 
     #[test]

@@ -54,6 +54,9 @@ pub(super) fn feature(v: &Value, report: &mut Report) -> Value {
     let Some(t) = kind(v) else {
         return v.clone();
     };
+    if let Some(patch) = random_patch(v, report) {
+        return patch;
+    }
     if REPLACED_FEATURES.contains(&t) {
         report.unknown(format!("feature {t} (written as data in 26.3)"));
     }
@@ -64,10 +67,93 @@ pub(super) fn feature(v: &Value, report: &mut Report) -> Value {
             n.insert(k.clone(), x.clone());
         }
     }
+    if t == "tree"
+        && let Some(dirt) = n.remove("dirt_provider")
+    {
+        let force = n.remove("force_dirt").and_then(|value| value.as_bool()) == Some(true);
+        let below_trunk = if force {
+            dirt
+        } else {
+            json!({
+                "type": "minecraft:rule_based",
+                "rules": [{
+                    "if_true": {"type": "minecraft:any_of", "predicates": [
+                        {"type": "minecraft:not", "predicate": {
+                            "type": "minecraft:matching_block_tag", "tag": "minecraft:dirt"
+                        }},
+                        {"type": "minecraft:matching_blocks",
+                            "blocks": ["minecraft:grass_block", "minecraft:mycelium"]}
+                    ]},
+                    "then": dirt
+                }]
+            })
+        };
+        n.insert("below_trunk_provider".into(), below_trunk);
+    }
     let mut v = Value::Object(n);
     states(&mut v);
     nested(&mut v, report);
     v
+}
+
+/// Legacy vanilla trees also appear as configured features in mod archives.
+pub(crate) fn legacy_tree(v: &Value) -> Option<Value> {
+    (kind(v) == Some("tree") && v.pointer("/config/dirt_provider").is_some())
+        .then(|| feature(v, &mut Report::default()))
+}
+
+/// A legacy patch repeats its placed feature with three differences of
+/// uniform draws. A symmetric trapezoid with zero plateau has that sampling
+/// order, and placement evaluates the child before drawing the next offset.
+pub(crate) fn random_patch(v: &Value, report: &mut Report) -> Option<Value> {
+    if kind(v) != Some("random_patch") {
+        return None;
+    }
+    let config = v.get("config")?;
+    let tries = config.get("tries")?.as_i64()?;
+    let horizontal = config.get("xz_spread")?.as_i64()?;
+    let vertical = config.get("y_spread")?.as_i64()?;
+    if !(1..=4096).contains(&tries)
+        || !(0..=16).contains(&horizontal)
+        || !(0..=16).contains(&vertical)
+    {
+        return None;
+    }
+    let triangle = |spread: i64| {
+        json!({
+            "type": "minecraft:trapezoid", "min": -spread, "max": spread, "plateau": 0
+        })
+    };
+    let child = config.get("feature")?;
+    let mut modifiers = vec![
+        json!({"type": "minecraft:count", "count": tries}),
+        json!({"type": "minecraft:offset",
+            "x": triangle(horizontal), "y": triangle(vertical), "z": triangle(horizontal)}),
+    ];
+    let configured = if child.is_string() {
+        json!({"type": "minecraft:sequence", "features": [child]})
+    } else {
+        child.get("feature")?;
+        child.get("placement")?.as_array()?;
+        let mut child = placed(child, report);
+        modifiers.append(child.get_mut("placement")?.as_array_mut()?);
+        child.get_mut("feature")?.take()
+    };
+    Some(json!({"type": "minecraft:sequence", "features": [{
+        "feature": configured, "placement": modifiers
+    }]}))
+}
+
+/// Legacy ore features already use the current rule tests and fields.
+pub(crate) fn ore(v: &Value) -> Option<Value> {
+    if !matches!(kind(v), Some("ore" | "scattered_ore")) {
+        return None;
+    }
+    let mut config = v.get("config")?.as_object()?.clone();
+    config.insert("type".into(), v["type"].clone());
+    let mut value = Value::Object(config);
+    states(&mut value);
+    Some(value)
 }
 
 /// Inside a feature: block state providers, placed features and
@@ -124,4 +210,45 @@ pub(super) fn placed(v: &Value, report: &mut Report) -> Value {
         }
     }
     v
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn random_patch_repeats_the_child_and_retains_its_filter() {
+        let legacy = json!({
+            "type": "minecraft:random_patch",
+            "config": {
+                "tries": 32, "xz_spread": 6, "y_spread": 2,
+                "feature": {
+                    "feature": "farm:plant",
+                    "placement": [{"type": "minecraft:block_predicate_filter",
+                        "predicate": {"type": "minecraft:matching_blocks", "blocks": "minecraft:air"}}]
+                }
+            }
+        });
+        let mut report = Report::default();
+        let converted = feature(&legacy, &mut report);
+        let child = &converted["features"][0];
+        assert_eq!(converted["type"], "minecraft:sequence");
+        assert_eq!(child["feature"], "farm:plant");
+        assert_eq!(
+            child["placement"][0],
+            json!({"type": "minecraft:count", "count": 32})
+        );
+        assert_eq!(
+            child["placement"][1],
+            json!({"type": "minecraft:offset",
+            "x": {"type": "minecraft:trapezoid", "min": -6, "max": 6, "plateau": 0},
+            "y": {"type": "minecraft:trapezoid", "min": -2, "max": 2, "plateau": 0},
+            "z": {"type": "minecraft:trapezoid", "min": -6, "max": 6, "plateau": 0}})
+        );
+        assert_eq!(
+            child["placement"][2],
+            legacy["config"]["feature"]["placement"][0]
+        );
+        assert!(report.unknown.is_empty());
+    }
 }

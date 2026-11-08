@@ -93,6 +93,20 @@ pub struct BlockProperties {
     /// `false`: the block occludes nothing, so its neighbours' faces are drawn and light passes
     /// it (`BlockBehaviour.Properties.noOcclusion`); unset or `true`: as its template.
     pub occludes: Option<bool>,
+    /// Replace the template's survival check with a neighboring block tag.
+    pub plant_support: Option<PlantSupport>,
+    /// The configured feature a sapling grows into.
+    pub tree_feature: Option<String>,
+    /// The loot table used when ripe berries are picked.
+    pub harvest_loot: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq, Eq)]
+#[serde(tag = "direction", rename_all = "snake_case", deny_unknown_fields)]
+pub enum PlantSupport {
+    Above { tag: String },
+    Below { tag: String },
+    None,
 }
 
 /// Vanilla's `RenderShape`, by its constant's name: `MODEL` puts the block model in the chunk
@@ -364,6 +378,7 @@ struct ItemFile {
     #[serde(default)]
     components: BTreeMap<String, serde_json::Value>,
     crafting_remainder: Option<String>,
+    crafting_damage: Option<u32>,
     place_block: Option<String>,
 }
 
@@ -382,6 +397,8 @@ pub struct Item {
     /// What it leaves in the crafting grid (`Item.Properties.craftRemainder`):
     /// a vanilla item or one of the mod's own.
     pub crafting_remainder: Option<String>,
+    /// Durability used when crafting returns this same stack.
+    pub crafting_damage: Option<u32>,
     /// An ordinary `BlockItem` binding to a vanilla block or this namespace's block.
     /// Components still come from `template`; placement retains this item's identity.
     pub place_block: Option<String>,
@@ -408,14 +425,16 @@ pub struct MobEffect {
     pub color: u32,
 }
 
-/// the vanilla entity types a mod's type may copy: thrown item
-/// projectiles (`ThrowableItemProjectile`), then living mobs
-/// ([`LIVING_TEMPLATES`]).
-pub const ENTITY_TEMPLATES: [&str; 4] = [
+/// The opt-in native Allthemodium entity, registered only by its content mod.
+pub const PIGLICH: &str = "allthemodium:piglich";
+
+/// The supported thrown and living entity templates.
+pub const ENTITY_TEMPLATES: [&str; 5] = [
     "minecraft:snowball",
     "minecraft:villager",
     "minecraft:wandering_trader",
     "minecraft:zombie",
+    PIGLICH,
 ];
 
 /// the [`ENTITY_TEMPLATES`] that are living mobs: a type copying one is a mob
@@ -424,10 +443,11 @@ pub const ENTITY_TEMPLATES: [&str; 4] = [
 /// The wandering trader is the neutral one whose behaviour is all goals,
 /// which a native mod can replace (`register_goals`); a villager's is its
 /// brain.
-pub const LIVING_TEMPLATES: [&str; 3] = [
+pub const LIVING_TEMPLATES: [&str; 4] = [
     "minecraft:villager",
     "minecraft:wandering_trader",
     "minecraft:zombie",
+    PIGLICH,
 ];
 
 /// an entity type the mod adds: a copy of a vanilla template's. A thrown one
@@ -758,6 +778,18 @@ impl Content {
                     "{name}: a mod adds files in its own namespaces ({top}/{id}/ and those listed in namespaces), to vanilla and convention (c) tags, or to vanilla's atlases"
                 ));
             }
+            if top == "data"
+                && let Some(file) = rest.strip_prefix("world_pack/")
+                && !(owned
+                    && matches!(
+                        file.split('/').next(),
+                        Some("dimension" | "dimension_type" | "worldgen" | "structure" | "tags")
+                    ))
+            {
+                return Err(format!(
+                    "{name}: an embedded world pack accepts owned worldgen data only"
+                ));
+            }
             if !own && top == "data" && rest.starts_with("horizon/") {
                 return Err(format!(
                     "{name}: blocks, items, mob effects, entity types and menu types are declared in data/{id}/horizon/"
@@ -850,6 +882,7 @@ impl Content {
                 rarity: file.rarity,
                 components: file.components,
                 crafting_remainder: file.crafting_remainder,
+                crafting_damage: file.crafting_damage,
                 place_block: file.place_block,
             };
             check_item(&item).map_err(|e| format!("{name}: {e}"))?;
@@ -911,6 +944,9 @@ impl Content {
                 ));
             }
             if file.is_living() {
+                if file.template == PIGLICH && kind != PIGLICH {
+                    return Err(format!("{name}: {PIGLICH} is reserved for its own type"));
+                }
                 // a mob is spawned, not thrown: nothing throws it, and its
                 // attack is its `minecraft:attack_damage`.
                 if file.item.is_some() || file.damage != 0.0 {
@@ -1021,6 +1057,11 @@ fn check_components(
 
 /// An item's fields, as a file or code gives them.
 fn check_item(item: &Item) -> Result<(), String> {
+    if let Some(damage) = item.crafting_damage
+        && (damage == 0 || item.crafting_remainder.is_some())
+    {
+        return Err("crafting_damage needs a positive value and no crafting_remainder".into());
+    }
     if !vanilla_id(&item.template) {
         return Err(format!(
             "template {:?} is not a vanilla item (minecraft:...)",
@@ -1048,6 +1089,28 @@ fn check_block(file: &Block) -> Result<(), String> {
             "template {:?} is not a vanilla block (minecraft:...)",
             file.template
         ));
+    }
+    if let Some(PlantSupport::Above { tag } | PlantSupport::Below { tag }) =
+        &file.properties.plant_support
+        && !tag.strip_prefix('#').is_some_and(namespaced_id)
+    {
+        return Err("plant_support.tag is a block tag, #namespace:path".into());
+    }
+    if let Some(feature) = &file.properties.tree_feature
+        && (!file.template.ends_with("_sapling") || !namespaced_id(feature))
+    {
+        return Err("tree_feature needs a sapling template and a configured feature id".into());
+    }
+    if let Some(table) = &file.properties.harvest_loot
+        && (!namespaced_id(table)
+            || !matches!(
+                file.template.as_str(),
+                "minecraft:cave_vines"
+                    | "minecraft:cave_vines_plant"
+                    | "minecraft:sweet_berry_bush"
+            ))
+    {
+        return Err("harvest_loot needs a berry plant template and a loot table id".into());
     }
     for shapes in file
         .shapes
@@ -1866,6 +1929,32 @@ capabilities = ["registries"]
         assert_eq!(occludes(block("false")), Some(false));
         assert_eq!(occludes(block("true")), Some(true));
         assert!(block(r#""no""#).is_err());
+    }
+
+    #[test]
+    fn plant_support_requires_a_direction_and_block_tag() {
+        let plant = |direction: &str, tag: &str| {
+            let text = format!(
+                r#"{{"template":"minecraft:wheat","properties":{{"plant_support":{{"direction":"{direction}","tag":"{tag}"}}}}}}"#
+            );
+            hmod(
+                "plant-support",
+                MANIFEST_TEXT,
+                &[("data/ruby/horizon/block/fruit.json", text.as_bytes())],
+            )
+        };
+        let content = plant("above", "#minecraft:leaves").unwrap();
+        let support = content.blocks[0].properties.plant_support.as_ref().unwrap();
+        assert_eq!(
+            support,
+            &PlantSupport::Above {
+                tag: "#minecraft:leaves".into()
+            }
+        );
+        assert!(plant("below", "#ruby:soil").is_ok());
+        assert!(plant("east", "#ruby:soil").is_err());
+        assert!(plant("below", "ruby:soil").is_err());
+        assert!(plant("below", "#soil").is_err());
     }
 
     #[test]

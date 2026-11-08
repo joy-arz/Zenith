@@ -5,6 +5,7 @@
 //! be rerun, resumed and inspected. The work folder belongs to the user: the
 //! jars they downloaded and what is carried over from them stay there and
 //! are never uploaded or committed.
+mod allthemodium;
 pub mod carry;
 pub mod check;
 pub mod classes;
@@ -13,6 +14,8 @@ pub mod datapacks;
 pub mod entry;
 pub mod events;
 pub mod fetch;
+mod food;
+mod harvestcraft;
 pub mod import;
 pub mod inventory;
 pub mod jar;

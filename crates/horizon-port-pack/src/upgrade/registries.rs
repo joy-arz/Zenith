@@ -101,6 +101,23 @@ pub(super) fn biome(v: &Value, report: &mut Report) -> Value {
     let Some(o) = v.as_object_mut() else {
         return v;
     };
+    // Older biomes group carvers by generation phase. The current format is one list.
+    if let Some(steps) = o.get("carvers").and_then(Value::as_object)
+        && steps
+            .iter()
+            .all(|(key, list)| matches!(key.as_str(), "air" | "liquid") && list.is_array())
+    {
+        let mut carvers = Vec::new();
+        for phase in ["air", "liquid"] {
+            if let Some(list) = steps.get(phase).and_then(Value::as_array) {
+                if phase == "liquid" && !list.is_empty() {
+                    report.lossy("biome: liquid-phase carvers now run with air-phase carvers");
+                }
+                carvers.extend(list.iter().cloned());
+            }
+        }
+        o.insert("carvers".into(), Value::Array(carvers));
+    }
     let spawners = o.remove("spawners");
     let costs = o.remove("spawn_costs");
     let probability = o.remove("creature_spawn_probability");
@@ -152,7 +169,7 @@ pub(super) fn dimension_type(v: &Value) -> Value {
 }
 
 /// A structure: its spawn overrides' counts in 26.3's form.
-pub(super) fn structure(v: &Value) -> Value {
+pub(crate) fn structure(v: &Value) -> Value {
     let mut v = v.clone();
     states(&mut v);
     if let Some(Value::Object(overrides)) = v.get_mut("spawn_overrides") {

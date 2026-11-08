@@ -17,12 +17,14 @@ mod density;
 mod features;
 mod noise;
 mod registries;
+pub(crate) use registries::structure;
 mod settings;
 
 use density::Context;
+pub(crate) use features::{legacy_tree, ore, random_patch};
 use noise::noise;
 pub use noise::parity_base_amplitude;
-use registries::{biome, carver, dimension_type, structure};
+use registries::{biome, carver, dimension_type};
 use serde_json::{Value, json};
 use std::{collections::BTreeMap, fs, path::Path};
 

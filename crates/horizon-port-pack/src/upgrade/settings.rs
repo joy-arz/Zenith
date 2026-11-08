@@ -46,7 +46,13 @@ impl Context<'_> {
         let depth = climate(self, report, "depth");
         let ridges = climate(self, report, "ridges");
         let final_density = conv(self, report, "final_density");
-        let surface = conv(self, report, "preliminary_surface_level");
+        let surface = if router.get("preliminary_surface_level").is_none()
+            && let Some(initial) = router.get("initial_density_without_jaggedness")
+        {
+            self.legacy_preliminary_surface(id, &o["noise"], initial, report)
+        } else {
+            conv(self, report, "preliminary_surface_level")
+        };
         let surface = self.named(id, "preliminary_surface_level", surface);
         let mut n = Map::new();
         let mut noise = o.get("noise").cloned().unwrap_or_default();
@@ -165,16 +171,77 @@ impl Context<'_> {
         Value::Object(n)
     }
 
-    /// A dimension (`dimension/<id>.json` or a world preset's entry): an
-    /// inline noise settings object in its generator is upgraded.
+    /// Legacy noise chunks searched the vertical cells of the initial density
+    /// for the highest value above 0.390625.
+    fn legacy_preliminary_surface(
+        &mut self,
+        id: &str,
+        noise: &Value,
+        initial: &Value,
+        report: &mut Report,
+    ) -> Value {
+        let cell = self.cell.1;
+        let min = noise["min_y"].as_i64().unwrap_or_default();
+        let max = noise["height"].as_i64().and_then(|h| min.checked_add(h));
+        let Some(max) = max.filter(|&max| {
+            (-2032..=2032).contains(&min)
+                && (min..=2032).contains(&max)
+                && (4..=16).contains(&cell)
+                && max % cell == 0
+        }) else {
+            report.lossy("noise settings have an unaligned legacy surface search");
+            return json!(0.0);
+        };
+        // One extra cell distinguishes a failed search from a hit at the last cell.
+        let last = min + (max - min) % cell;
+        let missing = last - cell;
+        let density = self.density(initial, report);
+        let search = self.named(
+            id,
+            "legacy_surface_search",
+            json!({
+                "type": "minecraft:find_top_surface",
+                "upper_bound": max,
+                "lower_bound": missing,
+                "cell_height": cell,
+                "density": {
+                    "type": "minecraft:sub", "left": density, "right": 0.390625
+                }
+            }),
+        );
+        json!({
+            "type": "minecraft:range_choice",
+            "input": search,
+            "min_inclusive": missing,
+            "max_exclusive": last,
+            "when_in_range": 4064,
+            "when_out_of_range": search
+        })
+    }
+
+    /// A dimension (`dimension/<id>.json` or a world preset's entry).
     pub(super) fn dimension(&mut self, v: &Value, report: &mut Report) -> Value {
         let mut v = v.clone();
-        let noise = v.get("generator").and_then(kind) == Some("noise");
-        if let Some(settings) = v.pointer("/generator/settings").cloned()
-            && settings.is_object()
-            && noise
-        {
-            v["generator"]["settings"] = self.settings("minecraft:inline", &settings, report);
+        match v.get("generator").and_then(kind) {
+            Some("noise") => {
+                if let Some(settings) = v.pointer("/generator/settings").cloned()
+                    && settings.is_object()
+                {
+                    v["generator"]["settings"] =
+                        self.settings("minecraft:inline", &settings, report);
+                }
+            }
+            Some("allthemodium:flat")
+                if v["type"] == "allthemodium:mining"
+                    && v["generator"]["settings"]["biome"] == "allthemodium:mining"
+                    && v["generator"]["settings"]["layers"].is_array() =>
+            {
+                v["generator"]["type"] = "minecraft:flat".into();
+                report.lossy(
+                    "Allthemodium Mining custom generator behavior requires separate parity checks",
+                );
+            }
+            _ => {}
         }
         v
     }
