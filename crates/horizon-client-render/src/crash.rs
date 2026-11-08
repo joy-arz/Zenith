@@ -203,6 +203,9 @@ impl Report {
 /// release from before 0.2, its tag and the client's crate version; for a build from source, that
 /// version alone.
 pub fn version() -> String {
+    if horizon_core::release::ZENITH {
+        return horizon_core::release::VERSION.to_owned();
+    }
     if let Some(label) = horizon_core::release::nightly_label() {
         return label;
     }
@@ -218,6 +221,9 @@ pub fn version() -> String {
 /// the folder the launcher installed it in, named after the tag (releases from before 0.2). A
 /// nightly is its version as the launcher installs it (`nightly-2026-10-28-0c02067`).
 pub fn release_tag() -> Option<String> {
+    if let Some(tag) = horizon_core::release::zenith_tag() {
+        return Some(tag);
+    }
     if let Some(nightly) = horizon_core::release::nightly_version() {
         return Some(nightly);
     }
@@ -706,6 +712,11 @@ mod tests {
 
     #[test]
     fn a_release_reports_its_built_in_version() {
+        if horizon_core::release::ZENITH {
+            assert_eq!(super::version(), horizon_core::release::VERSION);
+            assert_eq!(release_tag(), horizon_core::release::zenith_tag());
+            return;
+        }
         // release.yml builds with HORIZON_VERSION (docs/versioning.md): `v0.2.3`, wherever it is installed.
         if let Some(label) = horizon_core::release::nightly_label() {
             assert_eq!(super::version(), label);

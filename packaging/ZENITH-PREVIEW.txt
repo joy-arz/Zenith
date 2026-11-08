@@ -1,5 +1,10 @@
 Zenith Rust Edition engine preview
 
+Run horizon-client --version to see the installed Zenith version.
+Zenith versions use independent tags such as zenith-game@0.2.0-preview.1.
+The release manifest records the Horizon source revision and Minecraft protocol
+the build targets. Horizon Nightlies remain a separate compatibility channel.
+
 Install the JDK major version listed in research-lock.json. Use your own
 installation of the pinned Minecraft version and its matching server JAR.
 Run these commands from the extracted folder:

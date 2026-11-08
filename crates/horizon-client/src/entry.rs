@@ -23,6 +23,10 @@ pub fn main_with(mods: crate::mod_api::Mods) {
     horizon_client::spans::trace::start_from_env();
     let args: Vec<String> = std::env::args().skip(1).collect();
     let game_args = args.iter().take_while(|a| *a != "--dedicated");
+    if args.as_slice() == ["--version"] {
+        println!("{} {}", horizon_core::release::PRODUCT, crash::version());
+        return;
+    }
     let help = game_args
         .clone()
         .any(|a| a == "--help" || a == "-h" || a == "--launch-api");
@@ -59,7 +63,7 @@ pub fn main_with(mods: crate::mod_api::Mods) {
             thread,
         );
         // The log's first line names the build, so a bug report that carries the log says which one it was.
-        log::info!("Horizon {}", crash::version());
+        log::info!("{} {}", horizon_core::release::PRODUCT, crash::version());
         crash::install(home.clone(), side);
     }
     let renderers = crate::mod_api::mods()

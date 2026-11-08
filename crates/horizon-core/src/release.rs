@@ -15,10 +15,28 @@ pub const VERSION: &str = match RELEASE {
     None => env!("CARGO_PKG_VERSION"),
 };
 
+pub const ZENITH_TAG_PREFIX: &str = "zenith-game@";
+
+/// The branded, independently versioned release, set only by Zenith's release workflow.
+pub const ZENITH: bool = match option_env!("ZENITH_RUST_EDITION") {
+    Some(value) => matches!(value.as_bytes(), b"1"),
+    None => false,
+};
+
+pub const PRODUCT: &str = if ZENITH {
+    "Zenith Rust Edition"
+} else {
+    "Horizon"
+};
+
+pub fn zenith_tag() -> Option<String> {
+    ZENITH.then(|| format!("{ZENITH_TAG_PREFIX}{VERSION}"))
+}
+
 /// A nightly's date and commit (`2026-10-28 0c02067`): nightly-build.yml builds the opt-in Nightly
 /// channel with `HORIZON_NIGHTLY` set (docs/release-flow.md). None for a release or a build from source.
 pub const NIGHTLY: Option<&str> = match option_env!("HORIZON_NIGHTLY") {
-    Some(nightly) if !nightly.is_empty() => Some(nightly),
+    Some(nightly) if !ZENITH && !nightly.is_empty() => Some(nightly),
     _ => None,
 };
 

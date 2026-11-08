@@ -6,7 +6,7 @@ on:
       version:
         description: Preview version in the form X.Y.Z-preview.N
         required: true
-        default: 0.1.0-preview.1
+        default: 0.2.0-preview.1
       publish_preview:
         description: Publish the verified archives as a private GitHub prerelease
         type: boolean
@@ -17,6 +17,7 @@ permissions:
 
 env:
   HORIZON_VERSION: ${{ inputs.version }}
+  ZENITH_RUST_EDITION: "1"
   HORIZON_TELEMETRY_URL: 'off'
   CARGO_INCREMENTAL: '0'
 
@@ -67,7 +68,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$HORIZON_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-preview\.[0-9]+$ ]]
+          [[ "$HORIZON_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.[1-9][0-9]*$ ]]
           python3 tools/check_public_tree.py
           if [[ "$RUNNER_OS" == Windows ]]; then
             export RUSTFLAGS="-C target-feature=+crt-static"
@@ -85,6 +86,7 @@ jobs:
           folder="zenith-$PLATFORM"
           cargo run --locked -p xtask -- package-source "$OUTPUT/horizon-client$EXE" "dist/$folder"
           [[ "$("dist/$folder/horizon-client$EXE" --help)" == *--resources* ]]
+          [[ "$("dist/$folder/horizon-client$EXE" --version)" == "Zenith Rust Edition $HORIZON_VERSION" ]]
           [[ "$("dist/$folder/horizon-prepare$EXE" --version)" == *"$HORIZON_VERSION"* ]]
           (cd dist && tar -czf "$folder.tar.gz" "$folder")
       - name: Package and check the Linux server
@@ -123,8 +125,15 @@ jobs:
           set -euo pipefail
           tag="zenith-game@$HORIZON_VERSION"
           git archive --format=tar.gz --output=dist/zenith-source.tar.gz HEAD
-          jq -n --arg commit "$GITHUB_SHA" --arg tag "$tag" \
-            '{source_commit:$commit,tag:$tag,channel:"preview"}' > dist/preview.json
+          upstream=$(cat packaging/zenith-engine-upstream.txt)
+          mixins=$(sed -nE 's/^pub const MIXINS_REV: &str = "([0-9a-f]{40})";$/\1/p' launcher/src/native_mods.rs)
+          protocol=$(sed -nE 's/^pub const PROTOCOL_VERSION: i32 = ([0-9]+);$/\1/p' crates/horizon-core/src/version.rs)
+          vanilla=$(sed -nE 's/^pub const VANILLA_VERSION: &str = "([^"]+)";$/\1/p' crates/horizon-core/src/version.rs)
+          [[ "$upstream" =~ ^[0-9a-f]{40}$ && "$mixins" =~ ^[0-9a-f]{40}$ && -n "$protocol" && -n "$vanilla" ]]
+          jq -n --arg commit "$GITHUB_SHA" --arg tag "$tag" --arg version "$HORIZON_VERSION" \
+            --arg upstream "$upstream" --arg mixins "$mixins" --arg minecraft "$vanilla" --argjson protocol "$protocol" \
+            '{source_commit:$commit,tag:$tag,version:$version,channel:"preview",upstream_commit:$upstream,
+              mixins_commit:$mixins,minecraft_compatibility:$minecraft,protocol:$protocol}' > dist/preview.json
           EPHEMERAL=yes bash tools/ci/sign_release.sh "$tag" dist/*.tar.gz dist/preview.json
           cargo run --locked --quiet -p horizon-release-sign -- verify \
             --tag "$tag" --key "$(cat dist/ephemeral.pub)" dist

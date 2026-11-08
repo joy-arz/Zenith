@@ -524,6 +524,9 @@ fn up(shared: &Shared) -> bool {
 /// Looks for a newer release a minute after the start and then every 6 hours (installed servers only;
 /// `HORIZON_NO_UPDATE_CHECK=1` turns it off). It only tells: updating stays the owner's choice.
 fn check_updates(shared: Arc<Shared>) {
+    if horizon_core::release::ZENITH {
+        return;
+    }
     let Some(install) = shared.install.clone() else {
         return;
     };
