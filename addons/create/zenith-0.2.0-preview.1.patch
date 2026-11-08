@@ -1,0 +1,35 @@
+diff --git a/horizon-native.json b/horizon-native.json
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -3,6 +3,6 @@
+   "id": "create",
+   "version": "0.8.0-alpha.16",
+   "game": "26.3",
+-  "horizon": "1142b362f364c7ee5dea43dc1600905e2a3fe138",
++  "horizon": "a5609804433041da96cd8fde34b322dd6593b905",
+   "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02"
+ }
+diff --git a/mixins/create/horizon-mixin.toml b/mixins/create/horizon-mixin.toml
+--- a/mixins/create/horizon-mixin.toml
++++ b/mixins/create/horizon-mixin.toml
+@@ -3,7 +3,7 @@
+ version = "0.8.0-alpha.16"
+ 
+ [compatibility]
+-horizon_revision = "1142b362f364c7ee5dea43dc1600905e2a3fe138"
++horizon_revision = "a5609804433041da96cd8fde34b322dd6593b905"
+ 
+ [[crate]]
+ id = "engine"
+diff --git a/mixins/create/fan_entities.rs b/mixins/create/fan_entities.rs
+--- a/mixins/create/fan_entities.rs
++++ b/mixins/create/fan_entities.rs
+@@ -548,7 +548,7 @@
+         return;
+     }
+     if let Some(armor) = armor {
+-        game.spawn_item(armor, at, crate::game::dispenser::new_item_motion(), 10);
++        game.spawn_item_own(armor, at, 10);
+     }
+     game.native_remove_mob(&dim, id);
+     // Later fans in this tick must be able to discover the new skeleton horse.

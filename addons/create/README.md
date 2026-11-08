@@ -30,3 +30,13 @@ In the combined preview, the motor and Mechanical Press made two iron sheets.
 The depot retained both on save reopen. The patch also includes the pure
 Rust Mechanical Crafter pattern matcher. Its world traversal, in-game recipe
 registration and output transfer are separate work.
+
+## Zenith Rust Edition 0.2.0-preview.1
+
+Keep the first patch for the original ATM10 preview. To target the newer
+Zenith engine at `a5609804433041da96cd8fde34b322dd6593b905`, apply
+[`zenith-0.2.0-preview.1.patch`](zenith-0.2.0-preview.1.patch) after it.
+The follow-up retargets the manifests and uses the engine's item-spawn
+function for armor dropped during horse haunting. The old motion helper was
+removed when the engine moved spawn motion to the item entity's own random
+number generator.
