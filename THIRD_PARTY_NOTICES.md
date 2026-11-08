@@ -318,3 +318,11 @@ Zenith adapts these MIT-licensed Horizon contributions, retaining the original H
 - daniliammo, [PR #9974](https://github.com/horizon-rust/horizon/pull/9974), selected head `86c0211c35d0775de516d2b4fd207df8b581e76e`: identify and prune automatically installed obsolete Nightlies while preserving manual and protected installations.
 
 Both source revisions' LICENSE files were checked as MIT. No code from the other reviewed forks was copied.
+
+## Starling
+
+`crates/horizon-client-render/src/touch/layout.rs` is adapted from the touch layout of
+[Starling](https://github.com/starling-client/starling), an Android port of Horizon, at commit
+[150a414b09a1](https://github.com/starling-client/starling/tree/150a414b09a18c900489d9462a7fc035dae744b7)
+(`android` branch), written mostly by Vasysik. Starling is licensed under the same MIT license as
+Horizon (Copyright (c) 2026 Ludovic Marie and the Horizon contributors).
