@@ -1,0 +1,390 @@
+diff --git a/horizon-native.json b/horizon-native.json
+index 7d269db..44d0a37 100644
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -3,6 +3,6 @@
+   "id": "create",
+   "version": "0.8.0-alpha.16",
+   "game": "26.3",
+-  "horizon": "9c7f9b2215dfed497aba5522c44f38926628648d",
++  "horizon": "1142b362f364c7ee5dea43dc1600905e2a3fe138",
+   "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02"
+ }
+diff --git a/mixins/create/basin.rs b/mixins/create/basin.rs
+index 920d1b0..fd8d4cb 100644
+--- a/mixins/create/basin.rs
++++ b/mixins/create/basin.rs
+@@ -764,7 +764,9 @@ fn give_container(game: &mut Game<'_>, pos: Pos, stack: ItemStack) {
+     }
+ }
+ fn bucket_click(game: &mut Game<'_>, pos: Pos, held: &ItemStack) -> bool {
+-    let dim = game.dim.id().to_owned();
++    if !game.native_simulates() {
++        return false;
++    }
+     match held.item.as_ref() {
+         "minecraft:water_bucket" | "minecraft:lava_bucket" => {
+             let Some((fluid, amount, remainder)) = game.native_item_fluid_drain(held, 1000) else {
+@@ -775,12 +777,30 @@ fn bucket_click(game: &mut Game<'_>, pos: Pos, held: &ItemStack) -> bool {
+                 amount,
+                 components: Compound::new(),
+             };
+-            if game.native_fluid_fill_stack(&dim, pos, None, &fluid, NativeFluidAction::Simulate)
+-                != amount
+-            {
++            let mut filled = None;
++            fluid_fill(
++                game,
++                pos,
++                None,
++                &fluid,
++                NativeFluidAction::Simulate,
++                &mut filled,
++            );
++            if filled != Some(amount) {
++                return true;
++            }
++            filled = None;
++            fluid_fill(
++                game,
++                pos,
++                None,
++                &fluid,
++                NativeFluidAction::Execute,
++                &mut filled,
++            );
++            if filled != Some(amount) {
+                 return true;
+             }
+-            game.native_fluid_fill_stack(&dim, pos, None, &fluid, NativeFluidAction::Execute);
+             if !game.creative {
+                 if held.count == 1 {
+                     *game.held_mut() = Some(remainder);
+@@ -794,7 +814,9 @@ fn bucket_click(game: &mut Game<'_>, pos: Pos, held: &ItemStack) -> bool {
+             true
+         }
+         "minecraft:bucket" => {
+-            let Some(tanks) = game.native_fluid_view(&dim, pos, None) else {
++            let mut tanks = None;
++            fluid_tanks(game, pos, None, &mut tanks);
++            let Some(tanks) = tanks else {
+                 return true;
+             };
+             for tank in tanks {
+@@ -814,13 +836,31 @@ fn bucket_click(game: &mut Game<'_>, pos: Pos, held: &ItemStack) -> bool {
+                     continue;
+                 }
+                 fluid.amount = amount;
+-                game.native_fluid_drain_stack(
+-                    &dim,
++                let mut drained = None;
++                let request = NativeFluidDrain::Exact(fluid);
++                fluid_drain(
++                    game,
++                    pos,
++                    None,
++                    &request,
++                    NativeFluidAction::Simulate,
++                    &mut drained,
++                );
++                if drained.as_ref().is_none_or(|fluid| fluid.amount != amount) {
++                    continue;
++                }
++                drained = None;
++                fluid_drain(
++                    game,
+                     pos,
+                     None,
+-                    &NativeFluidDrain::Exact(fluid),
++                    &request,
+                     NativeFluidAction::Execute,
++                    &mut drained,
+                 );
++                if drained.as_ref().is_none_or(|fluid| fluid.amount != amount) {
++                    return true;
++                }
+                 if !game.creative {
+                     game.consume_held();
+                     give_container(game, pos, filled);
+@@ -829,15 +869,18 @@ fn bucket_click(game: &mut Game<'_>, pos: Pos, held: &ItemStack) -> bool {
+             }
+             true // GenericItemFilling claims even a refused/insufficient bucket.
+         }
+-        "minecraft:sponge" => game
+-            .native_fluid_drain_stack(
+-                &dim,
++        "minecraft:sponge" => {
++            let mut drained = None;
++            fluid_drain(
++                game,
+                 pos,
+                 None,
+                 &NativeFluidDrain::Any(i32::MAX),
+                 NativeFluidAction::Execute,
+-            )
+-            .is_some(),
++                &mut drained,
++            );
++            drained.is_some()
++        }
+         _ => false,
+     }
+ }
+diff --git a/mixins/create/burner_prediction.rs b/mixins/create/burner_prediction.rs
+index f50788c..cca68c1 100644
+--- a/mixins/create/burner_prediction.rs
++++ b/mixins/create/burner_prediction.rs
+@@ -48,7 +48,7 @@ pub(in crate::game) fn entity(game: &mut Game<'_>, hand: Hand) -> bool {
+     if game.spectator() {
+         return false;
+     }
+-    let Some((index, distance)) = game.mob_hit() else {
++    let Some((index, distance, _)) = game.mob_hit() else {
+         return false;
+     };
+     if !game.before_block(distance)
+diff --git a/mixins/create/chute_container_bridge.rs b/mixins/create/chute_container_bridge.rs
+index 16d44df..e5d4cc7 100644
+--- a/mixins/create/chute_container_bridge.rs
++++ b/mixins/create/chute_container_bridge.rs
+@@ -62,7 +62,7 @@ impl Game<'_> {
+                     count,
+                     ..stack.clone()
+                 };
+-                let (rest, _) = self.move_in_item(None, &view, portion, slot);
++                let (rest, _) = self.move_in_item(None, &view, portion, slot, Some(Direction::Up));
+                 moved += count - rest.map_or(0, |stack| stack.count);
+             }
+         }
+diff --git a/mixins/create/engine/src/core/mechanical_crafting.rs b/mixins/create/engine/src/core/mechanical_crafting.rs
+new file mode 100644
+index 0000000..871f267
+--- /dev/null
++++ b/mixins/create/engine/src/core/mechanical_crafting.rs
+@@ -0,0 +1,129 @@
++// Copyright (c) 2026 create-horizon contributors
++// SPDX-License-Identifier: MIT
++
++//! Shaped Mechanical Crafter matching after a chain has collected its ingredients.
++//! World traversal, crafting priority and output transfer belong to the adapter.
++
++/// A row-major recipe pattern or assembled crafter grid. Empty outer rows and
++/// columns are ignored. Internal empty cells must stay empty.
++pub struct Grid<'a, T> {
++    cells: &'a [Option<T>],
++    stride: usize,
++    bounds: [usize; 4],
++}
++
++impl<'a, T> Grid<'a, T> {
++    /// Rows start at the top of the crafter as seen from the front.
++    pub fn new(width: usize, height: usize, cells: &'a [Option<T>]) -> Option<Self> {
++        if width == 0 || height == 0 || width.checked_mul(height)? != cells.len() {
++            return None;
++        }
++        let mut occupied = cells.iter().enumerate().filter(|(_, cell)| cell.is_some());
++        let (first, _) = occupied.next()?;
++        let (x, y) = (first % width, first / width);
++        let (mut left, mut right, mut bottom) = (x, x, y);
++        for (i, _) in occupied {
++            let x = i % width;
++            left = left.min(x);
++            right = right.max(x);
++            bottom = i / width;
++        }
++        Some(Self {
++            cells,
++            stride: width,
++            bounds: [left, y, right, bottom],
++        })
++    }
++
++    fn size(&self) -> (usize, usize) {
++        let [left, top, right, bottom] = self.bounds;
++        (right - left + 1, bottom - top + 1)
++    }
++
++    fn get(&self, x: usize, y: usize) -> Option<&T> {
++        let [left, top, ..] = self.bounds;
++        self.cells[(top + y) * self.stride + left + x].as_ref()
++    }
++}
++
++/// Matches a mechanical recipe. The caller supplies ingredient matching so
++/// stack components and item tags follow the game's own recipe semantics.
++pub fn matches<I, S>(
++    recipe: &Grid<'_, I>,
++    input: &Grid<'_, S>,
++    accept_mirrored: bool,
++    mut ingredient_matches: impl FnMut(&I, &S) -> bool,
++) -> bool {
++    let (width, height) = recipe.size();
++    if input.size() != (width, height) {
++        return false;
++    }
++
++    let mut matches = |mirror| {
++        (0..height).all(|y| {
++            (0..width).all(|x| {
++                let pattern_x = if mirror { width - x - 1 } else { x };
++                match (recipe.get(pattern_x, y), input.get(x, y)) {
++                    (Some(ingredient), Some(stack)) => ingredient_matches(ingredient, stack),
++                    (None, None) => true,
++                    _ => false,
++                }
++            })
++        })
++    };
++
++    matches(false) || (accept_mirrored && matches(true))
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn a_grid_trims_borders_but_retains_holes() {
++        let recipe = Grid::new(2, 2, &[Some('a'), None, Some('b'), Some('a')]).unwrap();
++        let input = [
++            None,
++            None,
++            None,
++            None,
++            None,
++            Some('a'),
++            None,
++            None,
++            None,
++            Some('b'),
++            Some('a'),
++            None,
++        ];
++        let mut obstructed = input;
++        obstructed[6] = Some('a');
++        assert!(matches(
++            &recipe,
++            &Grid::new(4, 3, &input).unwrap(),
++            false,
++            char::eq
++        ));
++        assert!(!matches(
++            &recipe,
++            &Grid::new(4, 3, &obstructed).unwrap(),
++            false,
++            char::eq
++        ));
++    }
++
++    #[test]
++    fn an_asymmetric_recipe_mirrors_only_when_allowed() {
++        let recipe = Grid::new(3, 1, &[Some(1), Some(2), None]).unwrap();
++        let input = Grid::new(2, 1, &[Some(2), Some(1)]).unwrap();
++        assert!(!matches(&recipe, &input, false, i32::eq));
++        assert!(matches(&recipe, &input, true, i32::eq));
++    }
++
++    #[test]
++    fn an_empty_or_invalid_input_cannot_produce_a_recipe() {
++        assert!(Grid::<()>::new(1, 1, &[None]).is_none());
++        assert!(Grid::new(1, 2, &[Some(())]).is_none());
++        assert!(Grid::new(usize::MAX, 2, &[Some(())]).is_none());
++    }
++}
+diff --git a/mixins/create/engine/src/lib.rs b/mixins/create/engine/src/lib.rs
+index 6d42c58..a9029a6 100644
+--- a/mixins/create/engine/src/lib.rs
++++ b/mixins/create/engine/src/lib.rs
+@@ -19,6 +19,9 @@ pub mod deployer;
+ #[path = "core/sail.rs"]
+ pub mod sail;
+ 
++#[path = "core/mechanical_crafting.rs"]
++pub mod mechanical_crafting;
++
+ #[path = "core/controls.rs"]
+ pub mod controls;
+ 
+diff --git a/mixins/create/horizon-mixin.toml b/mixins/create/horizon-mixin.toml
+index 3c59c06..31bd825 100644
+--- a/mixins/create/horizon-mixin.toml
++++ b/mixins/create/horizon-mixin.toml
+@@ -3,7 +3,7 @@ id = "create"
+ version = "0.8.0-alpha.16"
+ 
+ [compatibility]
+-horizon_revision = "9c7f9b2215dfed497aba5522c44f38926628648d"
++horizon_revision = "1142b362f364c7ee5dea43dc1600905e2a3fe138"
+ 
+ [[crate]]
+ id = "engine"
+@@ -186,7 +186,7 @@ bindings = [
+ 
+ [[injection]]
+ id = "local-assets"
+-target = "horizon_client::game::load_resources"
++target = "horizon_client::game::resource_load::load_resources"
+ kind = "HEAD"
+ helper = "assets_startup.rs"
+ bindings = [{ name = "root", ty = "&mut std::path::PathBuf", value = "&mut root" }]
+diff --git a/mixins/create/mixer.rs b/mixins/create/mixer.rs
+index f59f118..e94dadd 100644
+--- a/mixins/create/mixer.rs
++++ b/mixins/create/mixer.rs
+@@ -8,7 +8,7 @@ use super::create_port_basin_recipes::Recipe;
+ use super::{Game, create_port_basin as basin, native_block_entity_draw::BlockEntityDraw};
+ use crate::containers::{BlockEntity, ModBlockEntity, ModRevision};
+ use create_engine::{basin as rules, kinetics::Axis, transport::SessionCache};
+-use horizon_client_render::sound_engine::{SoundEngine, SoundInstance, Sounds};
++use horizon_client_render::sound_engine::{SoundInstance, Sounds};
+ use horizon_core::random::RandomSource;
+ use horizon_world::nbt::Tag;
+ use std::{
+@@ -404,8 +404,14 @@ pub(super) fn client_tick(game: &mut Game<'_>) {
+             } else {
+                 0
+             };
+-            let sound =
+-                SoundInstance::at("create:mixing", 4, 0.75, 1.0, SoundEngine::unseeded(), at);
++            let sound = SoundInstance::at(
++                "create:mixing",
++                4,
++                0.75,
++                1.0,
++                horizon_client_render::random_source::create(),
++                at,
++            );
+             if delay > 0 {
+                 let id = game.audio.engine.add(sound, false);
+                 game.audio.engine.play_delayed(id, delay);
+diff --git a/mixins/create/nativeaudio.rs b/mixins/create/nativeaudio.rs
+index 3dec463..05f43e2 100644
+--- a/mixins/create/nativeaudio.rs
++++ b/mixins/create/nativeaudio.rs
+@@ -5,7 +5,7 @@
+ use super::Game;
+ use create_engine::audio::{self as rules, FanSound, Group, Key, Sound, SoundScapes};
+ use horizon_client_render::sound_engine::{
+-    Attenuation, InstanceId, SoundEngine, SoundInstance, Sounds, Ticking,
++    Attenuation, InstanceId, SoundInstance, Sounds, Ticking,
+ };
+ use horizon_core::random::RandomSource;
+ use horizon_world::nbt::{Compound, Tag};
+@@ -107,7 +107,7 @@ fn instance(sound: &Sound) -> SoundInstance {
+         8,
+         sound.volume,
+         sound.pitch,
+-        SoundEngine::unseeded(),
++        horizon_client_render::random_source::create(),
+         true,
+         0,
+         Attenuation::Linear,
+@@ -290,7 +290,7 @@ pub(super) fn enable_fan(game: &mut Game<'_>, rpm: f32, velocity: [f64; 3]) {
+                 4,
+                 0.01,
+                 cache.fan.pitch,
+-                SoundEngine::unseeded(),
++                horizon_client_render::random_source::create(),
+                 true,
+                 0,
+                 Attenuation::Linear,
