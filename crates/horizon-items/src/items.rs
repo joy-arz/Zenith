@@ -1069,7 +1069,11 @@ impl Items {
             loot,
             songs: load_songs(root),
             instruments: load_instruments(root),
-            enchantments: Arc::new(crate::enchant::Enchantments::load_with(root, overlay)),
+            enchantments: Arc::new(crate::enchant::Enchantments::load_with_defaults(
+                root,
+                overlay,
+                Some(raw.as_ref()),
+            )),
         })
     }
     pub fn get(&self, id: &str) -> Option<&ItemInfo> {
