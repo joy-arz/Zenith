@@ -111,6 +111,7 @@ enum Page {
     /// Mods, resource packs and modpacks (imported ones and the browser's).
     Mods,
     Servers,
+    Skins,
     /// What the player wears (`wardrobe_page.rs`), with the cosmetics flag on.
     Wardrobe,
     /// Cosmetics to try on and buy (`wardrobe_page/shop.rs`), beside the Wardrobe and under the
@@ -129,8 +130,7 @@ impl Page {
         let page = match std::env::var("HORIZON_LAUNCHER_PAGE").as_deref() {
             Ok("mods" | "modpacks" | "resourcepacks" | "shaders" | "datapacks") => Page::Mods,
             Ok("servers") => Page::Servers,
-            Ok("wardrobe") if horizon_cosmetics::forced() => Page::Wardrobe,
-            Ok("shop") if horizon_cosmetics::forced() => Page::Shop,
+            Ok("skins" | "wardrobe") => Page::Skins,
             Ok("versions") => Page::Versions,
             Ok("settings") => Page::Settings,
             _ => Page::Play,
@@ -145,24 +145,20 @@ impl Page {
 
     /// Every page, with its name and icon: the top bar shows all but Settings, which has its
     /// own button.
-    const ALL: [(Page, &'static str, &'static str); 7] = [
+    const ALL: [(Page, &'static str, &'static str); 6] = [
         (Page::Play, "Home", "home"),
         (Page::Mods, "Mods", "package"),
         (Page::Servers, "Servers", "server"),
-        (Page::Wardrobe, "Wardrobe", "user"),
-        (Page::Shop, "Shop", "bag"),
+        (Page::Skins, "Skins", "user"),
         (Page::Versions, "Versions", "archive"),
         (Page::Settings, "Settings", "sliders"),
     ];
 
-    /// The pages the top bar shows: all but Settings, and the Wardrobe and the Shop only when
-    /// `wardrobe` (`Launcher::wardrobe_shown`).
-    fn in_top_bar(wardrobe: bool) -> impl Iterator<Item = (Page, &'static str, &'static str)> {
-        Self::ALL.into_iter().filter(move |(page, ..)| match page {
-            Page::Settings => false,
-            Page::Wardrobe | Page::Shop => wardrobe,
-            _ => true,
-        })
+    /// Settings has its own button.
+    fn in_top_bar() -> impl Iterator<Item = (Page, &'static str, &'static str)> {
+        Self::ALL
+            .into_iter()
+            .filter(|(page, ..)| *page != Page::Settings)
     }
 }
 
@@ -815,6 +811,7 @@ impl Launcher {
             this.open_instance_dialog(this.selected_instance().cloned());
         }
         if cfg!(debug_assertions)
+            && horizon_cosmetics::forced()
             && matches!(
                 std::env::var("HORIZON_LAUNCHER_PAGE").as_deref(),
                 Ok("wardrobe" | "shop")
@@ -1103,10 +1100,7 @@ impl Launcher {
         self.perf.tick();
         match self.bench.as_mut().map(|b| b.tick(&self.perf)) {
             Some(perf::Step::Go(page)) => {
-                let pages: Vec<Page> = (Page::ALL.iter().map(|p| p.0))
-                    .filter(|p| !matches!(p, Page::Wardrobe | Page::Shop) || self.wardrobe_shown())
-                    .collect();
-                self.go(pages[page % pages.len()]);
+                self.go(Page::ALL[page % Page::ALL.len()].0);
                 changed = true;
             }
             Some(perf::Step::Scroll) => {
@@ -2828,7 +2822,7 @@ impl Launcher {
             .flex_wrap()
             .items_center()
             .gap(px(4.));
-        for (page, label, _) in Page::in_top_bar(self.wardrobe_shown()) {
+        for (page, label, _) in Page::in_top_bar() {
             nav = nav.child(
                 shell::tab(format!("nav-{label}"), tr(label), self.page == page, &t).on_click(
                     cx.listener(move |this, _: &ClickEvent, _, cx| {
@@ -3153,7 +3147,7 @@ impl Launcher {
         if !self.links.sponsor.is_empty() {
             foot = foot.child(link(
                 "sponsor",
-                tr("Sponsor"),
+                tr("Support"),
                 "heart",
                 self.links.sponsor.clone(),
             ));
@@ -3476,12 +3470,14 @@ impl Launcher {
                         cx.notify();
                     })),
                 ),
-            Some(false) => div().child(microsoft::sign_in_button("prepare-sign-in", &t).on_click(
-                cx.listener(|this, _: &ClickEvent, _, cx| {
-                    this.sign_in_to_play();
-                    cx.notify();
-                }),
-            )),
+            Some(false) => div().child(
+                button("prepare-accounts", "Manage accounts", Kind::Secondary, &t).on_click(
+                    cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.manage_accounts();
+                        cx.notify();
+                    }),
+                ),
+            ),
             None => div().child(prepare),
         };
         let owner = self.owner == Some(true);
@@ -3563,9 +3559,9 @@ impl Launcher {
                             .into_any_element(),
                     ),
                     Some(
-                        microsoft::sign_in_button("gate-sign-in", &t)
+                        button("gate-accounts", "Manage accounts", Kind::Secondary, &t)
                             .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                                this.sign_in_to_play();
+                                this.manage_accounts();
                                 cx.notify();
                             }))
                             .into_any_element(),
@@ -4906,13 +4902,67 @@ impl Launcher {
         })
     }
 
+    fn zenith_version_card(&self) -> Div {
+        let t = self.theme;
+        let launcher_release_url =
+            format!("https://github.com/{}/releases", backend::LAUNCHER_REPO);
+        let version = text(theme::HEADING).text_color(t.ink).child(trf(
+            "Zenith launcher {version}",
+            &[("version", backend::VERSION)],
+        ));
+        let update = self.updates.launcher.as_ref().and_then(|release| {
+            backend::launcher_version(&release.tag).map(|version| {
+                text(theme::CAPTION)
+                    .text_color(t.muted)
+                    .child(trf("{version} available", &[("version", version)]))
+            })
+        });
+        plate(&t)
+            .flex()
+            .flex_wrap()
+            .items_center()
+            .justify_between()
+            .gap(px(12.))
+            .p(px(18.))
+            .child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap(px(6.))
+                    .child(version)
+                    .children(update),
+            )
+            .child(
+                div()
+                    .flex()
+                    .flex_wrap()
+                    .gap(px(8.))
+                    .child(
+                        button(
+                            "zenith-launcher-releases",
+                            "Launcher releases",
+                            Kind::Secondary,
+                            &t,
+                        )
+                        .on_click(move |_, _, cx| cx.open_url(&launcher_release_url)),
+                    )
+                    .child(
+                        button(
+                            "zenith-engine-releases",
+                            "Zenith Rust Edition builds",
+                            Kind::Ghost,
+                            &t,
+                        )
+                        .on_click(|_, _, cx| {
+                            cx.open_url("https://github.com/joy-arz/zenith-rust-edition/releases")
+                        }),
+                    ),
+            )
+    }
+
     fn versions_page(&mut self, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
-        let header = page_header(
-            "Versions",
-            "Builds from GitHub. Each one installs into its own folder.",
-            &t,
-        );
+        let header = page_header("Versions", "Zenith updates and compatible game builds.", &t);
         // Measured again when the installed versions change.
         if self.disk_for != self.installed {
             self.disk_for = self.installed.clone();
@@ -4969,14 +5019,16 @@ impl Launcher {
                         .child(
                             text(theme::HEADING)
                                 .text_color(t.ink)
-                                .child(tr("Support the work below")),
+                                .child(tr("Support Zenith")),
                         )
-                        .child(text(theme::UI).text_color(t.muted).child(tr(
-                            "Horizon is built in the open. Sponsors fund the next release.",
-                        ))),
+                        .child(
+                            text(theme::UI)
+                                .text_color(t.muted)
+                                .child(tr("Support development on Ko-fi.")),
+                        ),
                 )
                 .child(
-                    button("sponsor", "Sponsor on GitHub", Kind::Secondary, &t)
+                    button("sponsor", "Support on Ko-fi", Kind::Secondary, &t)
                         .bg(t.plate)
                         .on_click({
                             let url = self.links.sponsor.clone();
@@ -4989,6 +5041,7 @@ impl Launcher {
             .flex_col()
             .gap(px(32.))
             .child(header)
+            .child(self.zenith_version_card())
             .children(sponsor)
             .child(
                 div()
@@ -5024,6 +5077,7 @@ impl Launcher {
                 &on_disk,
                 cx,
             ));
+        let page = page.child(caps(tr("Horizon compatibility builds")).text_color(t.muted));
         let releases = match &self.releases {
             Load::Loading => return page.child(centered(tr("Loading releases…"), &t)),
             Load::Failed(e) => {
@@ -5307,6 +5361,7 @@ impl Render for Launcher {
         let content = match self.page {
             Page::Play => self.play_page(cx),
             Page::Versions => self.versions_page(cx),
+            Page::Skins => self.skins_page(cx),
             Page::Mods => self.mods_page(cx),
             Page::Servers => self.servers_page(cx),
             Page::Wardrobe => self.wardrobe_page(cx),

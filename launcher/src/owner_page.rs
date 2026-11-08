@@ -22,10 +22,11 @@ impl Launcher {
         }
     }
 
-    /// Opens the screen and starts the sign-in on it.
-    pub(crate) fn sign_in_to_play(&mut self) {
-        self.owner_screen_open = true;
-        self.start_sign_in();
+    pub(crate) fn manage_accounts(&mut self) {
+        if self.asking_owner() {
+            self.close_owner_screen();
+        }
+        self.go(Page::Settings);
     }
 
     /// Closes it; it comes back with the next refused Play.
@@ -210,12 +211,12 @@ impl Launcher {
             Shown::Starting(_) => None,
             Shown::Error(_) if !configured => None,
             _ => Some(
-                microsoft::sign_in_button("owner-sign-in", &t).on_click(cx.listener(
-                    |this, _: &ClickEvent, _, cx| {
-                        this.sign_in_to_play();
+                button("owner-accounts", "Manage accounts", Kind::Primary, &t).on_click(
+                    cx.listener(|this, _: &ClickEvent, _, cx| {
+                        this.manage_accounts();
                         cx.notify();
-                    },
-                )),
+                    }),
+                ),
             ),
         };
         let waiting = matches!(state, Shown::Code(..)).then(|| {
@@ -466,12 +467,11 @@ impl Launcher {
                         .text_size(px(15.))
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_color(gpui::rgb(horizon_theme::glass::ON_LIGHT))
-                        .child(microsoft::logo(18.))
-                        .child(tr("Sign in with Microsoft")),
+                        .child(tr("Manage accounts")),
                     &t,
                 )
                 .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                    this.sign_in_to_play();
+                    this.manage_accounts();
                     cx.notify();
                 }))
                 .into_any_element(),

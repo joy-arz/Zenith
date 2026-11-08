@@ -870,8 +870,8 @@ impl Default for Links {
     fn default() -> Self {
         Self {
             discord: "https://discord.gg/playhorizon".into(),
-            sponsor: "https://github.com/sponsors/ludovic111".into(),
-            website: "https://playhorizon.dev".into(),
+            sponsor: "https://ko-fi.com/joyarz".into(),
+            website: "https://www.joyz.cc".into(),
             official_server: crate::server_list::OFFICIAL_ADDRESS.into(),
             official_server_previous: crate::server_list::OFFICIAL_PREVIOUS
                 .iter()
@@ -916,10 +916,14 @@ impl Links {
 /// The links from main, or the built-in ones when offline.
 pub fn links() -> Links {
     let url = format!("https://raw.githubusercontent.com/{REPO}/main/launcher/links.json");
-    get(&url)
+    let mut links = get(&url)
         .ok()
         .and_then(|r| r.into_string().ok())
-        .map_or_else(Links::default, |text| Links::parse(&text))
+        .map_or_else(Links::default, |text| Links::parse(&text));
+    let zenith = Links::parse(include_str!("../links.json"));
+    links.sponsor = zenith.sponsor;
+    links.website = zenith.website;
+    links
 }
 
 /// The launcher's data folder; `HORIZON_LAUNCHER_HOME` overrides it (for tests and scripts).
@@ -6404,8 +6408,8 @@ mod tests {
     fn links_fall_back_to_the_built_in_ones() {
         let defaults = Links::default();
         assert_eq!(defaults.discord, "https://discord.gg/playhorizon");
-        assert_eq!(defaults.sponsor, "https://github.com/sponsors/ludovic111");
-        assert_eq!(defaults.website, "https://playhorizon.dev");
+        assert_eq!(defaults.sponsor, "https://ko-fi.com/joyarz");
+        assert_eq!(defaults.website, "https://www.joyz.cc");
         // The file on main says the same thing as the defaults.
         assert_eq!(Links::parse(include_str!("../links.json")), defaults);
         // Unreadable or missing, offline included: the defaults.

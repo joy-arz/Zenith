@@ -22,16 +22,17 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 /// The Wardrobe's view's size, in points.
-pub(super) const W: f32 = 240.;
-pub(super) const H: f32 = 330.;
+pub(crate) const W: f32 = 240.;
+pub(crate) const H: f32 = 330.;
 /// Pixels of a trackpad's scroll that make one wheel step.
 const SCROLL_STEP: f32 = 40.;
 
 /// What the player wears in the view.
 #[derive(Clone)]
-pub(super) struct Outfit {
+pub(crate) struct Outfit {
     pub skin: Arc<Texture>,
     pub slim: bool,
+    pub extruded: bool,
     pub items: Vec<Arc<Item>>,
 }
 
@@ -40,6 +41,7 @@ impl PartialEq for Outfit {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.skin, &other.skin)
             && self.slim == other.slim
+            && self.extruded == other.extruded
             && self.items.len() == other.items.len()
             && (self.items.iter().zip(&other.items)).all(|(a, b)| Arc::ptr_eq(a, b))
     }
@@ -51,7 +53,7 @@ impl Outfit {
     }
 }
 
-pub(super) struct Viewer {
+pub(crate) struct Viewer {
     /// Its size in points.
     size: (f32, f32),
     outfit: Option<(Outfit, Part)>,
@@ -69,7 +71,7 @@ pub(super) struct Viewer {
 }
 
 impl Viewer {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::sized(W, H)
     }
 
@@ -89,18 +91,21 @@ impl Viewer {
     }
 
     /// Shows `outfit`, if it is a new one; `motion` is whether animations may play.
-    pub(super) fn dress(&mut self, outfit: Outfit, motion: bool, cx: &mut Context<Self>) {
+    pub(crate) fn dress(&mut self, outfit: Outfit, motion: bool, cx: &mut Context<Self>) {
         if self.outfit.as_ref().is_some_and(|(o, _)| *o == outfit) {
             return;
         }
         self.stage.dress(motion && outfit.animates());
-        let body = preview::player_model(outfit.slim);
+        let mut body = preview::player_model(outfit.slim);
+        if outfit.extruded {
+            horizon_cosmetics::skin_layers::extrude_preview(&mut body, &outfit.skin);
+        }
         self.outfit = Some((outfit, body));
         cx.notify();
     }
 
     /// Back to where the view started.
-    pub(super) fn reset(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn reset(&mut self, cx: &mut Context<Self>) {
         if self.stage.moved() {
             self.stage.set_camera(Camera::HOME);
             cx.notify();
@@ -221,7 +226,7 @@ impl Render for Viewer {
 /// The view in the page, with the pointer: press and drag to turn (followed past the view's
 /// edges while held, as a scrollbar's), the wheel to zoom. `dragging` is the page's
 /// (`set_dragging` changes it), so that the page draws the grabbing hand.
-pub(super) fn frame(
+pub(crate) fn frame(
     viewer: Entity<Viewer>,
     (w, h): (f32, f32),
     dragging: bool,
@@ -313,6 +318,7 @@ mod tests {
         let outfit = |items: Vec<Arc<Item>>| Outfit {
             skin: skin.clone(),
             slim: false,
+            extruded: false,
             items,
         };
         assert!(outfit(vec![cap.clone()]) == outfit(vec![cap.clone()]));
@@ -332,6 +338,7 @@ mod tests {
         let outfit = |items| Outfit {
             skin: skin.clone(),
             slim: false,
+            extruded: false,
             items,
         };
         assert!(!outfit(vec![item("cap", false)]).animates());

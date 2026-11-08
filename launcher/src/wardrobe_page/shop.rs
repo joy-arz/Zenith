@@ -387,6 +387,7 @@ impl Launcher {
         let outfit = Outfit {
             skin,
             slim,
+            extruded: false,
             items: (worn.values().filter_map(|id| w.items.get(id)))
                 .filter(|i| !matches!(i.slot, Slot::NameTag | Slot::Emote))
                 .cloned()

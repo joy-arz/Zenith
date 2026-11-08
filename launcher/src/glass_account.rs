@@ -106,7 +106,7 @@ impl Launcher {
         let mut chips = div().flex().flex_wrap().gap(px(8.)).mt(px(12.));
         for (i, offline) in self.accounts.offline.clone().into_iter().enumerate() {
             let plays = now == Player::Offline(offline.clone());
-            let (who, skin, forget) = (offline.clone(), offline.clone(), offline.clone());
+            let (who, forget) = (offline.clone(), offline.clone());
             chips = chips.child(
                 self.name_chip(
                     SharedString::from(format!("offline-chip-{i}")),
@@ -119,15 +119,6 @@ impl Launcher {
                         cx.notify();
                     }))
                 })
-                .child(self.chip_icon(
-                    SharedString::from(format!("offline-skin-{i}")),
-                    "pencil-edit-02",
-                    cx.listener(move |this, _: &ClickEvent, _, cx| {
-                        cx.stop_propagation();
-                        this.open_skin(skin.clone());
-                        cx.notify();
-                    }),
-                ))
                 .when(!plays, |d| {
                     d.child(self.chip_icon(
                         SharedString::from(format!("offline-forget-{i}")),
@@ -193,17 +184,6 @@ impl Launcher {
                     .child(tr("Offline names")),
             )
             .child(chips)
-            .children(match self.accounts.player() {
-                Player::Offline(name) => Some(
-                    ui::quiet("offline-skin-selected", tr("Custom skin…"), 32., &t)
-                        .mt(px(8.))
-                        .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
-                            this.open_skin(name.clone());
-                            cx.notify();
-                        })),
-                ),
-                _ => None,
-            })
             .child(
                 ui::text(13., FontWeight::NORMAL, 0.5)
                     .mt(px(10.))
@@ -213,7 +193,6 @@ impl Launcher {
                          too. Online servers don't take offline names.",
                     )),
             )
-            .children(self.skin_panel(cx).map(|p| p.mt(px(12.))))
     }
 
     /// An offline name's chip: its head and name, a tick on the one playing; white at 14 % for

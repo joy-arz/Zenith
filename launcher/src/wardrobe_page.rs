@@ -26,7 +26,7 @@ use std::sync::Arc;
 mod marks;
 mod purchases;
 mod shop;
-mod viewer;
+pub(super) mod viewer;
 pub(super) use marks::Marks;
 pub(super) use shop::Shop;
 use viewer::{Outfit, Viewer};
@@ -262,7 +262,7 @@ fn stand_in_skin() -> Arc<Texture> {
 }
 
 /// `plain()`, made once: the views compare skins by their file.
-fn plain_skin() -> Arc<Texture> {
+pub(super) fn plain_skin() -> Arc<Texture> {
     static PLAIN: std::sync::LazyLock<Arc<Texture>> =
         std::sync::LazyLock::new(|| Arc::new(plain()));
     PLAIN.clone()
@@ -875,6 +875,7 @@ impl Launcher {
         let outfit = Outfit {
             skin,
             slim,
+            extruded: false,
             items: worn_ids(&me.equipped, w.hover.as_ref())
                 .iter()
                 .filter_map(|id| w.items.get(id))

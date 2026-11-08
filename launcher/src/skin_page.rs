@@ -1,7 +1,8 @@
-//! Settings > Account's skin panel for an offline name (`horizon_launcher::skins`): the front
-//! of the skin and the cape, choosing either from a PNG, and the model.
+//! Local skin and cape controls with a draggable player preview.
 use super::*;
+use crate::wardrobe_page::{plain_skin, viewer};
 use gpui::RenderImage;
+use horizon_cosmetics::{preview::process_legacy_skin, Texture};
 use horizon_launcher::skins::{self, Model};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,8 +14,11 @@ type Preview = Option<Arc<RenderImage>>;
 pub(super) struct SkinPanel {
     /// The offline name it is for.
     pub(super) name: String,
-    /// The two previews, baked at the window's scale (skin, cape), or None without one.
-    seen: Option<(f32, Preview, Preview)>,
+    seen: Option<(f32, Arc<Texture>, Preview)>,
+    viewer: Option<gpui::Entity<viewer::Viewer>>,
+    shown: Option<viewer::Outfit>,
+    dragging: bool,
+    extruded: bool,
     /// What the last choice did, or why not.
     note: Option<Result<String, String>>,
 }
@@ -23,14 +27,76 @@ pub(super) struct SkinPanel {
 const TEXEL: f32 = 6.;
 
 impl Launcher {
-    pub(super) fn open_skin(&mut self, name: String) {
-        self.skin = match self.skin.take() {
-            Some(p) if p.name == name => None,
-            _ => Some(SkinPanel {
+    fn select_skin(&mut self, name: String) {
+        if self.skin.as_ref().is_none_or(|panel| panel.name != name) {
+            self.skin = Some(SkinPanel {
                 name,
                 ..SkinPanel::default()
-            }),
-        };
+            });
+        }
+    }
+
+    pub(super) fn skins_page(&mut self, cx: &mut Context<Self>) -> Div {
+        let t = self.theme;
+        let names = self.accounts.offline.clone();
+        let page = div().flex().flex_col().gap(px(16.)).child(page_header(
+            "Skins",
+            "Upload a skin for an offline profile and preview it in 3D.",
+            &t,
+        ));
+        if names.is_empty() {
+            self.skin = None;
+            return page.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .items_start()
+                    .gap(px(10.))
+                    .child(text(theme::UI).text_color(t.muted).child(tr(
+                        "Add an offline profile in Manage accounts to upload a skin.",
+                    )))
+                    .child(
+                        button(
+                            "skin-manage-accounts",
+                            "Manage accounts",
+                            Kind::Secondary,
+                            &t,
+                        )
+                        .on_click(cx.listener(
+                            |this, _: &ClickEvent, _, cx| {
+                                this.manage_accounts();
+                                cx.notify();
+                            },
+                        )),
+                    ),
+            );
+        }
+        if !self
+            .skin
+            .as_ref()
+            .is_some_and(|panel| names.contains(&panel.name))
+        {
+            let selected = match self.accounts.player() {
+                account::Player::Offline(name) if names.contains(&name) => name,
+                _ => names[0].clone(),
+            };
+            self.select_skin(selected);
+        }
+        let profiles = names.into_iter().enumerate().map(|(i, name)| {
+            let active = self.skin.as_ref().is_some_and(|panel| panel.name == name);
+            button(
+                format!("skin-profile-{i}"),
+                name.clone(),
+                if active { Kind::Secondary } else { Kind::Ghost },
+                &t,
+            )
+            .on_click(cx.listener(move |this, _: &ClickEvent, _, cx| {
+                this.select_skin(name.clone());
+                cx.notify();
+            }))
+        });
+        let selection = div().flex().flex_wrap().gap(px(6.)).children(profiles);
+        page.child(selection).children(self.skin_panel(cx))
     }
 
     fn save_look(&mut self, change: impl FnOnce(&mut skins::Look)) -> Result<(), String> {
@@ -58,6 +124,9 @@ impl Launcher {
     }
 
     fn choose_look_file(&mut self, cape: bool, cx: &mut Context<Self>) {
+        let Some(name) = self.skin.as_ref().map(|panel| panel.name.clone()) else {
+            return;
+        };
         let paths = cx.prompt_for_paths(PathPromptOptions {
             files: true,
             directories: false,
@@ -72,14 +141,16 @@ impl Launcher {
                 return;
             };
             let _ = this.update(cx, |this, cx| {
-                this.take_look_file(path, cape);
-                cx.notify();
+                if this.skin.as_ref().is_some_and(|panel| panel.name == name) {
+                    this.take_look_file(path, cape);
+                    cx.notify();
+                }
             });
         })
         .detach();
     }
 
-    pub(super) fn take_look_file(&mut self, path: PathBuf, cape: bool) {
+    fn take_look_file(&mut self, path: PathBuf, cape: bool) {
         let Some(name) = self.skin.as_ref().map(|p| p.name.clone()) else {
             return;
         };
@@ -106,60 +177,99 @@ impl Launcher {
         }
     }
 
-    fn previews(&mut self) -> (Preview, Preview) {
+    fn previews(
+        &mut self,
+        cx: &mut Context<Self>,
+    ) -> Option<(gpui::Entity<viewer::Viewer>, bool, Preview)> {
         let scale = self.scale;
-        let Some(panel) = &mut self.skin else {
-            return (None, None);
-        };
-        if let Some((s, skin, cape)) = &panel.seen {
-            if *s == scale {
-                return (skin.clone(), cape.clone());
-            }
-        }
+        let panel = self.skin.as_mut()?;
         let look = self.accounts.look(&panel.name);
-        let (skin_file, cape_file) = skins::files(&skins::dir(), &panel.name);
-        let read = |f: &PathBuf| std::fs::read(f).ok();
-        let skin = read(&skin_file)
-            .filter(|_| look.skin)
-            .and_then(|b| skins::read_skin(&b).ok())
-            .map(|png| art::bake(&skins::front(&png, look.model), 16, 32, TEXEL, scale));
-        let cape = read(&cape_file)
-            .filter(|_| look.cape)
-            .and_then(|b| skins::read_cape(&b).ok())
-            .map(|png| art::bake(&skins::cape_front(&png), 10, 16, TEXEL, scale));
-        panel.seen = Some((scale, skin.clone(), cape.clone()));
-        (skin, cape)
+        if panel
+            .seen
+            .as_ref()
+            .is_some_and(|(previous, ..)| *previous != scale)
+        {
+            panel.seen = None;
+        }
+        let (_, skin, cape) = panel.seen.get_or_insert_with(|| {
+            let (skin_file, cape_file) = skins::files(&skins::dir(), &panel.name);
+            let skin = std::fs::read(skin_file)
+                .ok()
+                .filter(|_| look.skin)
+                .and_then(|bytes| skins::read_skin(&bytes).ok())
+                .and_then(|skin| process_legacy_skin(skin.width(), skin.height(), skin.as_raw()))
+                .map(|rgba| {
+                    Arc::new(Texture {
+                        width: 64,
+                        height: 64,
+                        rgba,
+                    })
+                })
+                .unwrap_or_else(plain_skin);
+            let cape = std::fs::read(cape_file)
+                .ok()
+                .filter(|_| look.cape)
+                .and_then(|bytes| skins::read_cape(&bytes).ok())
+                .map(|png| art::bake(&skins::cape_front(&png), 10, 16, TEXEL, scale));
+            (scale, skin, cape)
+        });
+        let (skin, cape) = (skin.clone(), cape.clone());
+        let viewer = panel
+            .viewer
+            .get_or_insert_with(|| cx.new(|_| viewer::Viewer::new()))
+            .clone();
+        let outfit = viewer::Outfit {
+            skin,
+            slim: look.model == Model::Slim,
+            extruded: panel.extruded,
+            items: Vec::new(),
+        };
+        if panel.shown.as_ref() != Some(&outfit) {
+            panel.shown = Some(outfit.clone());
+            let to = viewer.clone();
+            cx.defer(move |cx| to.update(cx, |view, cx| view.dress(outfit, false, cx)));
+        }
+        Some((viewer, panel.dragging, cape))
     }
 
-    /// The panel, under the offline names while open.
-    pub(super) fn skin_panel(&mut self, cx: &mut Context<Self>) -> Option<Div> {
+    fn skin_panel(&mut self, cx: &mut Context<Self>) -> Option<Div> {
         let t = self.theme;
         let name = self.skin.as_ref()?.name.clone();
-        if !self.accounts.offline.iter().any(|n| n == &name) {
-            self.skin = None;
-            return None;
-        }
         let look = self.accounts.look(&name);
-        let (skin, cape) = self.previews();
-        let frame = |w: f32, h: f32, image: Preview, empty: &'static str| {
-            div()
-                .flex()
-                .flex_none()
-                .items_center()
-                .justify_center()
-                .w(px(w + 24.))
-                .h(px(h + 24.))
-                .bg(t.well)
-                .border_2()
-                .border_color(t.outline)
-                .child(match image {
-                    Some(i) => gpui::img(i).w(px(w)).h(px(h)).into_any_element(),
-                    None => text(theme::CAPTION)
-                        .text_color(t.muted)
-                        .child(tr(empty))
-                        .into_any_element(),
-                })
-        };
+        let (viewer, dragging, cape) = self.previews(cx)?;
+        let weak = cx.entity().downgrade();
+        let preview = viewer::frame(
+            viewer.clone(),
+            (viewer::W, viewer::H),
+            dragging,
+            move |on, cx| {
+                let _ = weak.update(cx, |this, cx| {
+                    if let Some(panel) = this.skin.as_mut() {
+                        panel.dragging = on;
+                        cx.notify();
+                    }
+                });
+            },
+        );
+        let reset = button("skin-reset-view", "Reset view", Kind::Ghost, &t)
+            .on_click(move |_: &ClickEvent, _, cx| viewer.update(cx, |view, cx| view.reset(cx)));
+        let extruded = self.skin.as_ref()?.extruded;
+        let layers = button(
+            "skin-layer-depth",
+            if extruded {
+                "3D skin layers on"
+            } else {
+                "3D skin layers off"
+            },
+            Kind::Secondary,
+            &t,
+        )
+        .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+            if let Some(panel) = this.skin.as_mut() {
+                panel.extruded = !panel.extruded;
+                cx.notify();
+            }
+        }));
         let weak = cx.entity().downgrade();
         let model = segments(
             "skin-model",
@@ -194,7 +304,7 @@ impl Launcher {
         };
         let mut skin_buttons = div().flex().flex_wrap().gap(px(6.)).child(pick(
             "skin-choose",
-            "Choose a skin…",
+            "Upload skin…",
             false,
             cx,
         ));
@@ -203,7 +313,7 @@ impl Launcher {
         }
         let mut cape_buttons = div().flex().flex_wrap().gap(px(6.)).child(pick(
             "cape-choose",
-            "Choose a cape…",
+            "Upload cape…",
             true,
             cx,
         ));
@@ -218,20 +328,23 @@ impl Launcher {
                 .gap(px(12.))
                 .px(px(16.))
                 .py(px(12.))
-                .when(!t.glass, |d| d.ml(px(40.)))
                 .child(
                     div()
                         .flex()
+                        .flex_wrap()
                         .gap(px(16.))
-                        .child(frame(16. * TEXEL, 32. * TEXEL, skin, "Default"))
-                        .child(frame(10. * TEXEL, 16. * TEXEL, cape, "No cape"))
+                        .child(div().flex().flex_col().items_center().flex_none()
+                            .bg(t.well).child(preview)
+                            .child(text(theme::CAPTION).text_color(t.muted)
+                                .child(tr("Drag to turn, scroll to zoom.")))
+                            .child(reset))
                         .child(
                             div()
                                 .flex()
                                 .flex_col()
                                 .items_start()
                                 .flex_1()
-                                .min_w_0()
+                                .min_w(px(200.))
                                 .gap(px(10.))
                                 .child(
                                     caps(trf("{name}'s skin", &[("name", &name)]))
@@ -239,7 +352,9 @@ impl Launcher {
                                 )
                                 .child(skin_buttons)
                                 .child(model)
+                                .child(layers)
                                 .child(cape_buttons)
+                                .children(cape.map(|image| gpui::img(image).w(px(10. * TEXEL)).h(px(16. * TEXEL))))
                                 .children(note.map(|n| match n {
                                     Ok(said) => {
                                         text(theme::CAPTION).text_color(t.muted).child(said)

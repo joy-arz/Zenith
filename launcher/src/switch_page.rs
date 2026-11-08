@@ -140,8 +140,7 @@ impl Launcher {
                 .hover(move |s| s.bg(t.plate_soft).text_color(t.ink))
                 .child(tr("Manage accounts"))
                 .on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                    this.account_menu = false;
-                    this.go(Page::Settings);
+                    this.manage_accounts();
                     cx.notify();
                 })),
         );
@@ -196,15 +195,6 @@ impl Launcher {
                     ),
                 );
             }
-            let dressed = name.clone();
-            actions = actions.child(
-                button(format!("offline-skin-{i}"), "Custom skin…", Kind::Ghost, &t).on_click(
-                    cx.listener(move |this, _: &ClickEvent, _, cx| {
-                        this.open_skin(dressed.clone());
-                        cx.notify();
-                    }),
-                ),
-            );
             let forget = name.clone();
             actions = actions.child(
                 button(format!("offline-forget-{i}"), "Forget", Kind::Ghost, &t).on_click(
@@ -231,7 +221,6 @@ impl Launcher {
                 &t,
             ));
         }
-        rows = rows.children(self.skin_panel(cx));
         // The name the game made up can't be forgotten — it's what an offline player is —
         // only rolled for a new one.
         if let Some(made_up) = self.offline_name.clone() {
