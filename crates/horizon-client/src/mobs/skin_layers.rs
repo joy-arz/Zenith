@@ -15,8 +15,8 @@
 //! the CPU and the GPU (`super::skin`) pose paths draw it unchanged.
 use super::{Part, Polygon};
 
-use horizon_cosmetics::skin_layers::{OUTER_PARTS, extrude_face};
 pub use horizon_cosmetics::skin_layers::{DEPTH, SIZE};
+use horizon_cosmetics::skin_layers::{OUTER_PARTS, extrude_face};
 
 /// `model` with every outer-layer part replaced by its extruded geometry,
 /// or `None` when the model has no outer layer to extrude.
