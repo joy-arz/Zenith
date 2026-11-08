@@ -14,12 +14,19 @@ version=$3
 tag=zenith-game@$version
 repo=joy-arz/Zenith
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
-: "${ZENITH_ENGINE_SIGNING_KEY:?missing Zenith engine signing key}"
+zenith_promote_key=${ZENITH_ENGINE_SIGNING_KEY:?missing Zenith engine signing key}
+export -n zenith_promote_key
+unset ZENITH_ENGINE_SIGNING_KEY
 umask 077
 stage=$(mktemp -d)
 echo "Staging run $run in $stage"
 cd "$root"
 
+gh api "repos/$repo/actions/runs/$run" |
+  jq -e --arg repo "$repo" '
+    .path == ".github/workflows/zenith-engine-preview.yml" and .head_branch == "main"
+    and .head_repository.full_name == $repo
+  ' >/dev/null
 gh run view "$run" --repo "$repo" --json workflowName,conclusion,event,jobs |
   jq -e '
     .workflowName == "Zenith engine preview" and .conclusion == "success"
@@ -57,7 +64,8 @@ cmp "$stage/expected" "$stage/actual"
 
 verifier=(cargo run --locked --quiet -p horizon-release-sign -- verify --tag "$tag")
 "${verifier[@]}" --key "$(cat "$dist/ephemeral.pub")" "$dist"
-bash tools/ci/sign_zenith_checksums.sh "$tag" "$dist" launcher/zenith-engine-release-keys.txt
+ZENITH_ENGINE_SIGNING_KEY="$zenith_promote_key" \
+  bash tools/ci/sign_zenith_checksums.sh "$tag" "$dist" launcher/zenith-engine-release-keys.txt
 "${verifier[@]}" --signature SHA256SUMS.zenith.sig \
   --key "$(cat launcher/zenith-engine-release-keys.txt)" "$dist"
 
