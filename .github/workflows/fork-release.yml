@@ -221,6 +221,11 @@ jobs:
           path: dist
           github-token: ${{ github.token }}
           run-id: ${{ inputs.recovery_run || github.run_id }}
+      - name: Install recovered launcher's Linux runtime dependencies
+        if: inputs.recovery_run != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libxkbcommon-x11-0 libwayland-client0 libx11-xcb1 libfontconfig1 libvulkan1 libasound2t64 libudev1
       - name: Check recovered launcher version
         if: inputs.recovery_run != ''
         env:
