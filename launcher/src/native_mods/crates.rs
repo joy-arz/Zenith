@@ -373,6 +373,7 @@ pub(super) fn post_build(
     let mut cmd = Command::new(program);
     crate::rust_toolchain::low_priority(&mut cmd);
     cmd.args(&step.args)
+        .env_remove(crate::zenith_game::TOKEN_ENV)
         .current_dir(version)
         .env("HORIZON_NATIVE_MOD", &step.mod_id)
         .env("HORIZON_NATIVE_VERSION_DIR", version)

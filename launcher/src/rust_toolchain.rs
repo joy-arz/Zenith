@@ -408,7 +408,11 @@ pub fn low_priority(cmd: &mut Command) -> &mut Command {
     cmd
 }
 
-const SCRUBBED: [&str; 8] = [
+const SCRUBBED: [&str; 12] = [
+    crate::zenith_game::TOKEN_ENV,
+    "HORIZON_NIGHTLY",
+    "HORIZON_VERSION",
+    "ZENITH_RUST_EDITION",
     "RUSTUP_TOOLCHAIN",
     "RUSTC_WRAPPER",
     "RUSTC_WORKSPACE_WRAPPER",
@@ -1106,6 +1110,7 @@ mod tests {
         let get = |name: &str| env.iter().find(|(k, _)| k == name).map(|(_, v)| v.clone());
         assert_eq!(get("RUSTUP_TOOLCHAIN"), Some(None));
         assert_eq!(get("RUSTC_WRAPPER"), Some(None));
+        assert_eq!(get(crate::zenith_game::TOKEN_ENV), Some(None));
         assert_eq!(
             PathBuf::from(get("RUSTC").flatten().unwrap()),
             toolchain.dir.join("bin").join(exe("rustc"))

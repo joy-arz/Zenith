@@ -1513,6 +1513,18 @@ pub fn version_for(
     platform: Option<&str>,
     bundles: &[Bundle],
 ) -> Result<String, String> {
+    version_for_engine(revision, mixins, profile, target, platform, bundles, None)
+}
+
+fn version_for_engine(
+    revision: &str,
+    mixins: &str,
+    profile: Profile,
+    target: Target,
+    platform: Option<&str>,
+    bundles: &[Bundle],
+    zenith_tag: Option<&str>,
+) -> Result<String, String> {
     let mut hash = Sha256::new();
     let (cargo_profile, configs) = profile.cargo();
     for part in [mixins, cargo_profile]
@@ -1520,6 +1532,7 @@ pub fn version_for(
         .chain(configs.iter().copied())
         .chain([target.features(), rust_toolchain::VERSION, revision])
         .chain(platform)
+        .chain(zenith_tag)
     {
         hash.update(part.as_bytes());
         hash.update([0]);
@@ -2425,13 +2438,14 @@ fn pipeline(
         Some(MIXINS_REV),
         |r| committed("horizon-rust/horizon-mixins", r),
     )?;
-    let version = version_for(
+    let version = version_for_engine(
         &revision,
         &mixins,
         profile,
         target,
         platform.cache_key(),
         &mods,
+        zenith.then_some(origin),
     )?;
     let now = Record {
         horizon: revision.clone(),
@@ -2551,19 +2565,26 @@ fn pipeline(
             .iter()
             .map(|m| (m.id.clone(), m.version.clone()))
             .collect();
+        let mut command = compile(
+            &rust,
+            &stage,
+            target,
+            &target_dir,
+            compiled,
+            if has_api {
+                api::PACKAGE
+            } else {
+                "horizon-client"
+            },
+        );
+        if let Some(version) = crate::zenith_game::version(origin) {
+            command
+                .env("ZENITH_RUST_EDITION", "1")
+                .env("HORIZON_VERSION", version)
+                .env("HORIZON_TELEMETRY_URL", "off");
+        }
         run_checked(
-            compile(
-                &rust,
-                &stage,
-                target,
-                &target_dir,
-                compiled,
-                if has_api {
-                    api::PACKAGE
-                } else {
-                    "horizon-client"
-                },
-            ),
+            command,
             "Compiling the game",
             |line| {
                 for event in parse_cargo(line) {
@@ -4241,6 +4262,18 @@ mod tests {
         sync(&fresh, &stage).unwrap();
         assert_eq!(env(&stage), Some(None));
         fs::remove_dir_all(d).unwrap();
+    }
+
+    #[test]
+    fn a_zenith_build_does_not_reuse_another_releases_native_binary() {
+        let key = |tag| {
+            version_for_engine(A, B, Profile::Performance, Target::Client, None, &[], tag).unwrap()
+        };
+        assert_ne!(key(None), key(Some("zenith-game@0.2.0-preview.1")));
+        assert_ne!(
+            key(Some("zenith-game@0.2.0-preview.1")),
+            key(Some("zenith-game@0.2.0-preview.2")),
+        );
     }
 
     /// The server build (docs/server.md): compiled headless off the same source, with its own
