@@ -7,6 +7,10 @@ on:
         description: Preview version in the form X.Y.Z-preview.N
         required: true
         default: 0.1.0-preview.1
+      publish_preview:
+        description: Publish the verified archives as a private GitHub prerelease
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -134,3 +138,41 @@ jobs:
             dist/SHA256SUMS.sig
             dist/ephemeral.pub
           if-no-files-found: error
+
+  publish:
+    if: inputs.publish_preview && github.event.repository.private
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: zenith-*
+          path: dist
+          merge-multiple: true
+      - name: Publish the verified preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="zenith-game@$HORIZON_VERSION"
+          jq -e --arg tag "$tag" --arg commit "$GITHUB_SHA" \
+            '.tag == $tag and .source_commit == $commit and .channel == "preview"' dist/preview.json
+          (cd dist && sha256sum --check SHA256SUMS)
+          api="repos/$GITHUB_REPOSITORY/git/matching-refs/tags/$tag"
+          ref=$(gh api "$api" --jq '.[] | select(.ref == "refs/tags/'"$tag"'") | .object.sha')
+          if [[ -z "$ref" ]]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f "ref=refs/tags/$tag" -f "sha=$GITHUB_SHA" --silent
+          else
+            [[ "$ref" == "$GITHUB_SHA" ]]
+          fi
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag --prerelease \
+            --title "Zenith Rust Edition $HORIZON_VERSION" --notes-file packaging/ZENITH-PREVIEW.txt \
+            dist/*.tar.gz dist/preview.json dist/SHA256SUMS dist/SHA256SUMS.sig dist/ephemeral.pub
