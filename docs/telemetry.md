@@ -1,5 +1,8 @@
 # Opt-in data collection
 
+Zenith disables the collection and uploads described below. This page records
+upstream Horizon behavior. Zenith keeps crash logs and benchmark files locally.
+
 Horizon collects nothing unless the player says yes. The launcher asks once, with four separate switches that are all off until the player turns one on, and the same switches stay in Settings. The game and the launcher obey the same answer. The code is in `crates/horizon-telemetry`.
 
 Two exceptions:
