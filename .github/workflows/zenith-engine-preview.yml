@@ -7,6 +7,10 @@ on:
         description: Preview version in the form X.Y.Z-preview.N
         required: true
         default: 0.2.0-preview.1
+      source_commit:
+        description: Optional exact commit SHA for an artifact-only rebuild
+        type: string
+        default: ''
       publish_preview:
         description: Publish the verified archives as a private GitHub prerelease
         type: boolean
@@ -20,10 +24,11 @@ env:
   ZENITH_RUST_EDITION: "1"
   HORIZON_TELEMETRY_URL: 'off'
   CARGO_INCREMENTAL: '0'
+  ZENITH_SOURCE_COMMIT: ${{ inputs.source_commit || github.sha }}
 
 jobs:
   build:
-    if: github.repository == 'joy-arz/zenith-rust-edition'
+    if: github.repository == 'joy-arz/zenith-rust-edition' || github.repository == 'joy-arz/Zenith'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 75
     strategy:
@@ -50,6 +55,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          ref: ${{ env.ZENITH_SOURCE_COMMIT }}
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -68,6 +74,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$ZENITH_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" == "$ZENITH_SOURCE_COMMIT" ]]
           [[ "$HORIZON_VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-preview\.[1-9][0-9]*$ ]]
           python3 tools/check_public_tree.py
           if [[ "$RUNNER_OS" == Windows ]]; then
@@ -113,6 +120,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          ref: ${{ env.ZENITH_SOURCE_COMMIT }}
       - uses: dtolnay/rust-toolchain@stable
       - uses: actions/download-artifact@v8
         with:
@@ -123,6 +131,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          [[ "$ZENITH_SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ && "$(git rev-parse HEAD)" == "$ZENITH_SOURCE_COMMIT" ]]
           tag="zenith-game@$HORIZON_VERSION"
           git archive --format=tar.gz --output=dist/zenith-source.tar.gz HEAD
           upstream=$(cat packaging/zenith-engine-upstream.txt)
@@ -130,7 +139,7 @@ jobs:
           protocol=$(sed -nE 's/^pub const PROTOCOL_VERSION: i32 = ([0-9]+);$/\1/p' crates/horizon-core/src/version.rs)
           vanilla=$(sed -nE 's/^pub const VANILLA_VERSION: &str = "([^"]+)";$/\1/p' crates/horizon-core/src/version.rs)
           [[ "$upstream" =~ ^[0-9a-f]{40}$ && "$mixins" =~ ^[0-9a-f]{40}$ && -n "$protocol" && -n "$vanilla" ]]
-          jq -n --arg commit "$GITHUB_SHA" --arg tag "$tag" --arg version "$HORIZON_VERSION" \
+          jq -n --arg commit "$ZENITH_SOURCE_COMMIT" --arg tag "$tag" --arg version "$HORIZON_VERSION" \
             --arg upstream "$upstream" --arg mixins "$mixins" --arg minecraft "$vanilla" --argjson protocol "$protocol" \
             '{source_commit:$commit,tag:$tag,version:$version,channel:"preview",upstream_commit:$upstream,
               mixins_commit:$mixins,minecraft_compatibility:$minecraft,protocol:$protocol}' > dist/preview.json
@@ -150,7 +159,9 @@ jobs:
 
   publish:
     environment: zenith-engine-release
-    if: inputs.publish_preview && github.event.repository.private && github.ref == 'refs/heads/main'
+    if: >-
+      inputs.publish_preview && !inputs.source_commit && github.repository == 'joy-arz/zenith-rust-edition'
+      && github.event.repository.private && github.ref == 'refs/heads/main'
     needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 10
