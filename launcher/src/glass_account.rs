@@ -4,8 +4,7 @@
 //!
 //! Not in the mockup, kept in its patterns: the Microsoft accounts already signed in (in the
 //! Microsoft card, with Play as, Refresh and Sign out), the name the game made up (a chip with
-//! New name), each offline name's skin (a pencil in its chip) and the skin panel, the sign-in's
-//! code, progress and problems.
+//! New name), the sign-in's code, progress and problems.
 
 use super::*;
 use crate::glass_ui::{self as ui, white, Tone};

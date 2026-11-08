@@ -608,7 +608,7 @@ impl Launcher {
             .items_center()
             .gap(px(if compact { 2. } else { 4. }))
             .min_w_0();
-        for (page, label, _) in Page::in_top_bar(self.wardrobe_shown()) {
+        for (page, label, _) in Page::in_top_bar() {
             let mut item = ui::tab(format!("nav-{label}"), tr(label), self.page == page, &t);
             if compact {
                 item = item.px(px(8.));
