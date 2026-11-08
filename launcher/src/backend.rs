@@ -12,8 +12,8 @@ use std::sync::{Arc, Mutex};
 pub const REPO: &str = "horizon-rust/horizon";
 pub const ZENITH_ENGINE_PREVIEW: &str = "0.1.0-preview.1";
 /// This fork publishes launcher updates independently of the upstream game.
-pub const LAUNCHER_REPO: &str = "joy-arz/horizon";
-pub const README_URL: &str = "https://github.com/joy-arz/horizon/blob/main/FORK.md";
+pub const LAUNCHER_REPO: &str = "joy-arz/Zenith";
+pub const README_URL: &str = "https://github.com/joy-arz/Zenith/blob/main/FORK.md";
 /// The players' page on connecting an AI agent (the website's docs/agents.md).
 pub const AGENT_DOCS_URL: &str = "https://playhorizon.dev/docs/agents";
 /// This launcher's version: the release workflow sets `HORIZON_LAUNCHER_VERSION` from the

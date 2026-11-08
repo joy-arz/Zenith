@@ -75,7 +75,7 @@ mod tests {
     fn fork_launcher_and_upstream_game_have_separate_update_roots() {
         assert_eq!(
             asset_url("launcher@0.2.1", SUMS),
-            "https://github.com/joy-arz/horizon/releases/download/launcher@0.2.1/SHA256SUMS"
+            "https://github.com/joy-arz/Zenith/releases/download/launcher@0.2.1/SHA256SUMS"
         );
         assert_eq!(
             asset_url("v0.2.1", SUMS),

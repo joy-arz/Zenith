@@ -1,2 +1,2 @@
-# joy-arz/horizon launcher releases. Private key: GitHub Actions secret FORK_RELEASE_SIGNING_KEY.
+# joy-arz/Zenith launcher releases. Private key: GitHub Actions secret FORK_RELEASE_SIGNING_KEY.
 j40bHY6QQ/V6daKYctQ0VdvzUMVOV+O8jWrTIrtIzWY=

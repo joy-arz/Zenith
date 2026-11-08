@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   version:
-    if: github.repository == 'joy-arz/horizon'
+    if: github.repository == 'joy-arz/Zenith'
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
