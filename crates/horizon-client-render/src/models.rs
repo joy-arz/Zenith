@@ -12,6 +12,7 @@ use std::path::Path;
 
 /// The standalone models native mods asked for (`native_standalone_models`).
 static STANDALONE: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+static EXTRA_SPRITES: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
 
 /// Sets the models no blockstate names that every resource load bakes
 /// beside the block models ([`StateModels::standalone`]): once, at start,
@@ -31,6 +32,17 @@ pub fn register_standalone(mut names: Vec<String>) -> bool {
 /// What [`register_standalone`] set; none before.
 pub fn standalone() -> &'static [String] {
     STANDALONE.get().map_or(&[], Vec::as_slice)
+}
+
+/// Terrain sprite names used by a native renderer outside its model files.
+pub fn register_extra_sprites(mut names: Vec<String>) {
+    names.retain(|name| {
+        name.split_once(':')
+            .is_some_and(|(namespace, path)| !namespace.is_empty() && !path.is_empty())
+    });
+    names.sort();
+    names.dedup();
+    let _ = EXTRA_SPRITES.set(names);
 }
 
 type Placement = (&'static str, &'static [(&'static str, &'static str)]);
@@ -106,6 +118,9 @@ pub(crate) fn prepare_with_models(
     {
         let _step = crate::spans::startup::step("core.bake_standalone");
         catalog.bake_standalone(root, sprites, models, standalone())?;
+        for name in EXTRA_SPRITES.get().into_iter().flatten() {
+            let _ = sprites.try_insert(root, name);
+        }
     }
     let mut placements = Vec::new();
     let mut states = Vec::new();

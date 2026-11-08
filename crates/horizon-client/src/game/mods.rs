@@ -78,6 +78,9 @@ pub(super) fn register_standalone_models() {
     let mut names = Vec::new();
     Game::native_standalone_models(&mut names);
     horizon_client::models::register_standalone(names);
+    let mut sprites = Vec::new();
+    Game::native_terrain_model_sprites(&mut sprites);
+    horizon_client::models::register_extra_sprites(sprites);
 }
 /// The native mods' entity model layers (`native_layer_definitions`), kept
 /// once at start for `native_bake_layer`.

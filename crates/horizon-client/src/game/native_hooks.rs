@@ -3259,6 +3259,10 @@ impl Game<'_> {
     pub(super) fn native_standalone_models(models: &mut Vec<String>) {
         mod_api::dispatch_standalone_models(mod_api::mods(), models);
     }
+    /// Terrain sprites sampled by native models but absent from their model files.
+    pub(super) fn native_terrain_model_sprites(sprites: &mut Vec<String>) {
+        let _ = sprites;
+    }
     /// Entity model layers built in code (NeoForge's
     /// `EntityRenderersEvent.RegisterLayerDefinitions`): push each one's id,
     /// `<mod id>:<model>#<layer>` as a `ModelLayerLocation` names it
