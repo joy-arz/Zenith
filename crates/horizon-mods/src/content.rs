@@ -1587,6 +1587,7 @@ capabilities = ["registries"]
                 outline_context_shapes: BTreeMap::new(),
                 collision_context_shapes: BTreeMap::new(),
                 interaction_shapes: None,
+                state_light: None,
                 state_properties: BTreeMap::new(),
                 default_state: BTreeMap::new(),
                 properties: BlockProperties {
