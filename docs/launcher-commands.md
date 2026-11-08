@@ -36,7 +36,7 @@ MCP: `zenith_access`.
 
 ## `horizon-launcher install`
 
-Install a release by tag, "latest" for Horizon, or "zenith-latest" for Zenith.
+Install a release by tag, "latest" for Zenith, or "horizon-latest" for compatibility.
 
     horizon-launcher install <TAG>
 

@@ -727,7 +727,7 @@ enum Cmd {
         #[arg(long)]
         forget: bool,
     },
-    /// Install a release by tag, "latest" for Horizon, or "zenith-latest" for Zenith
+    /// Install a release by tag, "latest" for Zenith, or "horizon-latest" for compatibility
     Install { tag: String },
     /// Remove an installed version
     Remove { tag: String },

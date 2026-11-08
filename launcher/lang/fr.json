@@ -1244,6 +1244,7 @@
   "Zenith Rust Edition builds": "Versions de Zenith Rust Edition",
   "Zenith launcher {version}": "Lanceur Zenith {version}",
   "Zenith updates and compatible game builds.": "Mises à jour de Zenith et versions compatibles du jeu.",
+  "Zenith Rust Edition": "Zenith Rust Edition",
   "Zenith Rust Edition {version}": "Zenith Rust Edition {version}",
   "Could not connect to the Zenith game repository.": "Could not connect to the Zenith game repository.",
   "Enter a GitHub token with read access to the Zenith game repository.": "Enter a GitHub token with read access to the Zenith game repository.",

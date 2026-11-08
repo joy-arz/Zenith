@@ -760,9 +760,9 @@ pub fn releases() -> Result<Vec<Release>, String> {
     let zenith = zenith_game::releases().unwrap_or_default();
     match release_list() {
         Ok(list) => {
-            let mut upstream = game_releases(&list);
-            upstream.extend(zenith);
-            Ok(upstream)
+            let mut releases = zenith;
+            releases.extend(game_releases(&list));
+            Ok(releases)
         }
         Err(_) if !zenith.is_empty() => Ok(zenith),
         Err(error) => Err(error),
@@ -3173,9 +3173,9 @@ pub fn resolve_version(requested: Option<&str>) -> Result<String, String> {
             .cloned()
             .ok_or_else(|| format!("{tag} is not installed."));
     }
-    let selected = Settings::load().selected.filter(|s| installed.contains(s));
-    selected
-        .or_else(|| installed.first().cloned())
+    Settings::load()
+        .preferred_installed(&installed)
+        .cloned()
         .ok_or_else(no_version_installed)
 }
 
@@ -3201,7 +3201,7 @@ pub fn remove_version(tag: &str) -> Result<(), String> {
     remove(tag)?;
     let mut settings = Settings::load();
     if settings.selected.as_deref() == Some(tag) {
-        settings.selected = installed().first().cloned();
+        settings.selected = settings.preferred_installed(&installed()).cloned();
         settings.save()?;
     }
     Ok(())
@@ -3552,15 +3552,7 @@ pub fn releases_and_updates(
     let zenith = zenith_game::releases().unwrap_or_default();
     let installed_versions = installed();
     let settings = Settings::load();
-    let zenith_selected = settings
-        .selected
-        .as_deref()
-        .is_some_and(zenith_game::is_tag)
-        || (settings.selected.is_none()
-            && installed_versions
-                .iter()
-                .all(|tag| zenith_game::is_tag(tag))
-            && latest(&zenith).is_some());
+    let zenith_selected = settings.uses_zenith_game();
     let upstream = releases_and_updates_with(
         release_list,
         || {
@@ -3573,10 +3565,7 @@ pub fn releases_and_updates(
         launcher_releases_in,
         |result| {
             on_releases(match result {
-                Ok(mut releases) => {
-                    releases.extend(zenith.iter().cloned());
-                    Ok(releases)
-                }
+                Ok(releases) => Ok(zenith.iter().cloned().chain(releases).collect()),
                 Err(_) if !zenith.is_empty() => Ok(zenith.clone()),
                 Err(error) => Err(error),
             });
@@ -3584,7 +3573,10 @@ pub fn releases_and_updates(
     );
     let mut updates = match upstream {
         Ok(updates) => updates,
-        Err(_) if !zenith.is_empty() => Updates::default(),
+        Err(_) if !zenith.is_empty() => Updates {
+            horizon: None,
+            launcher: launcher_update(&launcher_releases_in(&serde_json::Value::Null)),
+        },
         Err(error) => return Err(error),
     };
     if zenith_selected {
@@ -3593,6 +3585,8 @@ pub fn releases_and_updates(
             .filter(|tag| zenith_game::is_tag(tag))
             .collect();
         updates.horizon = horizon_update(&zenith, &installed_zenith);
+    } else if !settings.use_compatibility_builds {
+        updates.horizon = None;
     }
     Ok(updates)
 }
@@ -3666,23 +3660,24 @@ pub fn select_after_update(selected: Option<&str>, installed_before: &[String]) 
     }
 }
 
-/// Installs `tag` (or with "latest" the newest release, pre-releases left out), then updates the selection as
-/// `select_after_update` says when `as_update`, or always selects it otherwise.
+/// Installs a tag or the latest Zenith build, then updates the selection if it should follow the
+/// game's channel. "horizon-latest" is the opt-in Horizon compatibility channel.
 pub fn install_tag(tag: &str, as_update: bool, progress: impl Fn(f32)) -> Result<String, String> {
-    let zenith = zenith_game::is_tag(tag) || tag == "zenith-latest";
+    let latest_zenith = matches!(tag, "latest" | "zenith-latest");
+    let zenith = zenith_game::is_tag(tag) || latest_zenith;
     let releases = if zenith {
         zenith_game::releases()?
     } else {
         releases()?
     };
-    let release = if tag == "zenith-latest" {
+    let release = if latest_zenith {
         latest(&releases).ok_or_else(|| {
             crate::i18n::tr("No Zenith game build is available for this platform.").to_string()
         })?
-    } else if tag == "latest" {
+    } else if tag == "horizon-latest" {
         releases
             .iter()
-            .find(|r| r.asset.is_some() && !r.prerelease)
+            .find(|r| r.asset.is_some() && !r.prerelease && !zenith_game::is_tag(&r.tag))
             .ok_or("No release has a build for this platform yet.")?
     } else {
         releases
@@ -3706,10 +3701,14 @@ pub fn install_tag(tag: &str, as_update: bool, progress: impl Fn(f32)) -> Result
     }
     let mut settings = Settings::load();
     // An older Nightly is a deliberate rollback: installed, but an update never moves the selection back.
-    let select = !as_update
-        || (downgrade.is_none() && select_after_update(settings.selected.as_deref(), &before));
+    let select =
+        !as_update || (downgrade.is_none() && settings.select_game_update(&release.tag, &before));
     if select {
-        settings.selected = Some(release.tag.clone());
+        if as_update {
+            settings.selected = Some(release.tag.clone());
+        } else {
+            settings.choose_game(release.tag.clone());
+        }
         settings.save()?;
     }
     if as_update && release.nightly.is_some() {
@@ -4652,6 +4651,9 @@ impl WhilePlaying {
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Settings {
     pub selected: Option<String>,
+    /// Set only by an explicit choice of a compatibility build.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub use_compatibility_builds: bool,
     /// Game asset architecture. Auto preserves the launcher's process-architecture behavior.
     #[serde(default)]
     pub game_architecture: GameArchitecture,
@@ -4754,6 +4756,41 @@ pub struct Settings {
 }
 
 impl Settings {
+    pub fn uses_zenith_game(&self) -> bool {
+        !self.use_compatibility_builds
+            && !self.selected.as_deref().is_some_and(|tag| {
+                crate::build_import::is_imported(tag) || crate::native_mods::is_native(tag)
+            })
+    }
+
+    pub fn preferred_installed<'a>(&self, installed: &'a [String]) -> Option<&'a String> {
+        let saved = self
+            .selected
+            .as_ref()
+            .and_then(|tag| installed.iter().find(|installed| *installed == tag));
+        if self.uses_zenith_game() {
+            if saved.is_some_and(|tag| zenith_game::is_tag(tag)) {
+                return saved;
+            }
+            if let Some(zenith) = installed.iter().find(|tag| zenith_game::is_tag(tag)) {
+                return Some(zenith);
+            }
+        }
+        saved.or_else(|| installed.first())
+    }
+
+    pub fn choose_game(&mut self, tag: String) {
+        self.use_compatibility_builds = !zenith_game::is_tag(&tag);
+        self.selected = Some(tag);
+    }
+
+    pub fn select_game_update(&self, tag: &str, installed: &[String]) -> bool {
+        (zenith_game::is_tag(tag)
+            && self.uses_zenith_game()
+            && !self.selected.as_deref().is_some_and(zenith_game::is_tag))
+            || select_after_update(self.selected.as_deref(), installed)
+    }
+
     pub fn offline_enabled(&self) -> bool {
         self.offline_access.unwrap_or(true) || self.dev_offline
     }
@@ -6554,6 +6591,30 @@ mod tests {
             Some("v0.2.95"),
             &["v0.2.95".to_string()]
         ));
+    }
+
+    #[test]
+    fn zenith_replaces_the_legacy_default_and_preserves_deliberate_version_choices() {
+        let old = "nightly-2026-11-08-11102a5".to_string();
+        let new = "zenith-game@0.2.0-preview.2".to_string();
+        let next = "zenith-game@0.2.0-preview.3".to_string();
+        let mut settings = Settings::parse(r#"{"selected":"nightly-2026-11-08-11102a5"}"#);
+        let installed = [old.clone(), new.clone()];
+        assert!(settings.uses_zenith_game());
+        assert_eq!(settings.preferred_installed(&installed), Some(&new));
+        assert!(settings.select_game_update(&new, std::slice::from_ref(&old)));
+
+        settings.choose_game(old.clone());
+        let settings = Settings::parse(&serde_json::to_string(&settings).unwrap());
+        assert!(!settings.uses_zenith_game());
+        assert_eq!(settings.preferred_installed(&installed), Some(&old));
+
+        let mut settings = settings;
+        settings.choose_game(new.clone());
+        let installed = [next, new.clone()];
+        assert!(settings.uses_zenith_game());
+        assert_eq!(settings.preferred_installed(&installed), Some(&new));
+        assert!(!settings.select_game_update("zenith-game@0.2.0-preview.4", &installed));
     }
 
     #[test]

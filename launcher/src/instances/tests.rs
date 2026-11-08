@@ -16,6 +16,29 @@ fn put(path: &Path, text: &str) {
     fs::write(path, text).unwrap();
 }
 
+#[test]
+fn the_default_instance_renames_legacy_horizon_without_moving_its_worlds() {
+    let root = scratch("zenith-default");
+    let home = root.join("game");
+    let data = root.join("launcher");
+    let world = home.join("saves/World/level.dat");
+    put(&world, "world");
+    put(
+        &data.join(FILE),
+        r#"{"instances":{"horizon":{"name":"Horizon"}}}"#,
+    );
+    let default = find_in(&list_in(&home, &data), DEFAULT).unwrap();
+    assert_eq!(default.name, "Zenith");
+    assert_eq!(default.home, home);
+    assert_eq!(fs::read_to_string(world).unwrap(), "world");
+    let renamed = edit_in(&home, &data, DEFAULT, |meta| {
+        meta.name = Some("My worlds".into())
+    })
+    .unwrap();
+    assert_eq!(renamed.name, "My worlds");
+    fs::remove_dir_all(root).unwrap();
+}
+
 /// Every file under `dir`, relative, with its bytes.
 fn files(dir: &Path) -> BTreeMap<PathBuf, Vec<u8>> {
     fn walk(root: &Path, dir: &Path, out: &mut BTreeMap<PathBuf, Vec<u8>>) {

@@ -525,7 +525,13 @@ impl Launcher {
         let t = self.theme;
         let soft = self.look.accent_soft;
         let label = self.selected().map_or_else(
-            || tr("No version").into(),
+            || {
+                if self.settings.uses_zenith_game() {
+                    tr("Zenith Rust Edition").into()
+                } else {
+                    tr("No version").into()
+                }
+            },
             |tag| {
                 horizon_launcher::zenith_game::label(tag)
                     .or_else(|| horizon_launcher::nightly::label(tag))

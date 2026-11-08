@@ -73,13 +73,16 @@ Automatic registry updates retain a content mod's enabled or disabled state. Aut
 
 ### Zenith game previews
 
-The launcher lists Zenith builds in **Versions**. Install a build and select
-**Use**. Keep an older build installed to switch back at any time. A profile
-pinned to a specific release uses that release and keeps its own saves.
+Zenith Rust Edition is the default game. The launcher downloads the newest
+signed build for your platform from the [public Zenith releases](https://github.com/joy-arz/Zenith/releases).
+No GitHub account or token is needed. Turn off automatic installs in Settings
+to choose a build yourself in **Versions**. The default instance is **Zenith**.
 
-While the engine repository is private, use a GitHub token with read access
-to its contents. Pipe the token into `horizon-launcher zenith-access` to save
-it in the system credential store. The terminal command
-`horizon-launcher install zenith-latest` installs the latest preview the
-launcher can verify. The desktop launcher uses the same saved credential.
-`horizon-launcher zenith-access --forget` removes it.
+Horizon compatibility builds remain available in **Versions**. An instance
+pinned to a specific build keeps using that build. Older installed Zenith builds
+remain available for rollback.
+
+From a terminal, `horizon-launcher install latest` installs Zenith;
+`horizon-launcher install horizon-latest` selects the Horizon compatibility
+channel. Maintainers with access to the private engine repository can still
+use `horizon-launcher zenith-access` for earlier private previews.

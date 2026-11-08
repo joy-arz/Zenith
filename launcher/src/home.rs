@@ -24,22 +24,17 @@ impl Launcher {
             .cloned()
             .map(|i| self.instance_icon(&i, 56.));
         let instance = self.selected_instance();
-        let name = instance.map_or(
-            if tag.is_empty() {
-                "Minecraft"
-            } else {
-                "Horizon"
-            },
-            |i| i.name.as_str(),
-        );
+        let name = instance.map_or("Zenith", |i| i.name.as_str());
         let mut what = vec![format!("Minecraft: Java Edition {game}")];
         if !tag.is_empty() {
-            what.push(format!(
-                "Horizon {}",
-                horizon_launcher::nightly::label(tag)
-                    .or_else(|| horizon_launcher::build_import::label(tag))
-                    .unwrap_or_else(|| tag.trim_start_matches('v').to_string())
-            ));
+            what.push(
+                horizon_launcher::zenith_game::label(tag).unwrap_or_else(|| {
+                    let version = horizon_launcher::nightly::label(tag)
+                        .or_else(|| horizon_launcher::build_import::label(tag))
+                        .unwrap_or_else(|| tag.trim_start_matches('v').to_string());
+                    format!("{} {version}", tr("Horizon"))
+                }),
+            );
         }
         what.push(tr(if prepared { "Ready" } else { "Needs preparing" }).to_string());
         let state = div()

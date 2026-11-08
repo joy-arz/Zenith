@@ -1,7 +1,7 @@
 //! Instances: separate game folders, each with its own worlds, options and packs.
 //!
 //! Nothing that exists moves. The game's home (`backend::game_home`) stays the default instance,
-//! "Horizon", with its saves and options where they are. Imported modpacks (`ports/<pack>/home/`)
+//! "Zenith", with its saves and options where they are. Imported modpacks (`ports/<pack>/home/`)
 //! and registry modpacks (`horizon-packs/<id>/home/`) are instances too, played from their own
 //! folders as before. New instances get `instances/<slug>/` in the game's home. What the player
 //! chooses about an instance (its name, icon, group) is kept in `instances.json` in the
@@ -348,7 +348,10 @@ fn list_in(game_home: &Path, data: &Path) -> Vec<Instance> {
         .map(|(id, name, kind, work, home)| {
             let meta = store.instances.get(&id).cloned().unwrap_or_default();
             Instance {
-                name: meta.name.unwrap_or(name),
+                name: meta
+                    .name
+                    .filter(|saved| kind != Kind::Default || saved != "Horizon")
+                    .unwrap_or(name),
                 icon: meta.icon,
                 group: meta.group,
                 version: required.remove(&id).or(meta.version),

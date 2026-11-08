@@ -535,13 +535,7 @@ impl Launcher {
             });
         }
         let installed = backend::installed();
-        if settings
-            .selected
-            .as_ref()
-            .is_none_or(|s| !installed.contains(s))
-        {
-            settings.selected = installed.first().cloned();
-        }
+        settings.selected = settings.preferred_installed(&installed).cloned();
         // Pin the window's chrome (macOS title bar) to the choice before the theme reads
         // `window.appearance()`, so both draw the same look.
         titlebar::apply_appearance(window, settings.appearance);
@@ -944,8 +938,9 @@ impl Launcher {
         if self.installing.is_some() || self.removing.contains(&release.tag) {
             return;
         }
-        let select =
-            backend::select_after_update(self.settings.selected.as_deref(), &self.installed);
+        let select = self
+            .settings
+            .select_game_update(&release.tag, &self.installed);
         self.update_install = Some((release.tag.clone(), select));
         self.install(&release);
     }
@@ -1302,10 +1297,14 @@ impl Launcher {
                                 self.updates.horizon = None;
                             }
                             // An instance's own version leaves the other instances on theirs.
-                            let select = as_update.is_none_or(|(_, select)| select)
+                            let select = as_update.as_ref().is_none_or(|(_, select)| *select)
                                 && (!for_instance || self.launcher_version().is_none());
                             if select {
-                                self.settings.selected = Some(tag);
+                                if as_update.is_none() && !for_instance {
+                                    self.settings.choose_game(tag);
+                                } else {
+                                    self.settings.selected = Some(tag);
+                                }
                             }
                             // Pruning reads settings from disk: protect the selection only once
                             // it has been saved there. A failed save leaves all versions in place.
@@ -3159,7 +3158,13 @@ impl Launcher {
         let t = self.theme;
         // "Nightly · ba6344a", a release's tag: the menu lists the full tags.
         let label = self.selected().map_or_else(
-            || tr("No version").into(),
+            || {
+                if self.settings.uses_zenith_game() {
+                    tr("Zenith Rust Edition").into()
+                } else {
+                    tr("No version").into()
+                }
+            },
             |tag| {
                 horizon_launcher::zenith_game::label(tag)
                     .or_else(|| horizon_launcher::nightly::label(tag))
@@ -4698,7 +4703,7 @@ impl Launcher {
                 d.child(
                     button(format!("use-{tag}"), "Use", Kind::Ghost, &t).on_click(cx.listener(
                         move |this, _: &ClickEvent, _, cx| {
-                            this.settings.selected = Some(t1.clone());
+                            this.settings.choose_game(t1.clone());
                             this.save_settings();
                             cx.notify();
                         },
@@ -4844,6 +4849,14 @@ impl Launcher {
         let t = self.theme;
         let launcher_release_url =
             format!("https://github.com/{}/releases", backend::LAUNCHER_REPO);
+        let engine_url = match &self.releases {
+            Load::Ready(releases) => releases
+                .iter()
+                .find(|r| horizon_launcher::zenith_game::is_tag(&r.tag))
+                .map(|r| format!("{launcher_release_url}/tag/{}", r.tag)),
+            _ => None,
+        }
+        .unwrap_or_else(|| launcher_release_url.clone());
         let version = text(theme::HEADING).text_color(t.ink).child(trf(
             "Zenith launcher {version}",
             &[("version", backend::VERSION)],
@@ -4891,9 +4904,7 @@ impl Launcher {
                             Kind::Ghost,
                             &t,
                         )
-                        .on_click(|_, _, cx| {
-                            cx.open_url("https://github.com/joy-arz/zenith-rust-edition/releases")
-                        }),
+                        .on_click(move |_, _, cx| cx.open_url(&engine_url)),
                     ),
             )
     }
@@ -4962,9 +4973,11 @@ impl Launcher {
         }
         if !matches!(&self.releases, Load::Ready(releases) if releases.iter().any(|r| zenith_game::is_tag(&r.tag)))
         {
-            list = list.child(text(theme::CAPTION).text_color(t.muted).child(tr(
-                "Zenith previews require access to the Zenith game repository.",
-            )));
+            list = list.child(
+                text(theme::CAPTION)
+                    .text_color(t.muted)
+                    .child(tr("No releases yet.")),
+            );
         }
         list
     }

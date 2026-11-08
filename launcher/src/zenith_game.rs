@@ -8,7 +8,8 @@ use serde_json::Value;
 use std::io::Read;
 use std::path::Path;
 
-pub const REPO: &str = "joy-arz/zenith-rust-edition";
+pub const PUBLIC_REPO: &str = backend::LAUNCHER_REPO;
+const PRIVATE_REPO: &str = "joy-arz/zenith-rust-edition";
 pub const TOKEN_ENV: &str = "ZENITH_ENGINE_TOKEN";
 const TOKEN_ENTRY: &str = "zenith-engine-github-access";
 const API: &str = "https://api.github.com";
@@ -59,19 +60,22 @@ pub fn forget_access_token() -> Result<(), String> {
     crate::account::store().delete(TOKEN_ENTRY)
 }
 
-fn request(path: &str, accept: &str) -> Result<ureq::Response, String> {
-    let url = format!("{API}/repos/{REPO}/{path}");
-    let agent = backend::agent(&url);
-    let mut request = agent.get(&url).set("Accept", accept);
-    let token = std::env::var(TOKEN_ENV)
+fn private_token() -> Option<String> {
+    std::env::var(TOKEN_ENV)
         .ok()
         .filter(|token| !token.trim().is_empty())
-        .or_else(|| crate::account::store().get(TOKEN_ENTRY).ok().flatten());
-    if let Some(token) = token {
+        .or_else(|| crate::account::store().get(TOKEN_ENTRY).ok().flatten())
+}
+
+fn request(repo: &str, path: &str, accept: &str) -> Result<ureq::Response, String> {
+    let url = format!("{API}/repos/{repo}/{path}");
+    let agent = backend::agent(&url);
+    let mut request = agent.get(&url).set("Accept", accept);
+    if let Some(token) = (repo == PRIVATE_REPO).then(private_token).flatten() {
         request = request.set("Authorization", &format!("Bearer {}", token.trim()));
     }
     request.call().map_err(|error| match error {
-        ureq::Error::Status(401 | 403 | 404, _) => {
+        ureq::Error::Status(401 | 403 | 404, _) if repo == PRIVATE_REPO => {
             tr("Zenith previews require access to the Zenith game repository.").to_string()
         }
         ureq::Error::Status(code, _) => trf(
@@ -82,8 +86,11 @@ fn request(path: &str, accept: &str) -> Result<ureq::Response, String> {
     })
 }
 
-fn json(path: &str) -> Result<Value, String> {
-    request(path, "application/vnd.github+json")?
+fn json(repo: &str, path: &str) -> Result<Value, String> {
+    if repo == PUBLIC_REPO {
+        return crate::github::json(&format!("{API}/repos/{repo}/{path}"));
+    }
+    request(repo, path, "application/vnd.github+json")?
         .into_json()
         .map_err(|error| error.to_string())
 }
@@ -125,9 +132,26 @@ fn signature(release: &Value, tag: &str) -> Option<(&'static str, &'static str)>
 }
 
 pub fn releases() -> Result<Vec<Release>, String> {
-    let list = json("releases?per_page=100")?;
     let assets = backend::zenith_game_assets();
-    Ok(releases_from(&list, assets.0, assets.1))
+    let public = json(PUBLIC_REPO, "releases?per_page=100");
+    let mut releases = public
+        .as_ref()
+        .map(|list| releases_from(list, assets.0, assets.1))
+        .unwrap_or_default();
+    if let Some(private) =
+        private_token().and_then(|_| json(PRIVATE_REPO, "releases?per_page=100").ok())
+    {
+        for release in releases_from(&private, assets.0, assets.1) {
+            if !releases.iter().any(|public| public.tag == release.tag) {
+                releases.push(release);
+            }
+        }
+        releases.sort_by(|a, b| backend::compare_versions(&b.tag, &a.tag));
+    }
+    if releases.is_empty() {
+        public?;
+    }
+    Ok(releases)
 }
 
 fn releases_from(list: &Value, asset: Option<&str>, fallback: Option<&str>) -> Vec<Release> {
@@ -160,7 +184,7 @@ fn releases_from(list: &Value, asset: Option<&str>, fallback: Option<&str>) -> V
     releases
 }
 
-fn asset(release: &Value, name: &str) -> Result<ureq::Response, String> {
+fn asset(repo: &str, release: &Value, name: &str) -> Result<ureq::Response, String> {
     let id = asset_id(release, name).ok_or_else(|| {
         trf(
             "The Zenith release has no {file} attachment.",
@@ -168,13 +192,38 @@ fn asset(release: &Value, name: &str) -> Result<ureq::Response, String> {
         )
     })?;
     // ureq strips Authorization on redirects, including redirects to GitHub's download storage.
-    request(&format!("releases/assets/{id}"), "application/octet-stream")
+    let response = request(
+        repo,
+        &format!("releases/assets/{id}?download=1"),
+        "application/octet-stream",
+    );
+    if repo == PRIVATE_REPO {
+        return response;
+    }
+    match response {
+        Ok(response)
+            if !response
+                .header("Content-Type")
+                .unwrap_or_default()
+                .contains("json") =>
+        {
+            return Ok(response);
+        }
+        _ => {}
+    }
+    let tag = release["tag_name"]
+        .as_str()
+        .filter(|tag| is_tag(tag))
+        .ok_or_else(|| tr("Invalid Zenith game version.").to_string())?;
+    backend::get(&format!(
+        "https://github.com/{repo}/releases/download/{tag}/{name}"
+    ))
 }
 
-fn small_asset(release: &Value, name: &str) -> Result<Vec<u8>, String> {
+fn small_asset(repo: &str, release: &Value, name: &str) -> Result<Vec<u8>, String> {
     const LIMIT: u64 = 1 << 20;
     let mut bytes = Vec::new();
-    asset(release, name)?
+    asset(repo, release, name)?
         .into_reader()
         .take(LIMIT + 1)
         .read_to_end(&mut bytes)
@@ -186,6 +235,7 @@ fn small_asset(release: &Value, name: &str) -> Result<Vec<u8>, String> {
 }
 
 pub(crate) struct VerifiedRelease {
+    repo: &'static str,
     tag: String,
     release: Value,
     sums: Vec<u8>,
@@ -198,17 +248,23 @@ impl VerifiedRelease {
         if !is_tag(tag) {
             return Err(tr("Invalid Zenith game version.").into());
         }
-        let release = json(&format!("releases/tags/{tag}"))?;
+        let path = format!("releases/tags/{tag}");
+        let (repo, release) = match json(PUBLIC_REPO, &path) {
+            Ok(release) => (PUBLIC_REPO, release),
+            Err(_) if private_token().is_some() => (PRIVATE_REPO, json(PRIVATE_REPO, &path)?),
+            Err(error) => return Err(error),
+        };
         if release["tag_name"].as_str() != Some(tag) || release["draft"].as_bool() != Some(false) {
             return Err(tr("GitHub did not return the requested Zenith release.").into());
         }
         let (name, keys) = signature(&release, tag)
             .ok_or_else(|| tr("This Zenith release has no trusted signature.").to_string())?;
         let keys = horizon_release_sign::parse_keys(keys)?;
-        let sums = small_asset(&release, SUMS)?;
-        let signature =
-            String::from_utf8(small_asset(&release, name)?).map_err(|error| error.to_string())?;
+        let sums = small_asset(repo, &release, SUMS)?;
+        let signature = String::from_utf8(small_asset(repo, &release, name)?)
+            .map_err(|error| error.to_string())?;
         Ok(Self {
+            repo,
             tag: tag.to_owned(),
             release,
             sums,
@@ -229,7 +285,7 @@ impl VerifiedRelease {
 
     pub(crate) fn source_revision(&self) -> Result<String, String> {
         let expected = self.digest("preview.json")?;
-        let bytes = small_asset(&self.release, "preview.json")?;
+        let bytes = small_asset(self.repo, &self.release, "preview.json")?;
         horizon_release_sign::check(
             "preview.json",
             &expected,
@@ -258,7 +314,7 @@ impl VerifiedRelease {
         progress: &impl Fn(f32),
     ) -> Result<(), String> {
         let sha256 = self.digest(name)?;
-        let response = asset(&self.release, name)?;
+        let response = asset(self.repo, &self.release, name)?;
         let size = response
             .header("Content-Length")
             .and_then(|n| n.parse().ok())
