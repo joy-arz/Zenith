@@ -384,7 +384,8 @@ impl Launcher {
         );
         let mut summary = match kind {
             NewKind::Horizon => match self.draft_horizon() {
-                Some(tag) => format!("Horizon · {}", version_label(&tag)),
+                Some(tag) => horizon_launcher::zenith_game::label(&tag)
+                    .unwrap_or_else(|| format!("Horizon · {}", version_label(&tag))),
                 None => "Horizon".into(),
             },
             NewKind::Vanilla => format!("{} · {minecraft}", tr("Vanilla")),

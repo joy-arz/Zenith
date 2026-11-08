@@ -195,6 +195,7 @@ pub fn fetch(file: &FileRef, folder: &Path, progress: &dyn Fn(f32)) -> Result<Pa
     let response = agent(&file.url)
         .get(&file.url)
         .call()
+        .or_else(|error| crate::github::release_asset(&file.url).ok_or(error))
         .map_err(|e| match e {
             ureq::Error::Status(code, _) => format!("{} answered {code}.", file.url),
             ureq::Error::Transport(t) => format!("No connection: {t}"),

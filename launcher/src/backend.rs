@@ -553,16 +553,19 @@ pub(crate) fn get(url: &str) -> Result<ureq::Response, String> {
             request = request.set("Authorization", &format!("Bearer {token}"));
         }
     }
-    request.call().map_err(|e| match e {
-        ureq::Error::Status(code, r)
-            if url.starts_with("https://api.github.com/")
-                && crate::github::rate_limited(code, |h| r.header(h).map(str::to_owned)) =>
-        {
-            "GitHub's rate limit was reached. Try again in a few minutes.".into()
-        }
-        ureq::Error::Status(code, _) => format!("{url} answered {code}"),
-        ureq::Error::Transport(t) => format!("No connection: {t}"),
-    })
+    request
+        .call()
+        .or_else(|error| crate::github::release_asset(url).ok_or(error))
+        .map_err(|e| match e {
+            ureq::Error::Status(code, r)
+                if url.starts_with("https://api.github.com/")
+                    && crate::github::rate_limited(code, |h| r.header(h).map(str::to_owned)) =>
+            {
+                "GitHub's rate limit was reached. Try again in a few minutes.".into()
+            }
+            ureq::Error::Status(code, _) => format!("{url} answered {code}"),
+            ureq::Error::Transport(t) => format!("No connection: {t}"),
+        })
 }
 
 /// A Horizon game tag: `v` then a digit (`v2026.10.13`). Launcher tags never match.
@@ -3552,7 +3555,12 @@ pub fn releases_and_updates(
     let zenith_selected = settings
         .selected
         .as_deref()
-        .is_some_and(zenith_game::is_tag);
+        .is_some_and(zenith_game::is_tag)
+        || (settings.selected.is_none()
+            && installed_versions
+                .iter()
+                .all(|tag| zenith_game::is_tag(tag))
+            && latest(&zenith).is_some());
     let upstream = releases_and_updates_with(
         release_list,
         || {

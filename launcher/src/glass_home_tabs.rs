@@ -416,6 +416,17 @@ type Sections = Vec<(String, Vec<String>)>;
 /// release ("Launcher 0.2.37 · Nov 2").
 fn patch_source(releases: &[Release], played: Option<&str>) -> Option<(String, Sections)> {
     let day = |r: &Release| glass_versions::published(&r.date, "");
+    if let Some(label) = played.and_then(horizon_launcher::zenith_game::label) {
+        return Some(
+            match releases.iter().find(|r| Some(r.tag.as_str()) == played) {
+                Some(release) => (
+                    format!("{label} · {}", day(release)),
+                    patch_sections(&release.body),
+                ),
+                None => (label, Vec::new()),
+            },
+        );
+    }
     if let Some(played) = played {
         let nightly = releases
             .iter()

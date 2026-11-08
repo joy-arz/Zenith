@@ -24,6 +24,46 @@ const API: &str = "https://api.github.com";
 /// empty value turns it off).
 pub const MIRROR: &str = "https://mcp.playhorizon.dev/github/public";
 
+/// Fetch a public release attachment through GitHub's API if its browser URL is unavailable.
+pub(crate) fn release_asset(browser_url: &str) -> Option<ureq::Response> {
+    let path = browser_url.strip_prefix("https://github.com/")?;
+    let parts: Vec<_> = path.split('/').collect();
+    let [owner, repo, "releases", "download", tag, name] = parts.as_slice() else {
+        return None;
+    };
+    let plain = |part: &str, escapes: bool| {
+        !part.is_empty()
+            && part != "."
+            && part != ".."
+            && part.bytes().all(|b| {
+                b.is_ascii_alphanumeric()
+                    || matches!(b, b'-' | b'_' | b'.')
+                    || (escapes && matches!(b, b'@' | b'%' | b'+'))
+            })
+    };
+    if !plain(owner, false) || !plain(repo, false) || !plain(tag, true) || !plain(name, true) {
+        return None;
+    }
+    let root = format!("{API}/repos/{owner}/{repo}/releases");
+    let release = json(&format!("{root}/tags/{tag}")).ok()?;
+    let asset = release["assets"].as_array()?.iter().find(|asset| {
+        asset["name"].as_str() == Some(*name)
+            || asset["browser_download_url"]
+                .as_str()
+                .and_then(|url| url.rsplit('/').next())
+                == Some(*name)
+    })?["id"]
+        .as_u64()?;
+    let url = format!("{root}/assets/{asset}");
+    let response = backend::agent(&url)
+        .get(&url)
+        .set("Accept", "application/octet-stream")
+        .call()
+        .ok()?;
+    let content_type = response.header("Content-Type").unwrap_or_default();
+    (!content_type.contains("json")).then_some(response)
+}
+
 /// How long a saved answer is used without asking again: the launcher looks for releases every
 /// [`backend::CHECK_EVERY`], so a few minutes late at worst.
 pub const FRESH_SECS: u64 = 5 * 60;
