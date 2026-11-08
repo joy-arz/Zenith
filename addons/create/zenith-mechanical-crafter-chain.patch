@@ -1,0 +1,288 @@
+diff --git a/mixins/create/engine/src/core/mechanical_chain.rs b/mixins/create/engine/src/core/mechanical_chain.rs
+new file mode 100644
+index 0000000..325bdab
+--- /dev/null
++++ b/mixins/create/engine/src/core/mechanical_chain.rs
+@@ -0,0 +1,266 @@
++// SPDX-License-Identifier: MIT
++
++use super::Grid;
++use std::collections::{BTreeSet, VecDeque};
++
++pub type Point = [i32; 2];
++
++#[derive(Clone, Copy)]
++pub enum Arrow {
++    Up,
++    Down,
++    Left,
++    Right,
++}
++
++impl Arrow {
++    const ALL: [Self; 4] = [Self::Up, Self::Down, Self::Left, Self::Right];
++
++    fn target(self, [x, y]: Point) -> Result<Point, ChainError> {
++        let (dx, dy) = match self {
++            Self::Up => (0, -1),
++            Self::Down => (0, 1),
++            Self::Left => (-1, 0),
++            Self::Right => (1, 0),
++        };
++        Ok([
++            x.checked_add(dx).ok_or(ChainError::Limit)?,
++            y.checked_add(dy).ok_or(ChainError::Limit)?,
++        ])
++    }
++}
++
++pub enum Slot<T> {
++    Item(T),
++    Covered,
++    Empty,
++}
++
++pub struct Cell<T> {
++    pub output: Arrow,
++    pub slot: Slot<T>,
++}
++
++#[derive(Clone, Copy)]
++pub enum Trigger {
++    Automatic,
++    Redstone,
++}
++
++#[derive(Debug, PartialEq, Eq)]
++pub enum ChainError {
++    Missing,
++    Unloaded,
++    Cycle,
++    NotReady,
++    Limit,
++}
++
++pub struct Assembly<T> {
++    pub members: Vec<Point>,
++    pub exit: Point,
++    pub target: Point,
++    width: usize,
++    height: usize,
++    items: Vec<Option<T>>,
++}
++
++impl<T> Assembly<T> {
++    pub fn grid(&self) -> Grid<'_, T> {
++        Grid::new(self.width, self.height, &self.items).expect("an assembly contains an item")
++    }
++}
++
++/// Read the crafters on one face as seen from the front. Rows increase downward.
++/// The caller distinguishes an absent crafter from an unloaded part of the face
++/// and must keep the snapshot stable for the duration of this scan.
++pub fn assemble<T>(
++    start: Point,
++    trigger: Trigger,
++    mut read: impl FnMut(Point) -> Result<Option<Cell<T>>, ChainError>,
++) -> Result<Assembly<T>, ChainError> {
++    const LIMIT: usize = 4096;
++    let mut path = BTreeSet::new();
++    let mut exit = start;
++    let target = loop {
++        if !path.insert(exit) {
++            return Err(ChainError::Cycle);
++        }
++        if path.len() > LIMIT {
++            return Err(ChainError::Limit);
++        }
++        let cell = read(exit)?.ok_or(ChainError::Missing)?;
++        let next = cell.output.target(exit)?;
++        if read(next)?.is_none() {
++            break next;
++        }
++        exit = next;
++    };
++
++    let mut frontier = VecDeque::from([exit]);
++    let mut members = BTreeSet::from([exit]);
++    let mut items = Vec::new();
++    while let Some(point) = frontier.pop_front() {
++        match read(point)?.ok_or(ChainError::Missing)?.slot {
++            Slot::Item(item) => items.push((point, item)),
++            Slot::Empty if matches!(trigger, Trigger::Automatic) => {
++                return Err(ChainError::NotReady);
++            }
++            Slot::Empty | Slot::Covered => {}
++        }
++        for arrow in Arrow::ALL {
++            let previous = arrow.target(point)?;
++            if members.contains(&previous) {
++                continue;
++            }
++            if let Some(cell) = read(previous)?
++                && cell.output.target(previous)? == point
++            {
++                if members.len() == LIMIT {
++                    return Err(ChainError::Limit);
++                }
++                members.insert(previous);
++                frontier.push_back(previous);
++            }
++        }
++    }
++
++    let Some(&([x, y], _)) = items.first() else {
++        return Err(ChainError::NotReady);
++    };
++    let [left, top, right, bottom] =
++        items
++            .iter()
++            .fold([x, y, x, y], |[left, top, right, bottom], ([x, y], _)| {
++                [left.min(*x), top.min(*y), right.max(*x), bottom.max(*y)]
++            });
++    let extent = |start, end| usize::try_from(i64::from(end) - i64::from(start) + 1);
++    let width = extent(left, right).map_err(|_| ChainError::Limit)?;
++    let height = extent(top, bottom).map_err(|_| ChainError::Limit)?;
++    let size = width
++        .checked_mul(height)
++        .filter(|size| *size <= LIMIT)
++        .ok_or(ChainError::Limit)?;
++    let mut grid = std::iter::repeat_with(|| None)
++        .take(size)
++        .collect::<Vec<_>>();
++    for ([x, y], item) in items {
++        let column = extent(left, x).map_err(|_| ChainError::Limit)? - 1;
++        let row = extent(top, y).map_err(|_| ChainError::Limit)? - 1;
++        grid[row * width + column] = Some(item);
++    }
++    Ok(Assembly {
++        members: members.into_iter().collect(),
++        exit,
++        target,
++        width,
++        height,
++        items: grid,
++    })
++}
++
++#[cfg(test)]
++mod tests {
++    use super::super::matches;
++    use super::*;
++
++    #[test]
++    fn a_branch_feeds_the_exit_and_preserves_the_hole_between_ingredients() {
++        let assembly = assemble([0, 0], Trigger::Automatic, |point| {
++            let (output, slot) = match point {
++                [0, 0] => (Arrow::Down, Slot::Item('a')),
++                [0, 1] => (Arrow::Right, Slot::Covered),
++                [1, 1] => (Arrow::Right, Slot::Covered),
++                [2, 0] => (Arrow::Down, Slot::Item('b')),
++                [2, 1] => (Arrow::Down, Slot::Item('c')),
++                [1, 0] => (Arrow::Up, Slot::Item('d')),
++                _ => return Ok(None),
++            };
++            Ok(Some(Cell { output, slot }))
++        })
++        .unwrap();
++        assert_eq!(assembly.exit, [2, 1]);
++        assert_eq!(assembly.target, [2, 2]);
++        assert_eq!(assembly.members, [[0, 0], [0, 1], [1, 1], [2, 0], [2, 1]]);
++        let recipe = [Some('a'), None, Some('b'), None, None, Some('c')];
++        assert!(matches(
++            &Grid::new(3, 2, &recipe).unwrap(),
++            &assembly.grid(),
++            false,
++            char::eq
++        ));
++    }
++
++    #[test]
++    fn redstone_can_start_an_open_slot_but_cannot_start_an_empty_chain() {
++        let read = |point: Point| {
++            Ok(match point {
++                [0, 0] => Some(Cell {
++                    output: Arrow::Right,
++                    slot: Slot::Item(7),
++                }),
++                [1, 0] => Some(Cell {
++                    output: Arrow::Right,
++                    slot: Slot::Empty,
++                }),
++                _ => None,
++            })
++        };
++        assert_eq!(
++            assemble([1, 0], Trigger::Automatic, read).err(),
++            Some(ChainError::NotReady)
++        );
++        assert_eq!(
++            assemble([1, 0], Trigger::Redstone, read).unwrap().items,
++            [Some(7)]
++        );
++        assert_eq!(
++            assemble::<()>([0, 0], Trigger::Redstone, |_| Ok(Some(Cell {
++                output: Arrow::Right,
++                slot: Slot::Empty
++            })))
++            .err(),
++            Some(ChainError::Limit),
++        );
++        assert_eq!(
++            assemble::<()>([0, 0], Trigger::Redstone, |point| Ok((point == [0, 0])
++                .then_some(Cell {
++                    output: Arrow::Right,
++                    slot: Slot::Empty
++                })))
++            .err(),
++            Some(ChainError::NotReady),
++        );
++    }
++
++    #[test]
++    fn cycles_and_unloaded_neighbours_do_not_produce_a_recipe() {
++        assert_eq!(
++            assemble([0, 0], Trigger::Redstone, |point| Ok(match point {
++                [0, 0] => Some(Cell {
++                    output: Arrow::Right,
++                    slot: Slot::Item(1)
++                }),
++                [1, 0] => Some(Cell {
++                    output: Arrow::Left,
++                    slot: Slot::Item(2)
++                }),
++                _ => None,
++            }))
++            .err(),
++            Some(ChainError::Cycle)
++        );
++        assert_eq!(
++            assemble([0, 0], Trigger::Automatic, |point| match point {
++                [0, 0] => Ok(Some(Cell {
++                    output: Arrow::Right,
++                    slot: Slot::Item(1)
++                })),
++                [0, 1] => Err(ChainError::Unloaded),
++                _ => Ok(None),
++            })
++            .err(),
++            Some(ChainError::Unloaded)
++        );
++    }
++}
+diff --git a/mixins/create/engine/src/core/mechanical_crafting.rs b/mixins/create/engine/src/core/mechanical_crafting.rs
+index 871f267..ad3c715 100644
+--- a/mixins/create/engine/src/core/mechanical_crafting.rs
++++ b/mixins/create/engine/src/core/mechanical_crafting.rs
+@@ -2,7 +2,10 @@
+ // SPDX-License-Identifier: MIT
+ 
+ //! Shaped Mechanical Crafter matching after a chain has collected its ingredients.
+-//! World traversal, crafting priority and output transfer belong to the adapter.
++//! The world adapter supplies crafter cells, recipe priority, and output transfer.
++
++#[path = "mechanical_chain.rs"]
++pub mod chain;
+ 
+ /// A row-major recipe pattern or assembled crafter grid. Empty outer rows and
+ /// columns are ignored. Internal empty cells must stay empty.

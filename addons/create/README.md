@@ -40,3 +40,15 @@ The follow-up retargets the manifests and uses the engine's item-spawn
 function for armor dropped during horse haunting. The old motion helper was
 removed when the engine moved spawn motion to the item entity's own random
 number generator.
+
+## Mechanical Crafter chain and recipe input
+
+Apply [the chain patch](zenith-mechanical-crafter-chain.patch) after the base
+adapter. It adds a Rust routine that follows crafter arrows to the output,
+collects all connected inputs on the same face, and assembles the recipe
+grid. The tests cover branches, gaps, slot covers, redstone starts, cycles,
+and unloaded neighbors. Its reference is
+[Create's 1.21.1 recipe grid](https://github.com/Creators-of-Create/Create/blob/4148fd8d5b05c85d88947edc00fb495a5074f57d/src/main/java/com/simibubi/create/content/kinetics/crafter/RecipeGridHandler.java).
+
+The world adapter still needs to register the machine, supply the cells,
+run the crafting phases, and send the result to a belt or inventory.
