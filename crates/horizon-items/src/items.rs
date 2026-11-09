@@ -2734,7 +2734,7 @@ pub fn bucket_contents(
             "minecraft:item.bucket.empty_sulfur_cube",
             Some("sulfur_cube"),
         ),
-        _ => return None,
+        _ => return horizon_world::level::mod_bucket_contents(item),
     })
 }
 

@@ -1197,6 +1197,8 @@
   "{mods} didn't build on the Horizon you play: building on the one they were made for": "{mods} het nie gebou op die Horizon wat jy speel nie: bou op die een waarvoor hulle gemaak is",
   "In the last build, on Horizon {commit} for {mods}, not on {horizon}": "In die laaste bou, op Horizon {commit} vir {mods}, nie op {horizon} nie",
   "In the last build, on {horizon}": "In die laaste bou, op {horizon}",
+  "Duplicate native mod {id}.": "Duplicate native mod {id}.",
+  "Native and content mod ids differ.": "Native and content mod ids differ.",
   "The Zenith release has a different source revision.": "The Zenith release has a different source revision.",
   "ATM10 8.5 Rust preview": "ATM10 8.5 Rust preview",
   "Nothing in the registry matches yet.": "Nothing in the registry matches yet.",

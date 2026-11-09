@@ -1197,6 +1197,8 @@
   "{mods} didn't build on the Horizon you play: building on the one they were made for": "{mods} không build được trên Horizon bạn đang chơi: đang build trên bản chúng được làm cho",
   "In the last build, on Horizon {commit} for {mods}, not on {horizon}": "Trong lần build gần nhất, trên Horizon {commit} vì {mods}, không phải {horizon}",
   "In the last build, on {horizon}": "Trong lần build gần nhất, trên {horizon}",
+  "Duplicate native mod {id}.": "Duplicate native mod {id}.",
+  "Native and content mod ids differ.": "Native and content mod ids differ.",
   "The Zenith release has a different source revision.": "The Zenith release has a different source revision.",
   "ATM10 8.5 Rust preview": "ATM10 8.5 Rust preview",
   "Nothing in the registry matches yet.": "Nothing in the registry matches yet.",

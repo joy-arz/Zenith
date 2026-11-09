@@ -234,7 +234,7 @@ fn an_instance_follows_player_settings_without_enabling_telemetry() {
         ..Choices::NONE
     });
     consent.save(&main).unwrap();
-    horizon_core::no_ai::set(&main, true).unwrap();
+    horizon_platform::no_ai::set(&main, true).unwrap();
     put(&own.join("options.txt"), "fov:70\n");
     follow_player(&main, &own);
     assert_eq!(
@@ -246,11 +246,11 @@ fn an_instance_follows_player_settings_without_enabling_telemetry() {
         "name:Player123\n"
     );
     assert!(!Consent::path(&own).exists());
-    assert!(horizon_core::no_ai::is_on(&own));
+    assert!(horizon_platform::no_ai::is_on(&own));
     consent.save(&own).unwrap();
-    horizon_core::no_ai::set(&main, false).unwrap();
+    horizon_platform::no_ai::set(&main, false).unwrap();
     follow_player(&main, &own);
-    assert!(!horizon_core::no_ai::is_on(&own));
+    assert!(!horizon_platform::no_ai::is_on(&own));
     let disabled = Consent::load(&own);
     assert_eq!(disabled.choices, Choices::NONE);
     assert_eq!(disabled.install_id, consent.install_id);

@@ -707,9 +707,9 @@ fn follow_player(game_home: &Path, home: &Path) {
         }
     }
     backend::disable_legacy_telemetry(home);
-    let no_ai = horizon_core::no_ai::is_on(game_home);
-    if horizon_core::no_ai::is_on(home) != no_ai {
-        let _ = horizon_core::no_ai::set(home, no_ai);
+    let no_ai = horizon_platform::no_ai::is_on(game_home);
+    if horizon_platform::no_ai::is_on(home) != no_ai {
+        let _ = horizon_platform::no_ai::set(home, no_ai);
     }
 }
 

@@ -1197,6 +1197,8 @@
   "{mods} didn't build on the Horizon you play: building on the one they were made for": "{mods} таны тоглодог Horizon дээр бүтсэнгүй: зориулагдсан хувилбар дээр нь бүтээж байна",
   "In the last build, on Horizon {commit} for {mods}, not on {horizon}": "Сүүлийн бүтээлд {mods}-ийн төлөө Horizon {commit} дээр, {horizon} дээр биш",
   "In the last build, on {horizon}": "Сүүлийн бүтээлд {horizon} дээр",
+  "Duplicate native mod {id}.": "Duplicate native mod {id}.",
+  "Native and content mod ids differ.": "Native and content mod ids differ.",
   "The Zenith release has a different source revision.": "The Zenith release has a different source revision.",
   "ATM10 8.5 Rust preview": "ATM10 8.5 Rust preview",
   "Nothing in the registry matches yet.": "Nothing in the registry matches yet.",

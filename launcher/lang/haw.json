@@ -1197,6 +1197,8 @@
   "{mods} didn't build on the Horizon you play: building on the one they were made for": "ʻAʻole i kūkulu ʻia ʻo {mods} ma ka Horizon āu e pāʻani nei: e kūkulu ana ma ka mea i hana ʻia ai lākou",
   "In the last build, on Horizon {commit} for {mods}, not on {horizon}": "Ma ke kūkulu hope loa, ma Horizon {commit} no {mods}, ʻaʻole ma {horizon}",
   "In the last build, on {horizon}": "Ma ke kūkulu hope loa, ma {horizon}",
+  "Duplicate native mod {id}.": "Duplicate native mod {id}.",
+  "Native and content mod ids differ.": "Native and content mod ids differ.",
   "The Zenith release has a different source revision.": "The Zenith release has a different source revision.",
   "ATM10 8.5 Rust preview": "ATM10 8.5 Rust preview",
   "Nothing in the registry matches yet.": "Nothing in the registry matches yet.",

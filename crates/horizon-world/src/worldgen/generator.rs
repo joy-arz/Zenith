@@ -16,6 +16,7 @@ use super::{
     },
     biome::BiomeId,
     biome_chunk::{BiomeChunk, BiomeRegion},
+    biome_chunks::BiomeChunks,
     biome_source::{BiomeSourceCatalog, ResolvedBiomeSource},
     biome_temperature::{BiomeTemperature, BiomeTemperatureSettings},
     carver::{CarverCatalog, WorldCarver, generate_carving_mask},
@@ -1028,7 +1029,8 @@ impl FlatSettings {
         })
     }
 }
-const CACHE_LIMIT: usize = 16384;
+/// Carver origins whose biome is kept.
+const CARVER_CACHE_LIMIT: usize = 65536;
 /// What a generator's shared caches hold ([`OverworldGenerator::cache_census`]).
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CacheCensus {
@@ -1072,7 +1074,7 @@ impl ChunkWork {
     }
 }
 
-type BiomeCache = Mutex<HashMap<(i32, i32), Arc<BiomeChunk<BiomeId>>>>;
+type BiomeCache = Mutex<BiomeChunks>;
 type LatticeCache = Mutex<HashMap<(i32, i32), Arc<Vec<LatticeSamples>>>>;
 /// ~33 KB a chunk in To The Max; misses only resample.
 const LATTICE_CACHE_LIMIT: usize = 1024;
@@ -1278,7 +1280,7 @@ where
             noises,
             extensions,
             picker,
-            biome_cache: Mutex::new(HashMap::new()),
+            biome_cache: Mutex::new(BiomeChunks::default()),
             lattice_cache: Mutex::new(HashMap::new()),
             biome_work: ChunkWork::new(),
             carver_cache: Mutex::new(HashMap::new()),
@@ -1496,9 +1498,6 @@ where
             .map_err(stage("biomes"))?;
         let chunk = Arc::new(chunk);
         let mut cache = self.biome_cache.lock().unwrap();
-        if cache.len() >= CACHE_LIMIT {
-            cache.clear();
-        }
         cache.insert((pos.x, pos.z), chunk.clone());
         Ok(Some(chunk))
     }
@@ -1528,7 +1527,7 @@ where
             .map_err(|e| e.to_string())?;
         let id = self.data.biome_id(name).ok_or_else(|| name.to_owned())?;
         let mut cache = self.carver_cache.lock().unwrap();
-        if cache.len() >= CACHE_LIMIT * 4 {
+        if cache.len() >= CARVER_CACHE_LIMIT {
             cache.clear();
         }
         cache.insert(key, id);
@@ -3863,7 +3862,7 @@ impl OverworldGenerator {
                 temperatures: data
                     .temperatures
                     .iter()
-                    .map(|s| BiomeTemperature::new(*s))
+                    .map(|s| BiomeTemperature::for_generation(*s))
                     .collect(),
                 terrain_context: SamplerContext::cached(),
                 biome_context: SamplerContext::cached(),
@@ -4093,6 +4092,7 @@ impl GeneratorWorker {
 
 #[cfg(test)]
 mod tests {
+    use super::super::biome_chunks::CACHE_LIMIT;
     use super::*;
     #[test]
     fn settings_default_states_read_the_26_3_block_state_form() {
@@ -5120,18 +5120,18 @@ mod tests {
                 assert!(Arc::ptr_eq(first, other));
             }
         }
-        // Force the existing whole-cache biome eviction threshold.
+        // Two generations of other chunks push this one out of the cache.
         {
             let mut cache = pipeline.biome_cache.lock().unwrap();
-            cache.clear();
             for x in 0..CACHE_LIMIT as i32 {
                 cache.insert((x, 10000), biomes.clone());
             }
+            assert!(cache.len() <= CACHE_LIMIT);
         }
         let mut worker = generator.worker();
         let rebuilt = pipeline.biome_chunk(&mut worker.state, pos).unwrap();
         assert!(!Arc::ptr_eq(biomes, &rebuilt));
-        assert_eq!(pipeline.biome_cache.lock().unwrap().len(), 1);
+        assert!(pipeline.biome_cache.lock().unwrap().len() <= CACHE_LIMIT);
         for section in 0..24 {
             assert_eq!(biomes.section(section), rebuilt.section(section));
         }
