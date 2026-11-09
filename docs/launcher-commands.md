@@ -813,6 +813,14 @@ Import a .mrpack, a CurseForge zip or an instance folder, and write its coverage
 
 MCP: `modpack_import`.
 
+## `horizon-launcher modpack install-atm10-preview`
+
+Download and install the public ATM10 Rust content preview.
+
+    horizon-launcher modpack install-atm10-preview
+
+MCP: `modpack_install_atm10_preview`.
+
 ## `horizon-launcher modpack port`
 
 Get the jars of what this computer can port and carry them over.

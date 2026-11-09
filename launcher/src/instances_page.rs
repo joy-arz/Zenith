@@ -238,7 +238,7 @@ impl Launcher {
                         summary.map_or_else(|| tr("Modpack").into(), |p| p.summary()),
                     )
                 }
-                InstanceKind::Pack => (false, tr("From Horizon's registry").into()),
+                InstanceKind::Pack => (false, tr("From the registry").into()),
             };
             // Java instances have nothing of Horizon's to prepare: no state square.
             let state = (matches!(i.kind, InstanceKind::Default | InstanceKind::Own)

@@ -254,9 +254,13 @@ pub fn loadable(mods: &[std::path::PathBuf]) -> (Vec<std::path::PathBuf>, Vec<St
     let mut on: Vec<(std::path::PathBuf, String, Vec<String>)> = Vec::new();
     let mut off = Vec::new();
     for path in mods {
-        let manifest = fs::read_to_string(path.join(horizon_mods::manifest::MANIFEST))
-            .map_err(|e| e.to_string())
-            .and_then(|t| horizon_mods::Manifest::parse(&t));
+        let manifest = if path.is_file() {
+            horizon_mods::Package::read(path).map(|package| package.manifest)
+        } else {
+            fs::read_to_string(path.join(horizon_mods::manifest::MANIFEST))
+                .map_err(|e| e.to_string())
+                .and_then(|t| horizon_mods::Manifest::parse(&t))
+        };
         let m = match manifest {
             Ok(m) => m,
             Err(e) => {

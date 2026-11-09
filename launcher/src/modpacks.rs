@@ -171,29 +171,91 @@ impl Imported {
 pub fn row_plain(row: &Row) -> String {
     use crate::i18n::{tr, trf};
     let plain = match row.plain.as_str() {
-        "Its blocks and items came over and passed Horizon's checks; the mod's own code is not run." => tr("Its blocks and items came over and passed Horizon's checks; the mod's own code is not run."),
-        "Part of it came over, but something is left out, differs from the original or has not been checked yet; the technical detail says what." => tr("Part of it came over, but something is left out, differs from the original or has not been checked yet; the technical detail says what."),
+        "Its blocks and items came over and passed Horizon's checks; the mod's own code is not run." => {
+            tr(
+                "Its blocks and items came over and passed Horizon's checks; the mod's own code is not run.",
+            )
+        }
+        "Part of it came over, but something is left out, differs from the original or has not been checked yet; the technical detail says what." => {
+            tr(
+                "Part of it came over, but something is left out, differs from the original or has not been checked yet; the technical detail says what.",
+            )
+        }
         "It does not come over yet." => tr("It does not come over yet."),
-        "Nothing to port: Horizon has it built in or does not need it." => tr("Nothing to port: Horizon has it built in or does not need it."),
-        "Horizon cannot tell yet what this mod does (it needs its jar or a reviewed entry), so it cannot say whether it will come over." => tr("Horizon cannot tell yet what this mod does (it needs its jar or a reviewed entry), so it cannot say whether it will come over."),
-        "It joins other mods together, so it waits until those are ported." => tr("It joins other mods together, so it waits until those are ported."),
-        "Content only (blocks, items, structures). Its jar is here, but it has not been carried over yet." => tr("Content only (blocks, items, structures). Its jar is here, but it has not been carried over yet."),
-        "Content only (blocks, items, structures). It can come over once its jar is here." => tr("Content only (blocks, items, structures). It can come over once its jar is here."),
-        "Needs what blocks and items do when used, placed, broken or ticked, which Horizon's mod API cannot run from a mod yet, so it does not come over." => tr("Needs what blocks and items do when used, placed, broken or ticked, which Horizon's mod API cannot run from a mod yet, so it does not come over."),
-        "Needs machine-style features (block entities, menus, item, fluid and energy handling, networking) that Horizon's mod API does not have yet, so it does not come over." => tr("Needs machine-style features (block entities, menus, item, fluid and energy handling, networking) that Horizon's mod API does not have yet, so it does not come over."),
-        "Needs mobs, custom rendering and models, dimensions or new game hooks that Horizon's mod API does not have yet, so it does not come over." => tr("Needs mobs, custom rendering and models, dimensions or new game hooks that Horizon's mod API does not have yet, so it does not come over."),
-        "Needs the game's client interfaces (keys, targeting, inventory reading, interface, rendering), so it does not come over yet." => tr("Needs the game's client interfaces (keys, targeting, inventory reading, interface, rendering), so it does not come over yet."),
-        "Horizon has not worked out what this mod needs yet." => tr("Horizon has not worked out what this mod needs yet."),
-        "A library other mods build on. Horizon's mod API and SDK take its place, so there is nothing to port." => tr("A library other mods build on. Horizon's mod API and SDK take its place, so there is nothing to port."),
-        "It makes the game faster. Horizon's own engine does that, so there is nothing to port." => tr("It makes the game faster. Horizon's own engine does that, so there is nothing to port."),
-        "Pack tooling or a game feature that Horizon already has, so there is nothing to port." => tr("Pack tooling or a game feature that Horizon already has, so there is nothing to port."),
-        "Built into Horizon already, so there is nothing to port." => tr("Built into Horizon already, so there is nothing to port."),
+        "Nothing to port: Horizon has it built in or does not need it." => {
+            tr("Nothing to port: Horizon has it built in or does not need it.")
+        }
+        "Horizon cannot tell yet what this mod does (it needs its jar or a reviewed entry), so it cannot say whether it will come over." => {
+            tr(
+                "Horizon cannot tell yet what this mod does (it needs its jar or a reviewed entry), so it cannot say whether it will come over.",
+            )
+        }
+        "It joins other mods together, so it waits until those are ported." => {
+            tr("It joins other mods together, so it waits until those are ported.")
+        }
+        "Content only (blocks, items, structures). Its jar is here, but it has not been carried over yet." => {
+            tr(
+                "Content only (blocks, items, structures). Its jar is here, but it has not been carried over yet.",
+            )
+        }
+        "Content only (blocks, items, structures). It can come over once its jar is here." => {
+            tr("Content only (blocks, items, structures). It can come over once its jar is here.")
+        }
+        "Needs what blocks and items do when used, placed, broken or ticked, which Horizon's mod API cannot run from a mod yet, so it does not come over." => {
+            tr(
+                "Needs what blocks and items do when used, placed, broken or ticked, which Horizon's mod API cannot run from a mod yet, so it does not come over.",
+            )
+        }
+        "Needs machine-style features (block entities, menus, item, fluid and energy handling, networking) that Horizon's mod API does not have yet, so it does not come over." => {
+            tr(
+                "Needs machine-style features (block entities, menus, item, fluid and energy handling, networking) that Horizon's mod API does not have yet, so it does not come over.",
+            )
+        }
+        "Needs mobs, custom rendering and models, dimensions or new game hooks that Horizon's mod API does not have yet, so it does not come over." => {
+            tr(
+                "Needs mobs, custom rendering and models, dimensions or new game hooks that Horizon's mod API does not have yet, so it does not come over.",
+            )
+        }
+        "Needs the game's client interfaces (keys, targeting, inventory reading, interface, rendering), so it does not come over yet." => {
+            tr(
+                "Needs the game's client interfaces (keys, targeting, inventory reading, interface, rendering), so it does not come over yet.",
+            )
+        }
+        "Horizon has not worked out what this mod needs yet." => {
+            tr("Horizon has not worked out what this mod needs yet.")
+        }
+        "A library other mods build on. Horizon's mod API and SDK take its place, so there is nothing to port." => {
+            tr(
+                "A library other mods build on. Horizon's mod API and SDK take its place, so there is nothing to port.",
+            )
+        }
+        "It makes the game faster. Horizon's own engine does that, so there is nothing to port." => {
+            tr(
+                "It makes the game faster. Horizon's own engine does that, so there is nothing to port.",
+            )
+        }
+        "Pack tooling or a game feature that Horizon already has, so there is nothing to port." => {
+            tr(
+                "Pack tooling or a game feature that Horizon already has, so there is nothing to port.",
+            )
+        }
+        "Built into Horizon already, so there is nothing to port." => {
+            tr("Built into Horizon already, so there is nothing to port.")
+        }
         "Nothing to port." => tr("Nothing to port."),
-        "Made for Minecraft 1.20 or older: Horizon ports mods made for 1.21 and later." => tr("Made for Minecraft 1.20 or older: Horizon ports mods made for 1.21 and later."),
+        "Made for Minecraft 1.20 or older: Horizon ports mods made for 1.21 and later." => {
+            tr("Made for Minecraft 1.20 or older: Horizon ports mods made for 1.21 and later.")
+        }
         "Shader packs are not converted yet." => tr("Shader packs are not converted yet."),
-        "Copied as a resource pack; Horizon has not checked how it renders. Turn it on in the game's Resource Packs screen." => tr("Copied as a resource pack; Horizon has not checked how it renders. Turn it on in the game's Resource Packs screen."),
+        "Copied as a resource pack; Horizon has not checked how it renders. Turn it on in the game's Resource Packs screen." => {
+            tr(
+                "Copied as a resource pack; Horizon has not checked how it renders. Turn it on in the game's Resource Packs screen.",
+            )
+        }
         "Not downloaded yet; Port gets it." => tr("Not downloaded yet; Port gets it."),
-        "Horizon could not use this resource pack yet; the technical detail says why." => tr("Horizon could not use this resource pack yet; the technical detail says why."),
+        "Horizon could not use this resource pack yet; the technical detail says why." => {
+            tr("Horizon could not use this resource pack yet; the technical detail says why.")
+        }
         other => other,
     };
     let waiting = match row.waiting {
@@ -294,8 +356,31 @@ pub fn carried(work: &Path) -> Vec<PathBuf> {
         .map(|e| e.path().join("carry"))
         .filter(|c| c.join("horizon-mod.toml").is_file())
         .collect();
+    mods.extend(
+        horizon_mods::find(&work.join("local-content"))
+            .into_iter()
+            .filter(|path| path.is_file()),
+    );
     mods.sort();
     mods
+}
+
+/// Download and import the release-pinned, redistributable ATM10 preview.
+pub fn install_atm10_preview(log: Log) -> Result<Imported, String> {
+    const URL: &str = concat!(
+        "https://github.com/joy-arz/Zenith/releases/download/",
+        "modpack%40atm10-8.5-preview.1/atm10-8.5-zenith-preview.1.mrpack"
+    );
+    const SHA256: &str = "742815cc913343528314652ef86cfb79f6d66a8e99c4b367744569c67ce399f9";
+    let ports = ports_dir();
+    fs::create_dir_all(&ports).map_err(|e| e.to_string())?;
+    let stage = ports.join(format!(".atm10-download-{}", std::process::id()));
+    fs::create_dir(&stage).map_err(|e| e.to_string())?;
+    let file = stage.join("atm10-8.5-zenith-preview.1.mrpack");
+    let result =
+        backend::download(URL, 533_190, SHA256, &file, &|_| {}).and_then(|()| import(&file, log));
+    let _ = fs::remove_dir_all(stage);
+    result
 }
 
 /// Imports the pack at `path` into `ports/<slug>/` and writes its coverage report from
@@ -312,11 +397,99 @@ pub fn import(path: &Path, log: Log) -> Result<Imported, String> {
     };
     let work = ports_dir().join(slug(&name));
     log(format!("Importing {name} into {}", work.display()));
+    if path
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("mrpack"))
+        && pack.loader.is_empty()
+        && pack.files.is_empty()
+        && pack.overrides.contains_key("horizon-mods")
+    {
+        return import_local_content(path, &work, &pack);
+    }
     pipeline::import(path, &work, log)?;
     pipeline::inventory(&work, false, log)?;
     pipeline::report(&work, log)?;
     prepare_resourcepacks(&work);
     load(&work)
+}
+
+// A Zenith export stores already-converted content in a local .mrpack. Stage
+// every package before exposing it to the instance list or existing saves.
+fn import_local_content(path: &Path, work: &Path, pack: &Pack) -> Result<Imported, String> {
+    use std::io::Read;
+    const MAX_CONTENT: u64 = 256 << 20;
+    const MAX_TOTAL: u64 = 1 << 30;
+    let error = |e: std::io::Error| e.to_string();
+    if pack.minecraft != horizon_core::VANILLA_VERSION {
+        return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
+    }
+    let dest = work.join("local-content");
+    if dest.is_dir() {
+        if !work.join("pack.json").is_file() {
+            pipeline::write_json(&work.join("pack.json"), pack)?;
+        }
+        return load(work);
+    }
+    fs::create_dir_all(work).map_err(error)?;
+    let stage = work.join(format!(".local-content-{}", std::process::id()));
+    fs::create_dir(&stage).map_err(error)?;
+    let result = (|| {
+        let mut zip = zip::ZipArchive::new(fs::File::open(path).map_err(error)?)
+            .map_err(|e| e.to_string())?;
+        let mut remaining = MAX_TOTAL;
+        let mut count = 0;
+        for i in 0..zip.len() {
+            let mut entry = zip.by_index(i).map_err(|e| e.to_string())?;
+            let name = entry.name().map_err(|e| e.to_string())?;
+            let Some(file) = name.strip_prefix("overrides/horizon-mods/") else {
+                continue;
+            };
+            if entry.is_dir() {
+                continue;
+            }
+            let Some(stem) = file.strip_suffix(".hmod") else {
+                continue;
+            };
+            if stem.is_empty()
+                || !stem
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'))
+                || entry.size() > remaining.min(MAX_CONTENT)
+            {
+                return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
+            }
+            let output = stage.join(file);
+            let mut target = fs::File::options()
+                .write(true)
+                .create_new(true)
+                .open(&output)
+                .map_err(error)?;
+            let limit = remaining.min(MAX_CONTENT);
+            let size =
+                std::io::copy(&mut (&mut entry).take(limit + 1), &mut target).map_err(error)?;
+            if size > limit || size != entry.size() {
+                return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
+            }
+            remaining -= size;
+            drop(target);
+            let package = horizon_mods::Package::read(&output)?;
+            if package.wasm.is_some() {
+                return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
+            }
+            horizon_mods::Content::read(&output, &package.manifest)?;
+            count += 1;
+        }
+        if count == 0 {
+            return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
+        }
+        fs::rename(&stage, &dest).map_err(error)?;
+        pipeline::write_json(&work.join("pack.json"), pack)?;
+        load(work)
+    })();
+    if result.is_err() {
+        let _ = fs::remove_dir_all(&stage);
+    }
+    result
 }
 
 /// Ports what this computer can: the portable mods' jars (from `from` when the player has them,
@@ -568,10 +741,11 @@ mod tests {
             pack.left_off,
             ["allthemodium: CurseForge downloads coming soon"]
         );
-        assert!(pack
-            .jars()
-            .unwrap()
-            .contains("CurseForge downloads coming soon"));
+        assert!(
+            pack.jars()
+                .unwrap()
+                .contains("CurseForge downloads coming soon")
+        );
         fs::remove_dir_all(&work).unwrap();
     }
 
@@ -634,9 +808,10 @@ mod tests {
         apply_profile(&mut cmd, &work).unwrap();
         assert_eq!(cmd.get_args().count(), 0);
         assert_eq!(cmd.get_current_dir(), Some(home.as_path()));
-        assert!(cmd
-            .get_envs()
-            .any(|(k, v)| k == "HORIZON_HOME" && v == Some(home.as_os_str())));
+        assert!(
+            cmd.get_envs()
+                .any(|(k, v)| k == "HORIZON_HOME" && v == Some(home.as_os_str()))
+        );
         assert!(home.join("resourcepacks/Look/pack.mcmeta").is_file());
         assert_eq!(
             fs::read(home.join("resourcepacks/look.zip")).unwrap(),
@@ -650,10 +825,11 @@ mod tests {
         assert!(pack.can_play());
         assert!(!pack.can_port());
         assert_eq!(pack.resourcepacks, 2);
-        assert!(pack
-            .left_off
-            .iter()
-            .any(|l| l.contains("Conflict") && l.contains("look.zip")));
+        assert!(
+            pack.left_off
+                .iter()
+                .any(|l| l.contains("Conflict") && l.contains("look.zip"))
+        );
         assert!(outcome(&pack).contains("2 resource packs available"));
         apply_profile(&mut Command::new("true"), &work).unwrap();
         fs::remove_dir_all(root).unwrap();

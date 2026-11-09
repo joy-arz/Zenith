@@ -200,15 +200,41 @@ impl Launcher {
             .child(pick("import-folder", "Import an instance folder…", true))
             .child(text(theme::CAPTION).w_full().text_color(t.muted).child(tr(
                 ".mrpack (Modrinth), .zip (CurseForge), or a Prism, MultiMC or CurseForge instance. \
-                 Horizon ports what it can on this computer, from your own downloads, and plays \
+                 Zenith ports what it can on this computer, from your own downloads, and plays \
                  the pack as its own profile. Nothing is uploaded or shared.",
             )));
+        let install_atm10 = button(
+            "install-atm10-preview",
+            "Install public preview",
+            Kind::Primary,
+            &t,
+        );
+        let install_atm10 = if busy {
+            disabled(install_atm10)
+        } else {
+            install_atm10.on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                this.pack_job(modpacks::install_atm10_preview);
+                cx.notify();
+            }))
+        };
         let mut page = div().flex().flex_col().gap(px(16.));
         if !self.found_packs.is_empty() {
             page = page.child(self.found_pack_rows(cx));
         }
         page = page
             .child(section_title("Your modpacks", "archive", &t))
+            .child(
+                plate(&t)
+                    .p(px(12.))
+                    .flex()
+                    .flex_col()
+                    .gap(px(8.))
+                    .child(text(theme::UI).child(tr("ATM10 8.5 Rust preview")))
+                    .child(text(theme::CAPTION).text_color(t.muted).child(tr(
+                        "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.",
+                    )))
+                    .child(install_atm10),
+            )
             .child(actions);
         if busy || !self.pack_log.is_empty() {
             page = page.child(self.pack_log_plate(&t));
@@ -355,7 +381,7 @@ impl Launcher {
                     )),
                 );
             let detail = trf(
-                "{version} from Horizon's registry, its own profile: {mods}",
+                "{version} from the registry, its own profile: {mods}",
                 &[("version", &p.version), ("mods", &p.mods.join(", "))],
             );
             list = list.child(index_row(
@@ -525,7 +551,7 @@ impl Launcher {
             notes.push(trf("Left off: {line}.", &[("line", line)]));
         }
         if !can_play {
-            notes.push(tr("Playing needs a prepared Horizon version (Play page).").into());
+            notes.push(tr("Playing needs a prepared Zenith version (Play page).").into());
         }
         let mut rows: Vec<&horizon_port_pack::report::Row> = p
             .rows

@@ -209,6 +209,8 @@ enum ModpackCmd {
     List,
     /// Import a .mrpack, a CurseForge zip or an instance folder, and write its coverage report
     Import { path: PathBuf },
+    /// Download and install the public ATM10 Rust content preview
+    InstallAtm10Preview,
     /// Get the jars of what this computer can port and carry them over
     Port {
         /// The pack's folder name, as list shows it
@@ -1466,9 +1468,13 @@ fn execute(command: Cmd, as_json: bool) -> Result<(), String> {
             if as_json {
                 json(serde_json::json!({ "imported": tag, "prepared": prepared }));
             } else if prepared {
-                println!("Imported {tag} and selected it. It is prepared already, from another installed version.");
+                println!(
+                    "Imported {tag} and selected it. It is prepared already, from another installed version."
+                );
             } else {
-                println!("Imported {tag} and selected it. Prepare it next: horizon-launcher prepare --version {tag}");
+                println!(
+                    "Imported {tag} and selected it. Prepare it next: horizon-launcher prepare --version {tag}"
+                );
             }
         }
         Cmd::Prepare {
@@ -2362,7 +2368,9 @@ fn servers(action: ServersCmd, as_json: bool) -> Result<(), String> {
                 json(serde_json::json!({ "address": address, "link": link }));
             } else {
                 println!("{link}");
-                eprintln!("Forward your external TCP port to this server's game port. Reachability has not been verified.");
+                eprintln!(
+                    "Forward your external TCP port to this server's game port. Reachability has not been verified."
+                );
             }
         }
         ServersCmd::Forget { server } => {
@@ -2434,7 +2442,7 @@ fn github_native(
 }
 
 fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::browser::{horizon, installed, java_instance, Kind, Query, SourceId};
+    use horizon_launcher::browser::{Kind, Query, SourceId, horizon, installed, java_instance};
     use horizon_launcher::modpacks;
     // What the browser installs goes into an instance's game folder; Java mods' checks are kept
     // in the default one, shared by all.
@@ -3293,13 +3301,13 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
                     return Err(format!(
                         "No other launcher has an instance called {name}: \
                          horizon-launcher instance others"
-                    ))
+                    ));
                 }
                 _ => {
                     return Err(format!(
                         "More than one launcher has an instance called {name}: say which \
                          with --folder."
-                    ))
+                    ));
                 }
             };
             let target = new_name.as_deref().unwrap_or(&f.name);
@@ -3387,7 +3395,7 @@ fn instance(action: InstanceCmd, as_json: bool) -> Result<(), String> {
                         "{} is a data pack: put it into a world with horizon-launcher worlds \
                          datapack-add <world> <file>",
                         file.display()
-                    ))
+                    ));
                 }
             }
         }
@@ -3795,6 +3803,7 @@ fn modpack(action: ModpackCmd, as_json: bool) -> Result<(), String> {
             }
         }
         ModpackCmd::Import { path } => show(&modpacks::import(&path, log)?),
+        ModpackCmd::InstallAtm10Preview => show(&modpacks::install_atm10_preview(log)?),
         ModpackCmd::Port {
             pack,
             from,
@@ -4058,15 +4067,17 @@ mod tests {
             _ => panic!("expected native-build"),
         }
         // A version refuses --update, as in the game mode.
-        assert!(parse(&[
-            "mods",
-            "--server-output",
-            "engine-out",
-            "--version",
-            "v2026.10.13",
-            "--update"
-        ])
-        .is_err());
+        assert!(
+            parse(&[
+                "mods",
+                "--server-output",
+                "engine-out",
+                "--version",
+                "v2026.10.13",
+                "--update"
+            ])
+            .is_err()
+        );
         // The game mode is unchanged: an instance build without --server-output.
         assert!(matches!(
             parse(&["--instance", "A"]).unwrap().command,
