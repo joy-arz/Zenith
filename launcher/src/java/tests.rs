@@ -148,3 +148,19 @@ fn a_newly_downloaded_runtime_is_usable_in_flat_and_macos_bundle_layouts() {
         fs::remove_dir_all(root).unwrap();
     }
 }
+
+#[test]
+fn a_java_bin_on_the_path_names_the_home_above_it() {
+    let dir = scratch("path");
+    // A real home spells its program the way this OS starts one: java.exe on Windows.
+    let home = fake_home(&dir.join("jdk"), "21.0.5");
+    let path = std::env::join_paths([
+        // Not a `bin` folder at all, then a `bin` with no java in it.
+        dir.join("Programs").join("Java"),
+        dir.join("nobin").join("bin"),
+        home.join("bin"),
+    ])
+    .unwrap();
+    assert_eq!(homes_from_path(&path), [fs::canonicalize(&home).unwrap()]);
+    fs::remove_dir_all(&dir).unwrap();
+}
