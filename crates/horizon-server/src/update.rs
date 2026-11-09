@@ -311,7 +311,7 @@ fn fetch(url: &str) -> Result<Vec<u8>, String> {
 /// API, with the SHA-256 its signed checksums give for this computer's archive. With no Nightly
 /// published, GitHub's latest release.
 pub fn release(tag: Option<&str>) -> Result<Release, String> {
-    if horizon_core::release::ZENITH {
+    if horizon_platform::release::ZENITH {
         return Err("Zenith server previews use the Zenith Rust Edition release archive. Install it with --archive and --version.".into());
     }
     let api = |tag: &str| format!("https://api.github.com/repos/{REPO}/releases/tags/{tag}");

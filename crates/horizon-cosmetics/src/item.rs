@@ -125,13 +125,7 @@ pub struct Animation {
     pub phase: f32,
 }
 
-/// One quad: the game's `Polygon` (model pixels, then UV in 0..1 of the
-/// item's texture).
-#[derive(Clone, Debug, PartialEq)]
-pub struct Face {
-    pub normal: [f32; 3],
-    pub vertices: [[f32; 5]; 4],
-}
+pub use horizon_platform::skin_layers::Face;
 
 /// A part: its pose (as the game's: x, y, z in pixels, rotations in
 /// radians, scales), its faces and its children.

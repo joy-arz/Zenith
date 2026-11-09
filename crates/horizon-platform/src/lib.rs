@@ -14,6 +14,9 @@ pub use horizon_system as system;
 /// The pinned Minecraft version: its id, protocol and data version.
 pub use horizon_core::version;
 
+/// The release identity compiled into the game and dedicated server.
+pub use horizon_core::release;
+
 /// The player's "no AI" switch, which the launcher, the game and their agent tools share.
 pub use horizon_core::no_ai;
 
@@ -48,3 +51,7 @@ pub use horizon_server_files as server_files;
 pub mod hooks {
     pub use horizon_hooks::{Hooks, Started, TooLate, register};
 }
+
+/// Geometry shared by the game and the launcher’s 3D skin preview.
+#[cfg(feature = "skin-layers")]
+pub use horizon_assets::skin_layers;

@@ -1,0 +1,94 @@
+--- a/mixins/create/assets_root.rs
++++ b/mixins/create/assets_root.rs
+@@ -1,6 +1,8 @@
+ // Copyright (c) 2026 create-horizon contributors
+ // SPDX-License-Identifier: MIT
+ 
+-fn create_assets_root(root: std::path::PathBuf) -> std::path::PathBuf {
+-    crate::game::create_port::asset_root(root)
++fn create_assets_root(
++    root: std::io::Result<PathBuf>,
++) -> std::io::Result<PathBuf> {
++    root.map(crate::game::create_port::asset_root)
+ }
+--- a/mixins/create/horizon-mixin.toml
++++ b/mixins/create/horizon-mixin.toml
+@@ -3,7 +3,7 @@
+ version = "0.8.0-alpha.16"
+ 
+ [compatibility]
+-horizon_revision = "a5609804433041da96cd8fde34b322dd6593b905"
++horizon_revision = "b73a23d3313c7c22a81b4abad1b6563a5d39cfaf"
+ 
+ [[crate]]
+ id = "engine"
+@@ -193,14 +193,11 @@
+ 
+ [[injection]]
+ id = "local-assets-reload"
+-target = "horizon_client::game::packs::stage_pack"
+-kind = "MODIFY_VARIABLE"
+-variable = { name = "root", ordinal = 1, at = "STORE" }
+-require = 1
+-ordinal = 0
++target = "horizon_client::game::packs::startup_root"
++kind = "RETURN"
+ helper = "assets_root.rs"
+ bindings = [
+-  { name = "root", ty = "std::path::PathBuf", value = "$value" },
++  { name = "root", ty = "std::io::Result<PathBuf>", value = "$value" },
+ ]
+ 
+ [[injection]]
+@@ -1311,7 +1308,7 @@
+ 
+ [[injection]]
+ id = "transmission-next-tick"
+-target = "horizon_client::game::Game<'_>::tick_blocks"
++target = "horizon_client::game::block_ticks::Game<'_>::tick_blocks"
+ kind = "HEAD"
+ helper = "transmission_tick.rs"
+ bindings = [
+--- a/mixins/create/runtime.rs
++++ b/mixins/create/runtime.rs
+@@ -42,6 +42,12 @@
+ /// Imports the user's JAR before the initial load, and again on pack reload.
+ /// Uses Horizon's own pack loader/cache; the installed content archive is untouched.
+ pub(super) fn asset_root(root: std::path::PathBuf) -> std::path::PathBuf {
++    let home = Game::game_dir();
++    let cache = home.join(".horizon-cache/create-assets/overlay");
++    if root.starts_with(&cache) {
++        ORIGINAL_ASSETS.store(true, std::sync::atomic::Ordering::Relaxed);
++        return root;
++    }
+     ORIGINAL_ASSETS.store(false, std::sync::atomic::Ordering::Relaxed);
+     // Horizon consumes registry declarations while building the root; their
+     // source data/*/horizon files are deliberately absent from that overlay.
+@@ -52,7 +58,6 @@
+     {
+         return root;
+     }
+-    let home = Game::game_dir();
+     let result = (|| -> std::io::Result<Option<std::path::PathBuf>> {
+         let Some(imported) = create_assets::prepare(&home, horizon_client::packs::RESOURCE_FORMAT)?
+         else {
+@@ -75,7 +80,7 @@
+         let overlay = horizon_client::packs::resource_root(
+             &root,
+             &packs,
+-            &home.join(".horizon-cache/create-assets/overlay"),
++            &cache,
+         )?;
+         log::info!(
+             "Create: {} local resources from Create {} ({}); JAR and installed mod unchanged",
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -3,6 +3,6 @@
+   "id": "create",
+   "version": "0.8.0-alpha.16",
+   "game": "26.3",
+-  "horizon": "a5609804433041da96cd8fde34b322dd6593b905",
+-  "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02"
++  "horizon": "b73a23d3313c7c22a81b4abad1b6563a5d39cfaf",
++  "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57"
+ }

@@ -1,0 +1,12 @@
+--- a/crates/horizon-client/src/game/packs.rs
++++ b/crates/horizon-client/src/game/packs.rs
+@@ -64,7 +64,8 @@
+     let all = packs::discover(vanilla, &packs_dir());
+     let mut enabled = packs::enabled(&all, selected);
+     enabled.extend_from_slice(server);
+-    packs::resource_root(base, &enabled, &cache_dir())
++    let cache = cache_dir();
++    packs::resource_root(base, &enabled, &cache)
+ }
+ fn info(p: &Pack) -> PackInfo {
+     let built_in = !p.id.starts_with("file/");

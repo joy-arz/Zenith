@@ -422,7 +422,7 @@ fn import_local_content(path: &Path, work: &Path, pack: &Pack) -> Result<Importe
     const MAX_CONTENT: u64 = 256 << 20;
     const MAX_TOTAL: u64 = 1 << 30;
     let error = |e: std::io::Error| e.to_string();
-    if pack.minecraft != horizon_core::VANILLA_VERSION {
+    if pack.minecraft != horizon_platform::version::VANILLA_VERSION {
         return Err(crate::i18n::tr("Invalid local Zenith modpack content.").into());
     }
     let dest = work.join("local-content");

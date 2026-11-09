@@ -65,7 +65,8 @@ pub fn startup_root(
     let all = packs::discover(vanilla, &packs_dir());
     let mut enabled = packs::enabled(&all, selected);
     enabled.extend_from_slice(server);
-    packs::resource_root(base, &enabled, &cache_dir())
+    let cache = cache_dir();
+    packs::resource_root(base, &enabled, &cache)
 }
 fn info(p: &Pack) -> PackInfo {
     let built_in = !p.id.starts_with("file/");

@@ -14,3 +14,5 @@ pub mod palette;
 pub mod resolve;
 
 pub use json::DecodeError;
+
+pub mod skin_layers;

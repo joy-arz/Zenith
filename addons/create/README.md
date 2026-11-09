@@ -52,3 +52,16 @@ and unloaded neighbors. Its reference is
 
 The world adapter still needs to register the machine, supply the cells,
 run the crafting phases, and send the result to a belt or inventory.
+
+## Zenith Rust Edition 0.2.0-preview.5
+
+Apply [the engine source patch](zenith-engine-0.2.0-preview.5.patch) to a
+staging copy of the signed engine source at `b73a23d331`. Apply
+[the Create adapter](zenith-0.2.0-preview.5.patch) after the earlier three
+Create patches. Use Mixins `5a64af938ec86b00d53d16a408aabc0038fb3e57`.
+
+This restores the asset overlay on pack reload and reconnects the transmission
+tick after Horizon moved it out of `game.rs`. All 95 injections planned and
+applied, and the transformed client built on macOS ARM64. A motor drove the
+press to produce two iron sheets, and the depot retained both on save reopen.
+Use the player's own Create JAR for the original assets.

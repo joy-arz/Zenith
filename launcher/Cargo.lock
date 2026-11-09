@@ -2645,6 +2645,17 @@ name = "horizon-addresses"
 version = "0.1.0"
 
 [[package]]
+name = "horizon-assets"
+version = "0.1.0"
+dependencies = [
+ "glam",
+ "horizon-core",
+ "log",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "horizon-bench"
 version = "0.1.0"
 dependencies = [
@@ -2667,6 +2678,7 @@ dependencies = [
  "base64",
  "glam",
  "horizon-addresses",
+ "horizon-platform",
  "png 0.18.1",
  "serde",
  "serde_json",
@@ -2789,6 +2801,7 @@ dependencies = [
 name = "horizon-platform"
 version = "0.1.0"
 dependencies = [
+ "horizon-assets",
  "horizon-core",
  "horizon-hooks",
  "horizon-prepare",

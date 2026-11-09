@@ -2,7 +2,7 @@
 
 use crate::backend::{self, Release};
 use crate::i18n::{tr, trf};
-use horizon_core::release::ZENITH_TAG_PREFIX;
+use horizon_platform::release::ZENITH_TAG_PREFIX;
 use horizon_release_sign::{PublicKey, SIGNATURE, SUMS};
 use serde_json::Value;
 use std::io::Read;

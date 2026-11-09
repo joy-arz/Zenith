@@ -15,8 +15,8 @@
 //! the CPU and the GPU (`super::skin`) pose paths draw it unchanged.
 use super::{Part, Polygon};
 
-pub use horizon_cosmetics::skin_layers::{DEPTH, SIZE};
-use horizon_cosmetics::skin_layers::{OUTER_PARTS, extrude_face};
+pub use horizon_assets::skin_layers::{DEPTH, SIZE};
+use horizon_assets::skin_layers::{OUTER_PARTS, extrude_face};
 
 /// `model` with every outer-layer part replaced by its extruded geometry,
 /// or `None` when the model has no outer layer to extrude.
@@ -34,7 +34,7 @@ fn explode(part: &mut Part, skin: &[u8], size: usize, depth: f32, changed: &mut 
     if OUTER_PARTS.contains(&part.name.as_str()) {
         let mut polygons = Vec::with_capacity(part.polygons.len() * 8);
         for polygon in &part.polygons {
-            let face = horizon_cosmetics::Face {
+            let face = horizon_assets::skin_layers::Face {
                 normal: polygon.normal,
                 vertices: polygon.vertices,
             };
