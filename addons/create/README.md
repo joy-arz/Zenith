@@ -65,3 +65,10 @@ tick after Horizon moved it out of `game.rs`. All 95 injections planned and
 applied, and the transformed client built on macOS ARM64. A motor drove the
 press to produce two iron sheets, and the depot retained both on save reopen.
 Use the player's own Create JAR for the original assets.
+
+## Zenith Rust Edition 0.2.0-preview.6
+
+On the signed engine source at `b9f3bd4502`, the resource-root change is already
+present. Apply [the Preview 6 adapter](zenith-0.2.0-preview.6.patch) after the
+base, Preview 1 and Mechanical Crafter chain patches. Mixins is unchanged.
+All 95 injections planned and applied, and the transformed client type-checked.
