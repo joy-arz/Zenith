@@ -2442,7 +2442,7 @@ fn github_native(
 }
 
 fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
-    use horizon_launcher::browser::{Kind, Query, SourceId, horizon, installed, java_instance};
+    use horizon_launcher::browser::{horizon, installed, java_instance, Kind, Query, SourceId};
     use horizon_launcher::modpacks;
     // What the browser installs goes into an instance's game folder; Java mods' checks are kept
     // in the default one, shared by all.
@@ -4067,17 +4067,15 @@ mod tests {
             _ => panic!("expected native-build"),
         }
         // A version refuses --update, as in the game mode.
-        assert!(
-            parse(&[
-                "mods",
-                "--server-output",
-                "engine-out",
-                "--version",
-                "v2026.10.13",
-                "--update"
-            ])
-            .is_err()
-        );
+        assert!(parse(&[
+            "mods",
+            "--server-output",
+            "engine-out",
+            "--version",
+            "v2026.10.13",
+            "--update"
+        ])
+        .is_err());
         // The game mode is unchanged: an instance build without --server-output.
         assert!(matches!(
             parse(&["--instance", "A"]).unwrap().command,
