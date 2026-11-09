@@ -374,6 +374,13 @@ pub fn fetch_modpack(
     let version = pick(Kind::Modpack, &versions, true)
         .ok_or_else(|| format!("{} has no file to download.", project.title))?;
     let file = version.file().expect("pick keeps versions with a file");
+    // Modrinth allows colons in archive names. Rename the local copy only, then let
+    // the usual download checks validate its name and verify the original bytes.
+    if source.id() == SourceId::Modrinth && file.name.contains(':') {
+        let mut file = file.clone();
+        file.name = file.name.replace(':', "-");
+        return source.fetch(&file, folder, progress);
+    }
     source.fetch(file, folder, progress)
 }
 

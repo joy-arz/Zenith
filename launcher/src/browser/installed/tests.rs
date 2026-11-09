@@ -238,6 +238,23 @@ fn modpacks_download_checked() {
     fs::remove_dir_all(&home).unwrap();
 }
 
+#[test]
+fn modrinth_modpack_with_a_colon_downloads_under_a_portable_name() {
+    let home = home("modpack-colon");
+    let mut fake = Fake::default();
+    let pack = project("oneblock", Kind::Modpack);
+    fake.add(pack.clone());
+    let archive = b"example modpack";
+    fake.release(&pack.id, "1.3", &[], archive, false);
+    fake.versions.get_mut().unwrap().get_mut(&pack.id).unwrap()[0].files[0].name =
+        "1.21.1 Create 6: Oneblock 1.3.mrpack".into();
+
+    let path = fetch_modpack(&fake, &pack, &home, &|_| {}).unwrap();
+    assert_eq!(path, home.join("1.21.1 Create 6- Oneblock 1.3.mrpack"));
+    assert_eq!(fs::read(&path).unwrap(), archive);
+    fs::remove_dir_all(&home).unwrap();
+}
+
 /// A NeoForge jar with `files` beside its `neoforge.mods.toml` for mod `id`.
 fn mod_jar(id: &str, files: &[(&str, &str)]) -> Vec<u8> {
     use std::io::Write;
