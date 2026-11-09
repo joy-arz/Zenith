@@ -19,6 +19,7 @@ use std::collections::HashMap;
 
 use glam::{DMat4, DVec3};
 use horizon_shaders::{Format, Group, Kind, Post, SHADOW_COLORS};
+use smallvec::SmallVec;
 
 use super::pack_draw::DrawUniforms;
 use super::pack_entities::{PROGRAMS, PackEntities};
@@ -2779,13 +2780,17 @@ impl PackPost {
             post.particles,
             post.damaged_block,
             post.beacon_beam,
+            post.block_translucent,
+            post.particles_translucent,
         ];
-        let late = [
+        let mut late = [
             false,
             false,
             post.translucent_late,
             post.particles_late,
             false,
+            true,
+            post.translucent_late,
             true,
         ];
         let shadow_only = (post.shadow_only_player, post.shadow_only_lit_blocks);
@@ -2828,6 +2833,11 @@ impl PackPost {
                 }
             })
         });
+        // Translation alone is insufficient: a refused GPU pipeline must retain the
+        // legacy single particle pass and its timing as well as its geometry grouping.
+        if entity_passes[super::pack_entities::PARTICLE_TRANSLUCENT].is_some() {
+            late[super::pack_entities::PARTICLE] = false;
+        }
         let shadow_entities = shadow_programs.map(|p| {
             p.zip(entity_geometry.as_ref())
                 .and_then(|(p, g)| paged(build(p, Some(g))))
@@ -2851,10 +2861,12 @@ impl PackPost {
             cull: false,
         });
         let hides_clouds = post.clouds_off || post.clouds.is_some() && cloud_geometry.is_some();
+        // Rain and snow test depth but never write it: Iris 1.11.7 left none of either in
+        // `depthtex0`, whatever `rain.depth` said (probe packs of ours, #10492).
         let weather_geometry = world.weather.then(|| Geometry {
             buffers: &entity_buffers,
             table: None,
-            depth_write: post.rain_depth,
+            depth_write: false,
             atlas: None,
             material_maps: false,
             ids: None,
@@ -3845,7 +3857,8 @@ impl PackPost {
             _ => (super::pack_shadow::load(), [load; SHADOW_COLORS]),
         };
         let shadow = self.shadow_targets.as_ref().filter(|_| pass.group.shadow());
-        let mut attachments: Vec<Option<wgpu::RenderPassColorAttachment>> = Vec::new();
+        let mut attachments: SmallVec<[Option<wgpu::RenderPassColorAttachment>; BUFFERS]> =
+            SmallVec::new();
         for &(location, buffer) in &pass.writes {
             let l = location as usize;
             if attachments.len() <= l {
@@ -4156,7 +4169,7 @@ impl PackPost {
                 continue;
             };
             let mut draws = (geometry.draws.iter())
-                .filter(|d| d.shadow && d.program == program)
+                .filter(|d| d.shadow && super::pack_entities::shadow_program(d.program) == program)
                 .peekable();
             if draws.peek().is_none() {
                 continue;
@@ -4168,7 +4181,11 @@ impl PackPost {
                 encoder,
                 pass,
                 size,
-                (geometry.draws.iter()).any(|d| d.shadow && d.program == program && d.portal),
+                (geometry.draws.iter()).any(|d| {
+                    d.shadow
+                        && super::pack_entities::shadow_program(d.program) == program
+                        && d.portal
+                }),
             );
             let mut on_portal = false;
             let mut rp = self.begin(encoder, pass);
@@ -5002,7 +5019,8 @@ impl PackPost {
             }
             let group = self.bind(device, queue, encoder, pass, size);
             let t = self.shadow_targets.as_ref().expect("shadow pass");
-            let mut attachments: Vec<Option<wgpu::RenderPassColorAttachment>> = Vec::new();
+            let mut attachments: SmallVec<[Option<wgpu::RenderPassColorAttachment>; BUFFERS]> =
+                SmallVec::new();
             for &(location, buffer) in &pass.writes {
                 let l = location as usize;
                 if attachments.len() <= l {
@@ -5031,6 +5049,7 @@ impl PackPost {
                 }
                 rp.draw(0..6, 0..1);
             }
+            drop(attachments);
             if let Some(t) = &mut self.shadow_targets {
                 t.main ^= pass.flip;
             }
@@ -5504,7 +5523,8 @@ impl PackPost {
                     .as_ref()
                     .map(|t| &t[usize::from(self.main & 1 << i == 0)])
             };
-            let mut attachments: Vec<Option<wgpu::RenderPassColorAttachment>> = Vec::new();
+            let mut attachments: SmallVec<[Option<wgpu::RenderPassColorAttachment>; BUFFERS]> =
+                SmallVec::new();
             // Vertex coverage and fragment discard can leave alternate pixels untouched.
             // The unused sink can still skip loading its old contents.
             let ops = if !pass.sink || pass.viewport.is_some() {
@@ -6413,3 +6433,6 @@ mod mipmap_box_tests;
 
 #[cfg(test)]
 mod colortex_mip_blend_tests;
+
+#[cfg(test)]
+mod material_route_tests;
