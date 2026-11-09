@@ -376,6 +376,57 @@ pub fn trust_and_capabilities(
     lines
 }
 
+/// The Zenith-maintained listing uses the same pinned artifact as the installer.
+fn atm10_entry() -> index::Project {
+    use crate::{i18n::tr, modpacks::*};
+    index::Project {
+        id: ATM10_PREVIEW_ID.into(),
+        kind: index::Kind::Modpack,
+        name: tr("ATM10 8.5 Rust preview").into(),
+        summary: tr(
+            "A partial Rust port with Glassential Renewed, Mekanism Tools, and AllTheCompressed stone blocks.",
+        )
+        .into(),
+        description: String::new(),
+        authors: vec!["joy-arz".into()],
+        owners: vec!["joy-arz".into()],
+        license: "MIT".into(),
+        source: horizon_addresses::ZENITH_ATM10_PAGE.into(),
+        icon: None,
+        categories: Vec::new(),
+        tags: vec!["all the mods 10".into()],
+        screenshots: Vec::new(),
+        key: None,
+        versions: vec![index::Version {
+            version: "8.5-preview.3".into(),
+            published: "2026-11-09".into(),
+            changelog: String::new(),
+            api: "1".into(),
+            side: None,
+            capabilities: Vec::new(),
+            api_level: None,
+            hooks: None,
+            game: GAME.into(),
+            broken_on: Vec::new(),
+            requires: Vec::new(),
+            file: index::File {
+                name: ATM10_PREVIEW_FILE.into(),
+                url: horizon_addresses::ZENITH_ATM10_PREVIEW.into(),
+                size: ATM10_PREVIEW_SIZE,
+                sha256: ATM10_PREVIEW_SHA256.into(),
+                signature: None,
+            },
+        }],
+        downloads: 0,
+        stars: 0,
+    }
+}
+
+/// A fresh Mods page can show the bundled listing before the remote index answers.
+pub fn builtin_modpacks(query: &Query) -> Vec<Project> {
+    search(&Index::default(), query)
+}
+
 fn project_of(p: &index::Project) -> Option<Project> {
     let mut game_versions: Vec<String> = p.versions.iter().map(|v| v.game.clone()).collect();
     game_versions.dedup();
@@ -387,7 +438,11 @@ fn project_of(p: &index::Project) -> Option<Project> {
         summary: p.summary.clone(),
         author: p.authors.join(", "),
         downloads: p.downloads,
-        page: format!("{SITE}/{}", p.id),
+        page: if p.id == crate::modpacks::ATM10_PREVIEW_ID {
+            horizon_addresses::ZENITH_ATM10_PAGE.into()
+        } else {
+            format!("{SITE}/{}", p.id)
+        },
         icon: p.icon.clone(),
         license: p.license.clone(),
         kind: kind_of(&p.kind)?,
@@ -494,9 +549,12 @@ fn search_where(
     keep: impl Fn(&index::Project) -> bool,
 ) -> Vec<Project> {
     use super::details::Sort;
+    let local = (query.kind == Kind::Modpack).then(atm10_entry);
     let mut found: Vec<&index::Project> = index
         .projects
         .iter()
+        .filter(|p| p.id != crate::modpacks::ATM10_PREVIEW_ID)
+        .chain(local.as_ref())
         .filter(|p| kind_of(&p.kind) == Some(query.kind) && matches(p, &query.text))
         .filter(|p| {
             query
@@ -564,8 +622,18 @@ impl Source for Registry {
     }
 
     fn search(&self, query: &Query) -> Result<Vec<Project>, String> {
-        let index = index()?;
-        let found = match query.filters.works_on {
+        let index = match index() {
+            Ok(index) => index,
+            Err(error) => {
+                let local = builtin_modpacks(query);
+                return if local.is_empty() {
+                    Err(error)
+                } else {
+                    Ok(local)
+                };
+            }
+        };
+        let found = match query.filters.works_on && query.kind == Kind::Mod {
             true => {
                 let works = works_on(&index, &crate::instances::selected());
                 search_where(&index, query, |p| works(p).is_none_or(|(works, _)| works))
@@ -576,6 +644,9 @@ impl Source for Registry {
     }
 
     fn project(&self, id: &str) -> Result<Project, String> {
+        if id == crate::modpacks::ATM10_PREVIEW_ID {
+            return Ok(project_of(&atm10_entry()).expect("modpacks are browsable"));
+        }
         let index = index()?;
         let p = index
             .project(id)
@@ -590,6 +661,15 @@ impl Source for Registry {
     }
 
     fn versions(&self, project: &Project) -> Result<Vec<Version>, String> {
+        if project.id == crate::modpacks::ATM10_PREVIEW_ID {
+            let entry = atm10_entry();
+            return Ok(vec![version_of(
+                &Index::default(),
+                &entry,
+                &entry.versions[0],
+                None,
+            )]);
+        }
         let index = index()?;
         let p = index
             .project(&project.id)
@@ -618,6 +698,12 @@ impl Source for Registry {
     }
 
     fn details(&self, project: &Project) -> Result<Details, String> {
+        if project.id == crate::modpacks::ATM10_PREVIEW_ID {
+            return Ok(Details {
+                body: project.summary.clone(),
+                ..Details::default()
+            });
+        }
         refresh_ratings();
         let index = index()?;
         let p = index

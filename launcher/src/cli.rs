@@ -2700,6 +2700,9 @@ fn mods(action: ModsCmd, as_json: bool) -> Result<(), String> {
                     p.title
                 ));
             }
+            if p.source == SourceId::Horizon && p.id == modpacks::ATM10_PREVIEW_ID {
+                return modpack(ModpackCmd::InstallAtm10Preview, as_json);
+            }
             if p.kind == Kind::Modpack && p.source == SourceId::Horizon {
                 let pack = horizon::pack::install(&p.id, &line)?;
                 if as_json {

@@ -365,18 +365,23 @@ pub fn carried(work: &Path) -> Vec<PathBuf> {
     mods
 }
 
+pub const ATM10_PREVIEW_ID: &str = "zenith_atm10";
+pub(crate) const ATM10_PREVIEW_SHA256: &str =
+    "5c94d585e96595ae2bdcea3b6b3478540d10225cff7bf3da0e41ddc7d8137b94";
+pub(crate) const ATM10_PREVIEW_FILE: &str = "atm10-8.5-zenith-preview.3.mrpack";
+pub(crate) const ATM10_PREVIEW_SIZE: u64 = 590_015;
+
 /// Download and import the release-pinned, redistributable ATM10 preview.
 pub fn install_atm10_preview(log: Log) -> Result<Imported, String> {
-    const SHA256: &str = "967f5bc222a49a8866eeea893747e5c91774234c5f7eea8aac4911ac072afde5";
     let ports = ports_dir();
     fs::create_dir_all(&ports).map_err(|e| e.to_string())?;
     let stage = ports.join(format!(".atm10-download-{}", std::process::id()));
     fs::create_dir(&stage).map_err(|e| e.to_string())?;
-    let file = stage.join("atm10-8.5-zenith-preview.2.mrpack");
+    let file = stage.join(ATM10_PREVIEW_FILE);
     let result = backend::download(
         horizon_addresses::ZENITH_ATM10_PREVIEW,
-        524_989,
-        SHA256,
+        ATM10_PREVIEW_SIZE,
+        ATM10_PREVIEW_SHA256,
         &file,
         &|_| {},
     )

@@ -1273,7 +1273,7 @@
   "GitHub returned HTTP {status} for the Zenith game repository.": "GitHub returned HTTP {status} for the Zenith game repository.",
   "Offline profile: downloading Minecraft {version} from Mojang": "Offline profile: downloading Minecraft {version} from Mojang",
   "Zenith release metadata is too large.": "Zenith release metadata is too large.",
-  "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.": "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.",
+  "A partial Rust port with Glassential Renewed, Mekanism Tools, and AllTheCompressed stone blocks.": "A partial Rust port with Glassential Renewed, Mekanism Tools, and AllTheCompressed stone blocks.",
   "The Zenith release has no {file} attachment.": "The Zenith release has no {file} attachment.",
   "Zenith and its icon are in your desktop's menu.": "Zenith i njegova ikona nalaze se u meniju vaše radne površine."
 }

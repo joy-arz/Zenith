@@ -536,6 +536,9 @@ impl Launcher {
             Some(_) => SourceId::Modrinth,
             None => m.source,
         };
+        if offset == 0 && !keep && source == SourceId::Horizon && query.kind == PackKind::Modpack {
+            m.results = horizon::builtin_modpacks(&query);
+        }
         let (tx, search) = (m.tx.clone(), m.search);
         std::thread::spawn(move || {
             let result = browser::source(source)
@@ -547,6 +550,7 @@ impl Launcher {
                 .filter(|_| source == SourceId::Horizon)
                 .into_iter()
                 .flatten()
+                .filter(|project| project.id != modpacks::ATM10_PREVIEW_ID)
                 .map(|project| project.id.clone())
                 .collect();
             if tx.send(Event::Found(search, offset, result)).is_err() || registry_ids.is_empty() {
@@ -848,6 +852,10 @@ impl Launcher {
     /// Modpacks. `known` is the project when the page has it; else it is asked for first.
     pub(super) fn mods_install(&mut self, source: SourceId, id: String, known: Option<Project>) {
         if self.mods.busy.is_some() {
+            return;
+        }
+        if source == SourceId::Horizon && id == modpacks::ATM10_PREVIEW_ID {
+            self.pack_job(modpacks::install_atm10_preview);
             return;
         }
         // The first native mod: the trust notice, before anything is installed.
@@ -1307,7 +1315,6 @@ impl Launcher {
         let mut body = body.children(self.mods_busy_plate());
         if self.mods.kind == PackKind::Modpack {
             body = body
-                .child(self.featured_atm10(cx))
                 .child(self.imported_packs(cx))
                 .child(div().h(px(2.)).bg(t.rule))
                 .child(section_title("Browse modpacks", "search", &t));
@@ -2155,12 +2162,11 @@ pub(super) fn auto_update(targets: &[AutoTarget]) -> (Vec<String>, Vec<String>) 
     (lines, rebuild)
 }
 
-/// Where a kind's tab searches first: Horizon's registry for mods and shader packs, Modrinth for
-/// the rest.
+/// Where a kind's tab searches first: Zenith for mods, modpacks and shaders, Modrinth for the rest.
 fn source_for(kind: PackKind) -> SourceId {
     match kind {
-        PackKind::Mod | PackKind::Shader => SourceId::Horizon,
-        PackKind::ResourcePack | PackKind::Modpack | PackKind::DataPack => SourceId::Modrinth,
+        PackKind::Mod | PackKind::Modpack | PackKind::Shader => SourceId::Horizon,
+        PackKind::ResourcePack | PackKind::DataPack => SourceId::Modrinth,
     }
 }
 

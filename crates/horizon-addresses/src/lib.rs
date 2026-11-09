@@ -40,4 +40,7 @@ pub const ZENITH_WEBSITE: &str = "https://www.joyz.cc";
 pub const ZENITH_SUPPORT: &str = "https://ko-fi.com/joyarz";
 pub const GITHUB_WEB: &str = "https://github.com/";
 pub const GITHUB_API: &str = "https://api.github.com";
-pub const ZENITH_ATM10_PREVIEW: &str = "https://github.com/joy-arz/Zenith/releases/download/modpack%40atm10-8.5-preview.2/atm10-8.5-zenith-preview.2.mrpack";
+pub const ZENITH_ATM10_PREVIEW: &str = "https://github.com/joy-arz/Zenith/releases/download/modpack%40atm10-8.5-preview.3/atm10-8.5-zenith-preview.3.mrpack";
+
+pub const ZENITH_ATM10_PAGE: &str =
+    "https://github.com/joy-arz/Zenith/releases/tag/modpack%40atm10-8.5-preview.3";

@@ -232,8 +232,6 @@ impl Launcher {
 
         // What the mockup doesn't have, as cards under the two.
         let card = |inner: Div| crate::glass::plate(radius::PANEL).p(px(20.)).child(inner);
-        let featured =
-            (self.mods.kind == PackKind::Modpack).then(|| self.featured_atm10(cx).mb(px(10.)));
         let mut more: Vec<Div> = Vec::new();
         more.extend(self.mods_busy_plate().into_iter().map(card));
         if self.mods.kind == PackKind::Modpack {
@@ -248,7 +246,6 @@ impl Launcher {
             .flex_col()
             .child(header)
             .children(notice)
-            .children(featured)
             .child(cards)
             .child(
                 div()
@@ -446,6 +443,10 @@ impl Launcher {
                     tr("Checking…")
                 } else if busy {
                     tr("Installing…")
+                } else if p.source == SourceId::Horizon
+                    && p.id == horizon_launcher::modpacks::ATM10_PREVIEW_ID
+                {
+                    tr("Install public preview")
                 } else if p.kind == PackKind::Modpack {
                     tr("Import as an instance")
                 } else {

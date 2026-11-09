@@ -106,6 +106,18 @@ fn only_horizons_own_projects_say_they_come_from_horizon() {
 }
 
 #[test]
+fn atm10_is_searchable_without_the_remote_index() {
+    for term in ["", "ATM10", "All The Mods 10"] {
+        let rows = builtin_modpacks(&Query::new(term, Kind::Modpack));
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].id, crate::modpacks::ATM10_PREVIEW_ID);
+        assert_eq!(rows[0].page, horizon_addresses::ZENITH_ATM10_PAGE);
+    }
+    assert!(builtin_modpacks(&Query::new("ATM10", Kind::Mod)).is_empty());
+    assert!(builtin_modpacks(&Query::new("skyblock", Kind::Modpack)).is_empty());
+}
+
+#[test]
 fn searches_by_kind_and_words() {
     let index = sample();
     let found = |text: &str, kind| -> Vec<String> {
@@ -119,7 +131,9 @@ fn searches_by_kind_and_words() {
     assert!(found("coordinates HUD", Kind::Mod).is_empty());
     assert!(found("zoom", Kind::Mod).is_empty());
     // Modpacks under Modpacks; a kind this launcher can't install yet (a world) never.
-    assert_eq!(found("", Kind::Modpack), ["cozy"]);
+    let mut modpacks = found("", Kind::Modpack);
+    modpacks.sort();
+    assert_eq!(modpacks, ["cozy", crate::modpacks::ATM10_PREVIEW_ID]);
     assert!(found("skyblock", Kind::ResourcePack).is_empty());
     assert_eq!(found("", Kind::Shader), ["glow"]);
     // The index's download counts, most downloaded first (of native mods: the browser lists them).

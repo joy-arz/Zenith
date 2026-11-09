@@ -57,6 +57,7 @@ impl Launcher {
                 self.packs.retain(|p| p.slug != pack.slug);
                 self.packs.push(*pack);
                 self.packs.sort_by_key(|p| p.title().to_ascii_lowercase());
+                self.reload_instances();
             }
             Err(e) => self.pack_error = Some(e),
         }
@@ -173,36 +174,6 @@ impl Launcher {
             }
             self.packs_loaded = Some(Instant::now());
         }
-    }
-
-    pub(super) fn featured_atm10(&mut self, cx: &mut Context<Self>) -> Div {
-        let t = self.theme;
-        let busy = self.pack_busy;
-        let install_atm10 = button(
-            "install-atm10-preview",
-            "Install public preview",
-            Kind::Primary,
-            &t,
-        );
-        let install_atm10 = if busy {
-            disabled(install_atm10)
-        } else {
-            install_atm10.on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                this.pack_job(modpacks::install_atm10_preview);
-                cx.notify();
-            }))
-        };
-        let description = tr(
-            "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.",
-        );
-        plate(&t)
-            .p(px(12.))
-            .flex()
-            .flex_col()
-            .gap(px(8.))
-            .child(text(theme::UI).child(tr("ATM10 8.5 Rust preview")))
-            .child(text(theme::CAPTION).text_color(t.muted).child(description))
-            .child(install_atm10)
     }
 
     /// The imported packs, above the Modpacks tab's search.
