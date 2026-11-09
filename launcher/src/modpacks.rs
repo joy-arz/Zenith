@@ -367,18 +367,20 @@ pub fn carried(work: &Path) -> Vec<PathBuf> {
 
 /// Download and import the release-pinned, redistributable ATM10 preview.
 pub fn install_atm10_preview(log: Log) -> Result<Imported, String> {
-    const URL: &str = concat!(
-        "https://github.com/joy-arz/Zenith/releases/download/",
-        "modpack%40atm10-8.5-preview.1/atm10-8.5-zenith-preview.1.mrpack"
-    );
-    const SHA256: &str = "742815cc913343528314652ef86cfb79f6d66a8e99c4b367744569c67ce399f9";
+    const SHA256: &str = "967f5bc222a49a8866eeea893747e5c91774234c5f7eea8aac4911ac072afde5";
     let ports = ports_dir();
     fs::create_dir_all(&ports).map_err(|e| e.to_string())?;
     let stage = ports.join(format!(".atm10-download-{}", std::process::id()));
     fs::create_dir(&stage).map_err(|e| e.to_string())?;
-    let file = stage.join("atm10-8.5-zenith-preview.1.mrpack");
-    let result =
-        backend::download(URL, 533_190, SHA256, &file, &|_| {}).and_then(|()| import(&file, log));
+    let file = stage.join("atm10-8.5-zenith-preview.2.mrpack");
+    let result = backend::download(
+        horizon_addresses::ZENITH_ATM10_PREVIEW,
+        524_989,
+        SHA256,
+        &file,
+        &|_| {},
+    )
+    .and_then(|()| import(&file, log));
     let _ = fs::remove_dir_all(stage);
     result
 }

@@ -912,8 +912,8 @@ impl Default for Links {
     fn default() -> Self {
         Self {
             discord: "https://discord.gg/playhorizon".into(),
-            sponsor: "https://ko-fi.com/joyarz".into(),
-            website: "https://www.joyz.cc".into(),
+            sponsor: horizon_addresses::ZENITH_SUPPORT.into(),
+            website: horizon_addresses::ZENITH_WEBSITE.into(),
             official_server: crate::server_list::OFFICIAL_ADDRESS.into(),
             official_server_previous: crate::server_list::OFFICIAL_PREVIOUS
                 .iter()

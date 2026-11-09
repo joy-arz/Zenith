@@ -4873,8 +4873,11 @@ impl Launcher {
 
     fn zenith_version_card(&self) -> Div {
         let t = self.theme;
-        let launcher_release_url =
-            format!("https://github.com/{}/releases", backend::LAUNCHER_REPO);
+        let launcher_release_url = format!(
+            "{}{}/releases",
+            horizon_addresses::GITHUB_WEB,
+            backend::LAUNCHER_REPO
+        );
         let engine_url = match &self.releases {
             Load::Ready(releases) => releases
                 .iter()

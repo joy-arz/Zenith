@@ -34,3 +34,10 @@ pub const STUN_SERVERS: &[&str] = &["stun.cloudflare.com:3478", "stun.l.google.c
 /// Play with Friends' troubleshooting page, shown to hosts nobody can reach.
 pub const FRIENDS_HELP: &str =
     "https://github.com/horizon-rust/horizon/blob/main/docs/play-with-friends.md#troubleshooting";
+
+// Zenith launcher links and public release services.
+pub const ZENITH_WEBSITE: &str = "https://www.joyz.cc";
+pub const ZENITH_SUPPORT: &str = "https://ko-fi.com/joyarz";
+pub const GITHUB_WEB: &str = "https://github.com/";
+pub const GITHUB_API: &str = "https://api.github.com";
+pub const ZENITH_ATM10_PREVIEW: &str = "https://github.com/joy-arz/Zenith/releases/download/modpack%40atm10-8.5-preview.2/atm10-8.5-zenith-preview.2.mrpack";

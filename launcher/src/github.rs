@@ -19,14 +19,14 @@ use sha2::Digest;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const API: &str = "https://api.github.com";
+use horizon_addresses::GITHUB_API as API;
 /// Kira's read-only mirror of Horizon's release reads. `HORIZON_GITHUB_MIRROR` replaces it (an
 /// empty value turns it off).
 pub const MIRROR: &str = "https://mcp.playhorizon.dev/github/public";
 
 /// Fetch a public release attachment through GitHub's API if its browser URL is unavailable.
 pub(crate) fn release_asset(browser_url: &str) -> Option<ureq::Response> {
-    let path = browser_url.strip_prefix("https://github.com/")?;
+    let path = browser_url.strip_prefix(horizon_addresses::GITHUB_WEB)?;
     let parts: Vec<_> = path.split('/').collect();
     let [owner, repo, "releases", "download", tag, name] = parts.as_slice() else {
         return None;

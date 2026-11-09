@@ -175,6 +175,36 @@ impl Launcher {
         }
     }
 
+    pub(super) fn featured_atm10(&mut self, cx: &mut Context<Self>) -> Div {
+        let t = self.theme;
+        let busy = self.pack_busy;
+        let install_atm10 = button(
+            "install-atm10-preview",
+            "Install public preview",
+            Kind::Primary,
+            &t,
+        );
+        let install_atm10 = if busy {
+            disabled(install_atm10)
+        } else {
+            install_atm10.on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
+                this.pack_job(modpacks::install_atm10_preview);
+                cx.notify();
+            }))
+        };
+        let description = tr(
+            "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.",
+        );
+        plate(&t)
+            .p(px(12.))
+            .flex()
+            .flex_col()
+            .gap(px(8.))
+            .child(text(theme::UI).child(tr("ATM10 8.5 Rust preview")))
+            .child(text(theme::CAPTION).text_color(t.muted).child(description))
+            .child(install_atm10)
+    }
+
     /// The imported packs, above the Modpacks tab's search.
     pub(super) fn imported_packs(&mut self, cx: &mut Context<Self>) -> Div {
         let t = self.theme;
@@ -203,38 +233,12 @@ impl Launcher {
                  Zenith ports what it can on this computer, from your own downloads, and plays \
                  the pack as its own profile. Nothing is uploaded or shared.",
             )));
-        let install_atm10 = button(
-            "install-atm10-preview",
-            "Install public preview",
-            Kind::Primary,
-            &t,
-        );
-        let install_atm10 = if busy {
-            disabled(install_atm10)
-        } else {
-            install_atm10.on_click(cx.listener(|this, _: &ClickEvent, _, cx| {
-                this.pack_job(modpacks::install_atm10_preview);
-                cx.notify();
-            }))
-        };
         let mut page = div().flex().flex_col().gap(px(16.));
         if !self.found_packs.is_empty() {
             page = page.child(self.found_pack_rows(cx));
         }
         page = page
             .child(section_title("Your modpacks", "archive", &t))
-            .child(
-                plate(&t)
-                    .p(px(12.))
-                    .flex()
-                    .flex_col()
-                    .gap(px(8.))
-                    .child(text(theme::UI).child(tr("ATM10 8.5 Rust preview")))
-                    .child(text(theme::CAPTION).text_color(t.muted).child(tr(
-                        "A partial port with Glassential Renewed and Mekanism Tools for Zenith Rust Edition.",
-                    )))
-                    .child(install_atm10),
-            )
             .child(actions);
         if busy || !self.pack_log.is_empty() {
             page = page.child(self.pack_log_plate(&t));

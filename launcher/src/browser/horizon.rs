@@ -112,10 +112,14 @@ fn fetch_index() -> Result<(Index, String), String> {
     use std::io::Read;
     let at = location();
     let text = if at.starts_with("https://") {
-        let response = download::agent(&at).get(&at).call().map_err(|e| match e {
-            ureq::Error::Status(code, _) => format!("The mod registry answered {code}."),
-            ureq::Error::Transport(t) => format!("The mod registry can't be reached: {t}"),
-        })?;
+        let response = download::agent(&at)
+            .get(&at)
+            .timeout(std::time::Duration::from_secs(12))
+            .call()
+            .map_err(|e| match e {
+                ureq::Error::Status(code, _) => format!("The mod registry answered {code}."),
+                ureq::Error::Transport(t) => format!("The mod registry can't be reached: {t}"),
+            })?;
         let mut text = String::new();
         response
             .into_reader()
@@ -160,7 +164,7 @@ pub fn rate_url(id: &str) -> String {
 /// Fetches the ratings again when the last try is ten minutes old: from `HORIZON_MOD_RATINGS`
 /// (a file or an `https://` address, for a test registry), else [`RATINGS_URL`]; a local test
 /// registry has none unless given. After a failure the browser shows downloads only.
-fn refresh_ratings() {
+pub fn refresh_ratings() {
     if RATINGS
         .lock()
         .unwrap()
@@ -177,15 +181,20 @@ fn refresh_ratings() {
     }
     let at = given.unwrap_or_else(|| RATINGS_URL.to_owned());
     let text = if at.starts_with("https://") {
-        download::agent(&at).get(&at).call().ok().and_then(|r| {
-            use std::io::Read;
-            let mut text = String::new();
-            r.into_reader()
-                .take(MAX_INDEX)
-                .read_to_string(&mut text)
-                .ok()
-                .map(|_| text)
-        })
+        download::agent(&at)
+            .get(&at)
+            .timeout(std::time::Duration::from_secs(4))
+            .call()
+            .ok()
+            .and_then(|r| {
+                use std::io::Read;
+                let mut text = String::new();
+                r.into_reader()
+                    .take(MAX_INDEX)
+                    .read_to_string(&mut text)
+                    .ok()
+                    .map(|_| text)
+            })
     } else {
         fs::read_to_string(&at).ok()
     };
@@ -563,7 +572,6 @@ impl Source for Registry {
             }
             false => search(&index, query),
         };
-        refresh_ratings();
         Ok(found)
     }
 

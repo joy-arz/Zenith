@@ -270,6 +270,7 @@ impl Source for Modrinth {
 fn get(url: &str) -> Result<Value, String> {
     let response = super::download::agent(url)
         .get(url)
+        .timeout(std::time::Duration::from_secs(12))
         .call()
         .map_err(|e| match e {
             ureq::Error::Status(429, _) => {

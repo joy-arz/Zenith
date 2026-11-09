@@ -49,9 +49,9 @@ pub(super) enum Event {
     /// A Java mod's check: its jar read, or why it couldn't be.
     Checked((SourceId, String), Result<Box<Check>, String>),
     /// What a Horizon registry project says before install: signed or not, what it may do.
-    About(HashMap<String, Vec<String>>),
+    About(u64, HashMap<String, Vec<String>>),
     /// Registry native mods' [`horizon::works_on`] in the selected instance, by id.
-    Works(HashMap<String, (bool, String)>),
+    Works(u64, HashMap<String, (bool, String)>),
     /// Registry files taken down that the launcher turned off.
     TakenDown(Vec<String>),
     /// What the automatic updates did (`horizon::auto`), and the instances (ids) whose native
@@ -440,15 +440,16 @@ impl Launcher {
                     m.checks.insert(key, state);
                 }
                 Event::Loaded(l) => loaded.push(l),
-                Event::About(about) => {
+                Event::About(search, about) if search == m.search => {
                     // Rows grow by a line: measure them again (`cull`).
                     m.about.extend(about);
                     m.results_list.reset();
                 }
-                Event::Works(works) => {
+                Event::Works(search, works) if search == m.search => {
                     m.works.extend(works);
                     m.results_list.reset();
                 }
+                Event::About(..) | Event::Works(..) => {}
                 Event::AutoUpdated(lines, rebuild) => {
                     m.rebuild.extend(rebuild);
                     if !lines.is_empty() {
@@ -507,6 +508,7 @@ impl Launcher {
         let m = &mut self.mods;
         m.search += 1;
         m.searching = true;
+        m.error = None;
         if offset == 0 {
             if !keep {
                 m.results.clear();
@@ -539,31 +541,31 @@ impl Launcher {
             let result = browser::source(source)
                 .ok_or_else(|| trf("{source} isn't set up.", &[("source", source.label())]))
                 .and_then(|s| s.search(&query));
+            let registry_ids: Vec<_> = result
+                .as_ref()
+                .ok()
+                .filter(|_| source == SourceId::Horizon)
+                .into_iter()
+                .flatten()
+                .map(|project| project.id.clone())
+                .collect();
+            if tx.send(Event::Found(search, offset, result)).is_err() || registry_ids.is_empty() {
+                return;
+            }
             let instance = horizon_launcher::instances::selected();
-            let about: HashMap<String, Vec<String>> = match (&result, source) {
-                (Ok(found), SourceId::Horizon) => found
-                    .iter()
-                    .map(|p| {
-                        let lines = horizon::trust_and_capabilities(&p.id, Some(&instance));
-                        (p.id.clone(), lines)
-                    })
-                    .collect(),
-                _ => HashMap::new(),
-            };
-            let works = match (&result, source) {
-                (Ok(found), SourceId::Horizon) => {
-                    let ids: Vec<String> = found.iter().map(|p| p.id.clone()).collect();
-                    horizon::works_lines(&ids, &instance)
-                }
-                _ => HashMap::new(),
-            };
-            let _ = tx.send(Event::Found(search, offset, result));
-            if !about.is_empty() {
-                let _ = tx.send(Event::About(about));
-            }
-            if !works.is_empty() {
-                let _ = tx.send(Event::Works(works));
-            }
+            let about = registry_ids
+                .iter()
+                .map(|id| {
+                    (
+                        id.clone(),
+                        horizon::trust_and_capabilities(id, Some(&instance)),
+                    )
+                })
+                .collect();
+            let works = horizon::works_lines(&registry_ids, &instance);
+            horizon::refresh_ratings();
+            let _ = tx.send(Event::About(search, about));
+            let _ = tx.send(Event::Works(search, works));
         });
     }
 
@@ -1305,6 +1307,7 @@ impl Launcher {
         let mut body = body.children(self.mods_busy_plate());
         if self.mods.kind == PackKind::Modpack {
             body = body
+                .child(self.featured_atm10(cx))
                 .child(self.imported_packs(cx))
                 .child(div().h(px(2.)).bg(t.rule))
                 .child(section_title("Browse modpacks", "search", &t));

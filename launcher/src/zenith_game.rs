@@ -12,7 +12,7 @@ pub const PUBLIC_REPO: &str = backend::LAUNCHER_REPO;
 const PRIVATE_REPO: &str = "joy-arz/zenith-rust-edition";
 pub const TOKEN_ENV: &str = "ZENITH_ENGINE_TOKEN";
 const TOKEN_ENTRY: &str = "zenith-engine-github-access";
-const API: &str = "https://api.github.com";
+use horizon_addresses::GITHUB_API as API;
 const CHANNEL_SIGNATURE: &str = "SHA256SUMS.zenith.sig";
 const FIRST_PREVIEW: &str = "zenith-game@0.1.0-preview.1";
 
@@ -216,7 +216,8 @@ fn asset(repo: &str, release: &Value, name: &str) -> Result<ureq::Response, Stri
         .filter(|tag| is_tag(tag))
         .ok_or_else(|| tr("Invalid Zenith game version.").to_string())?;
     backend::get(&format!(
-        "https://github.com/{repo}/releases/download/{tag}/{name}"
+        "{}{repo}/releases/download/{tag}/{name}",
+        horizon_addresses::GITHUB_WEB
     ))
 }
 
