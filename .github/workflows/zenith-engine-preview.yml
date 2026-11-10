@@ -80,9 +80,9 @@ jobs:
           if [[ "$RUNNER_OS" == Windows ]]; then
             export RUSTFLAGS="-C target-feature=+crt-static"
           fi
-          cargo build --profile fast --locked ${BUILD_TARGET:+--target "$BUILD_TARGET"} -p horizon-client -p horizon-client-lib \
+          cargo build --profile fast --locked ${BUILD_TARGET:+--target "$BUILD_TARGET"} -p horizon-official -p horizon-client-lib \
             -p horizon-prepare -p horizon-server \
-            --bin horizon-client --bin horizon-ctl --bin horizon-prepare --bin horizon-server
+            --bin horizon-official --bin horizon-ctl --bin horizon-prepare --bin horizon-server
       - name: Package and check the client
         shell: bash
         env:
@@ -91,6 +91,7 @@ jobs:
         run: |
           set -euo pipefail
           folder="zenith-$PLATFORM"
+          cp -f "$OUTPUT/horizon-official$EXE" "$OUTPUT/horizon-client$EXE"
           cargo run --locked -p xtask -- package-source "$OUTPUT/horizon-client$EXE" "dist/$folder"
           [[ "$("dist/$folder/horizon-client$EXE" --help)" == *--resources* ]]
           [[ "$("dist/$folder/horizon-client$EXE" --version)" == "Zenith Rust Edition $HORIZON_VERSION" ]]

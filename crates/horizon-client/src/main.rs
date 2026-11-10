@@ -15,20 +15,5 @@ static MOD_API_LEVEL: [u8; 27] = horizon_mods::api_level::MARK;
 
 fn main() {
     std::hint::black_box(&MOD_API_LEVEL);
-    // Zenith ships this executable. Register the extras that moved out of the engine.
-    #[cfg(feature = "friends")]
-    horizon_hooks::register(&horizon_friends::game::HOOKS)
-        .expect("register friends before startup");
-    #[cfg(feature = "horizon-extras")]
-    horizon_hooks::register(&horizon_official_servers::HOOKS)
-        .expect("register servers before startup");
-    #[cfg(feature = "discord")]
-    {
-        horizon_hooks::register(&horizon_discord::HOOKS).expect("register Discord before startup");
-        horizon_hooks::settings::register(&horizon_discord::SETTING)
-            .expect("register Discord settings before startup");
-        horizon_hooks::pages::register(&horizon_discord::SECTION)
-            .expect("register Discord page before startup");
-    }
     horizon_client::entry::main();
 }

@@ -12,9 +12,7 @@ use horizon_platform::hooks::{self, Hooks};
 use horizon_platform::{pages, settings};
 
 /// Every Horizon part in the game, in the order its hooks run.
-const PARTS: [&dyn Hooks; 4] = [
-    // The anonymous "I'm playing" ping.
-    &horizon_heartbeat::HOOKS,
+const PARTS: [&dyn Hooks; 3] = [
     // Play with Friends: `friend:` addresses join through its tunnel.
     &horizon_friends::game::HOOKS,
     // The official server in the player's server list.
@@ -30,7 +28,10 @@ const PAGES: [&dyn pages::Page; 1] = [&horizon_discord::SECTION];
 /// Registers Horizon's in-game parts with the game. The executable calls it before it runs the
 /// game, and so does the launcher's generated executable for native mods.
 pub fn register() {
-    let late = PARTS.into_iter().map(hooks::register);
+    // Zenith omits the anonymous play count even when started outside the launcher.
+    let heartbeat =
+        (!horizon_platform::release::ZENITH).then_some(&horizon_heartbeat::HOOKS as &dyn Hooks);
+    let late = heartbeat.into_iter().chain(PARTS).map(hooks::register);
     let late = late.chain(STORES.into_iter().map(settings::register));
     for result in late.chain(PAGES.into_iter().map(pages::register)) {
         if let Err(e) = result {
