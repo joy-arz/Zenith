@@ -1,0 +1,22 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -3,6 +3,6 @@
+   "id": "fast_items",
+   "version": "0.1.0",
+   "game": "26.3",
+-  "horizon": "998b1d8301928c0559a0f368809860a30d6d9e53",
+-  "mixins": "e8cd0aa38cffef49cb2e088ef716baa107148c02"
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
++  "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57"
+ }
+--- a/mixins/fast_items/horizon-mixin.toml
++++ b/mixins/fast_items/horizon-mixin.toml
+@@ -4,7 +4,7 @@
+ priority = 100
+ 
+ [compatibility]
+-horizon_revision = "998b1d8301928c0559a0f368809860a30d6d9e53"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ [[module]]
+ id = "runtime"

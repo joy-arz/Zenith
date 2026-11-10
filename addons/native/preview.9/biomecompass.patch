@@ -1,0 +1,83 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -1,8 +1,8 @@
+ {
+   "game": "26.3",
+-  "horizon": "142388e1c136e622652ec7505af15d8ad195e041",
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
+   "id": "biomecompass",
+-  "mixins": "0d6b103c70633d8fd9443d8d0acd3aadaacedb06",
++  "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57",
+   "schema": 1,
+   "version": "0.2.2"
+ }
+--- a/mixins/biomecompass/horizon-mixin.toml
++++ b/mixins/biomecompass/horizon-mixin.toml
+@@ -11,14 +11,14 @@
+ # generator, `/tp`, the LAN hub, the inventories), so BiomeCompass builds on
+ # this commit only. Its other hooks use only hook points (NATIVE_HOOKS_API 1).
+ [compatibility]
+-horizon_revision = "142388e1c136e622652ec7505af15d8ad195e041"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ # The search, the settings, the item's components, the recipe and the picker
+ # as plain values: in the game's library (public), so the library's hooks (a
+ # guest's crafting table, the command tree) reach them as the game's do.
+ [[module]]
+ id = "runtime"
+-file = "crates/horizon-client/src/lib.rs"
++file = "crates/horizon-client/src/client_lib.rs"
+ name = "biomecompass"
+ source = "runtime.rs"
+ visibility = "pub"
+@@ -27,7 +27,7 @@
+ # crafting grids, the commands in its command tree.
+ [[module]]
+ id = "item"
+-file = "crates/horizon-client/src/lib.rs"
++file = "crates/horizon-client/src/client_lib.rs"
+ name = "biomecompass_item"
+ source = "item.rs"
+ visibility = "pub"
+@@ -143,7 +143,7 @@
+ id = "craft"
+ kind = "HEAD"
+ cancellable = true
+-target = "horizon_client::game::Game<'_>::craft_recipe"
++target = "horizon_client::game::inventory_slots::Game<'_>::craft_recipe"
+ helper = "craft.rs"
+ bindings = [
+   { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+--- a/mixins/biomecompass/item.rs
++++ b/mixins/biomecompass/item.rs
+@@ -47,7 +47,7 @@
+ pub fn new_stack() -> ItemStack {
+     let mut s = ItemStack::new(bc::ITEM, 1);
+     let d = s.data_mut();
+-    d.custom_name = Some(bc::ITEM_NAME.to_owned());
++    d.custom_name = Some(Tag::String(bc::ITEM_NAME.into()));
+     d.set_other(bc::ITEM_NAME_COMPONENT, Some(tag(&bc::item_name())));
+     d.set_other(bc::CUSTOM_DATA, Some(tag(&bc::custom_data())));
+     d.set_other(bc::LORE, Some(tag(&bc::lore(&Pointing::Idle))));
+--- a/mixins/biomecompass/native.rs
++++ b/mixins/biomecompass/native.rs
+@@ -471,8 +471,8 @@
+         let layers = bc::layers(
+             dimension,
+             origin[1],
+-            self.dim.min_y(),
+-            self.dim.max_y(),
++            self.world.bottom_y(),
++            self.world.top_y() - 1,
+             config.heights,
+         );
+         let search = Search::new(Spec {
+@@ -552,7 +552,7 @@
+     /// its chunk is loaded, else on the generator's terrain (above water).
+     fn bc_landing(&self, terrain: &VanillaTerrain, x: i32, z: i32) -> Option<i32> {
+         if self.world.loaded(x, z) {
+-            let (lo, hi) = (self.dim.min_y(), self.dim.max_y());
++            let (lo, hi) = (self.world.bottom_y(), self.world.top_y() - 1);
+             return (lo..=hi)
+                 .rev()
+                 .find(|&y| !self.world.is_air(self.world.block(x, y, z)))

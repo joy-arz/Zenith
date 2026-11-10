@@ -1,0 +1,319 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -1,8 +1,8 @@
+ {
+   "game": "26.3",
+-  "horizon": "68ac6f647e7022b2c696e81863d7cface28c9416",
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
+   "id": "basic_hud",
+-  "mixins": "0d6b103c70633d8fd9443d8d0acd3aadaacedb06",
++  "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57",
+   "schema": 1,
+   "version": "0.5.0"
+ }
+--- a/mixins/basic_hud/click.rs
++++ b/mixins/basic_hud/click.rs
+@@ -5,7 +5,7 @@
+         return;
+     }
+     if button == 0 {
+-        editor::open(game);
++        editor::open(game, false);
+         return;
+     }
+     let mut current = m::config(|| game.native_setting(m::ID, "config"), m::Config::clone);
+--- a/mixins/basic_hud/data.rs
++++ b/mixins/basic_hud/data.rs
+@@ -110,14 +110,7 @@
+ 
+ /// Prune any entity IDs no longer present in confirmed player lists, verifying matching identity.
+ pub(super) fn cleanup_stale_entities(game: &Game<'_>) {
+-    let mut confirmed: Vec<(u32, String)> = game.remote_player_names();
+-    if let Some(host) = &game.lan {
+-        for (conn, model) in &host.models {
+-            if let Some(g) = host.hub.guest(*conn) {
+-                confirmed.push((model.id, g.name.clone()));
+-            }
+-        }
+-    }
++    let confirmed = game.remote_player_names();
+     HEALTH_CACHE.with(|c| {
+         c.borrow_mut().cleanup_stale(&confirmed);
+     });
+@@ -130,21 +123,12 @@
+     values: &[(u8, i32, horizon_protocol::entity_data::Value)],
+ ) {
+     let entity_id = id as u32;
+-    // Find confirmed player name from server remote players or LAN guests
++    // Resolve the server-tracked player identity before caching health.
+     let confirmed_name = game
+         .remote_player_names()
+         .into_iter()
+         .find(|(pid, _)| *pid == entity_id)
+-        .map(|(_, name)| name)
+-        .or_else(|| {
+-            let host = game.lan.as_ref()?;
+-            for (conn, m) in &host.models {
+-                if m.id == entity_id {
+-                    return host.hub.guest(*conn).map(|g| g.name.clone());
+-                }
+-            }
+-            None
+-        });
++        .map(|(_, name)| name);
+ 
+     let Some(name) = confirmed_name else {
+         return;
+@@ -176,11 +160,10 @@
+ }
+ 
+ /// Constructs a verified health snapshot for a confirmed player by inspecting
+-/// live model attributes (for finite positive max_health), actual LAN guest health,
+-/// and observed remote SetEntityData metadata.
++/// live model attributes and observed remote SetEntityData metadata.
+ fn get_player_snapshot(game: &Game<'_>, id: u32, confirmed_name: &str) -> Option<logic::HealthSnapshot> {
+     let model = game.mobs.iter().find(|m| m.id == id);
+-    let mut max_hp = model.and_then(|m| {
++    let max_hp = model.and_then(|m| {
+         let max = m.attrs.max_health as f32;
+         if max.is_finite() && max > 0.0 {
+             Some(max)
+@@ -189,45 +172,13 @@
+         }
+     });
+ 
+-    let mut guest_hp = None;
+-    let mut guest_abs = None;
+-    if let Some(host) = &game.lan {
+-        for (conn, m) in &host.models {
+-            if m.id == id {
+-                if let Some(g) = host.hub.guest(*conn) {
+-                    if g.health.is_finite() && g.health >= 0.0 {
+-                        guest_hp = Some(g.health);
+-                    }
+-                    let abs = g
+-                        .motion
+-                        .as_ref()
+-                        .map(|m| m.health.absorption())
+-                        .or(g.saved_absorption)
+-                        .filter(|a| a.is_finite() && *a >= 0.0);
+-                    if let Some(abs) = abs {
+-                        guest_abs = Some(abs);
+-                    }
+-                    if max_hp.is_none() {
+-                        let max = m.attrs.max_health as f32;
+-                        if max.is_finite() && max > 0.0 {
+-                            max_hp = Some(max);
+-                        }
+-                    }
+-                }
+-            }
+-        }
+-    }
+-
+     let observed = HEALTH_CACHE.with(|c| {
+         c.borrow().get(id, Some(confirmed_name)).cloned()
+     });
+ 
+-    let current_hp = guest_hp.or_else(|| observed.as_ref().and_then(|o| o.hp));
+-    let absorption = guest_abs
+-        .or_else(|| observed.as_ref().and_then(|o| o.absorption))
+-        .unwrap_or(0.0);
+-
+-    let hp = current_hp?;
++    let observed = observed?;
++    let hp = observed.hp?;
++    let absorption = observed.absorption.unwrap_or(0.0);
+     logic::HealthSnapshot::new(confirmed_name, hp, max_hp, absorption)
+ }
+ 
+@@ -239,16 +190,7 @@
+ }
+ 
+ fn targeted_player(game: &Game<'_>) -> Option<(u32, String)> {
+-    let mob_hit = game.mob_hit().filter(|(_, distance)| game.before_block(*distance));
+-    // Legacy in-frame hosts keep guest models separately from ordinary mobs.
+-    if let Some((conn, _)) = game.guest_hit().filter(|(_, d)| {
+-        game.before_block(*d) && !mob_hit.is_some_and(|(_, other)| other < *d)
+-    }) {
+-        let host = game.lan.as_ref()?;
+-        let model = host.models.get(&conn)?;
+-        return host.hub.guest(conn).map(|g| (model.id, g.name.clone()));
+-    }
+-    let (index, _) = mob_hit?;
++    let (index, _, _) = game.mob_hit().filter(|(_, distance, _)| game.before_block(*distance))?;
+     let model = game.mobs.get(index)?;
+     game.remote_player_names().into_iter().find(|(id, _)| *id == model.id)
+ }
+--- a/mixins/basic_hud/draw_options.rs
++++ b/mixins/basic_hud/draw_options.rs
+@@ -13,7 +13,7 @@
+         _ => false,
+     };
+     if !editor::active() && hud_page && game.native_on(m::ID) && editor::guide_pending(game) {
+-        editor::open(game);
++        editor::open(game, false);
+     }
+     if !editor::active() {
+         return std::ops::ControlFlow::Continue(());
+--- a/mixins/basic_hud/editor.rs
++++ b/mixins/basic_hud/editor.rs
+@@ -122,7 +122,7 @@
+     )
+ }
+ 
+-pub(super) fn open(game: &mut Game<'_>) {
++pub(super) fn open(game: &mut Game<'_>, return_to_game: bool) {
+     let show_guide = guide_pending(game);
+     let initial = m::config(|| game.native_setting(m::ID, "config"), m::Config::clone);
+     let marker_ok = if game.native_setting(m::ID, m::GUIDE_SEEN_KEY).as_deref() != Some("1") {
+@@ -133,8 +133,6 @@
+     } else { true };
+     GUIDE_OPENED.with(|seen| seen.set(true));
+     let size = game.gui_size();
+-    let return_to_game = game.options_to_game;
+-    game.options_to_game = true;
+     game.capture(false);
+     EDITOR.with(|e| {
+         let mut editor = Editor::new(initial, [size.0, size.1], return_to_game);
+@@ -191,9 +189,7 @@
+         game.screen = super::Screen::Playing;
+         game.keys.clear();
+         game.capture(true);
+-        game.options_to_game = false;
+     } else {
+-        game.options_to_game = false;
+         if game.screen == super::Screen::Options {
+             if let horizon_client::options_ui::Page::NativeMod(i) = game.ui.options.page() {
+                 game.native_settings_refresh(i);
+--- a/mixins/basic_hud/horizon-mixin.toml
++++ b/mixins/basic_hud/horizon-mixin.toml
+@@ -6,7 +6,7 @@
+ # Counting totems and writing above a player's head hook the game's own
+ # functions, which have no hook point, so it builds on this commit only.
+ [compatibility]
+-horizon_revision = "68ac6f647e7022b2c696e81863d7cface28c9416"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ [[module]]
+ id = "recent_pickups"
+@@ -196,7 +196,7 @@
+ bindings = [
+   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+   { name = "body", ty = "&Body", value = "&body" },
+-  { name = "own", ty = "bool", value = "own" },
++  { name = "target", ty = "TrackingTarget", value = "target" },
+ ]
+ 
+ [[injection]]
+@@ -323,7 +323,7 @@
+ [[injection]]
+ id = "entity_remove_reset"
+ kind = "HEAD"
+-target = "horizon_client::game::remote::Game<'_>::remove_entity"
++target = "horizon_client::game::remote::Game<'_>::detach_remote_tracking_entity"
+ helper = "entity_remove.rs"
+ bindings = [
+   { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+--- a/mixins/basic_hud/key.rs
++++ b/mixins/basic_hud/key.rs
+@@ -14,7 +14,6 @@
+     }
+ 
+     game.open_options_at(false, horizon_client::options_ui::Page::Mods);
+-    game.options_to_game = true;
+     game.capture(false);
+-    editor::open(game);
++    editor::open(game, true);
+ }
+--- a/mixins/basic_hud/players.rs
++++ b/mixins/basic_hud/players.rs
+@@ -1,5 +1,3 @@
+-// The players this window knows of. The game's own list is private to its name
+-// tags, and these are the same two sources: a LAN host's guests, a server's players.
+ use super::Game;
+ 
+ pub(super) struct Player {
+@@ -11,18 +9,6 @@
+ 
+ pub(super) fn others(game: &Game<'_>) -> Vec<Player> {
+     let mut out = Vec::new();
+-    if let Some(host) = &game.lan {
+-        for (conn, m) in &host.models {
+-            if let Some(g) = host.hub.guest(*conn) {
+-                out.push(Player {
+-                    id: m.id,
+-                    name: g.name.clone(),
+-                    at: [m.position.x, m.position.y, m.position.z],
+-                    alive: m.alive(),
+-                });
+-            }
+-        }
+-    }
+     for (id, name) in game.remote_player_names() {
+         if let Some(m) = game.mobs.iter().find(|m| m.id == id) {
+             out.push(Player {
+@@ -36,15 +22,12 @@
+     out
+ }
+ 
+-/// The other player standing at `at`. A server's event is sent from the
+-/// player's model, so it matches exactly; a guest's own body can run ahead of
+-/// their model on the host. Anything else there is a mob holding a totem.
++/// The other player standing at the position of a totem event.
+ pub(super) fn at(game: &Game<'_>, at: [f64; 3]) -> Option<String> {
+-    let reach = if game.lan.is_some() { 9.0 } else { 0.01 };
+     others(game)
+         .into_iter()
+         .map(|p| ((0..3).map(|a| (p.at[a] - at[a]).powi(2)).sum::<f64>(), p.name))
+-        .filter(|(d, _)| *d < reach)
++        .filter(|(d, _)| *d < 0.01)
+         .min_by(|a, b| a.0.total_cmp(&b.0))
+         .map(|(_, name)| name)
+ }
+--- a/mixins/basic_hud/tab.rs
++++ b/mixins/basic_hud/tab.rs
+@@ -6,6 +6,7 @@
+ use super::Game;
+ use crate::game::basic_hud as m;
+ use crate::game::basic_hud_i18n as i18n;
++use horizon_client::actions::Action;
+ use horizon_client::hud::HudBatch;
+ use horizon_client::hud_layout::GuiDraw;
+ use horizon_client::scoreboard as sb;
+@@ -49,9 +50,10 @@
+     // 3. In game, check visibility against key, singleplayer, and objectives.
+     if !preview {
+         let key = game.screen == crate::game::Screen::Playing
+-            && game.keys.contains(&winit::keyboard::KeyCode::Tab);
++            && game.keys.held(Action::Playerlist);
+         let has_objective = game.score.board.display_objective(sb::SLOT_LIST).is_some();
+         let shown = tab_list::visible(
++            !game.ui.hide_gui,
+             key,
+             game.has_singleplayer_server(),
+             players.len(),
+@@ -191,6 +193,7 @@
+         gui_ticks: game.ticks as i64,
+         background,
+         upside_down: &up,
++        mark: &horizon_hooks::engine::player_mark,
+     };
+ 
+     let mut draws = list.layout(&inputs, &game.gui.atlas.font);
+--- a/mixins/basic_hud/totem.rs
++++ b/mixins/basic_hud/totem.rs
+@@ -1,11 +1,11 @@
+ // Entity event 35, in the window's game only: the single player server thread
+ // passes here too, for the same totem.
+-fn basic_hud_totem(game: &mut crate::game::Game<'_>, body: &Body, own: bool) {
++fn basic_hud_totem(game: &mut crate::game::Game<'_>, body: &Body, target: TrackingTarget) {
+     use crate::game::{basic_hud as m, basic_hud_players as players};
+     if !game.native_on(m::ID) || !game.native_window() {
+         return;
+     }
+-    let name = if own { Some(game.own_profile_name()) } else { players::at(game, body.at) };
++    let name = if target == TrackingTarget::LocalPlayer { Some(game.own_profile_name()) } else { players::at(game, body.bounds.feet) };
+     if let Some(name) = name {
+         m::pops(|p| p.add(&name));
+     }

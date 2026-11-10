@@ -1,0 +1,45 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -1,8 +1,8 @@
+ {
+   "game": "26.3",
+-  "horizon": "142388e1c136e622652ec7505af15d8ad195e041",
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
+   "id": "smartf3",
+-  "mixins": "0d6b103c70633d8fd9443d8d0acd3aadaacedb06",
++  "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57",
+   "schema": 1,
+   "version": "0.1.0"
+ }
+--- a/mixins/smartf3/horizon-mixin.toml
++++ b/mixins/smartf3/horizon-mixin.toml
+@@ -11,7 +11,7 @@
+ # is made for this one commit. Its other hooks use only hook points
+ # (NATIVE_HOOKS_API 1).
+ [compatibility]
+-horizon_revision = "142388e1c136e622652ec7505af15d8ad195e041"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ [[module]]
+ id = "runtime"
+--- a/mixins/smartf3/native.rs
++++ b/mixins/smartf3/native.rs
+@@ -516,7 +516,7 @@
+                 best = Some((distance, kind));
+             }
+         };
+-        if let Some((i, d)) = self.mob_hit() {
++        if let Some((i, d, _)) = self.mob_hit() {
+             offer(d, self.mobs[i].kind.id.clone());
+         }
+         if let Some((_, d, _)) = self.armor_stand_hit() {
+@@ -536,9 +536,6 @@
+         }
+         if let Some((_, d)) = self.dragon_hit() {
+             offer(d, "minecraft:ender_dragon".to_owned());
+-        }
+-        if let Some((_, d)) = self.guest_hit() {
+-            offer(d, "minecraft:player".to_owned());
+         }
+         let (distance, kind) = best?;
+         self.before_block(distance).then_some(kind)

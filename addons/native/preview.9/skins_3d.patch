@@ -1,0 +1,32 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -3,6 +3,6 @@
+   "id": "skins_3d",
+   "version": "1.1.0",
+   "game": "26.3",
+-  "horizon": "66f3981f522b24c250b21523a70080965b940424",
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
+   "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57"
+-}
+\ No newline at end of file
++}
+--- a/mixins/skins_3d/horizon-mixin.toml
++++ b/mixins/skins_3d/horizon-mixin.toml
+@@ -4,7 +4,7 @@
+ priority = 100
+ 
+ [compatibility]
+-horizon_revision = "66f3981f522b24c250b21523a70080965b940424"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ [[module]]
+ id = "build"
+@@ -42,7 +42,7 @@
+ id = "arm"
+ kind = "HEAD"
+ cancellable = true
+-target = "horizon_client::game::Game<'_>::first_person_arm"
++target = "horizon_client::game::frame_geometry::Game<'_>::first_person_arm"
+ helper = "hooks/arm.rs"
+ bindings = [
+   { name = "game", ty = "&crate::game::Game<'_>", value = "&*self" },

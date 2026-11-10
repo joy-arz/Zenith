@@ -1,0 +1,15 @@
+--- a/horizon-native.json
++++ b/horizon-native.json
+@@ -5,3 +5,3 @@
+   "game": "26.3",
+-  "horizon": "b9f3bd450231faa08d9efb3b6235573dc94d0098",
++  "horizon": "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df",
+   "mixins": "5a64af938ec86b00d53d16a408aabc0038fb3e57"
+--- a/mixins/create/horizon-mixin.toml
++++ b/mixins/create/horizon-mixin.toml
+@@ -5,4 +5,4 @@
+ [compatibility]
+-horizon_revision = "b9f3bd450231faa08d9efb3b6235573dc94d0098"
++horizon_revision = "b10a5c68e39b3452690a2c8aeb94f187f5dfc5df"
+ 
+ [[crate]]

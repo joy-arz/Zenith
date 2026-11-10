@@ -72,3 +72,11 @@ On the signed engine source at `b9f3bd4502`, the resource-root change is already
 present. Apply [the Preview 6 adapter](zenith-0.2.0-preview.6.patch) after the
 base, Preview 1 and Mechanical Crafter chain patches. Mixins is unchanged.
 All 95 injections planned and applied, and the transformed client type-checked.
+
+## Zenith Rust Edition 0.2.0-preview.9
+
+Apply [the Preview 9 pin patch](zenith-0.2.0-preview.9.patch) after the Preview
+6 adapter. Both manifests then target `b10a5c68e39b3452690a2c8aeb94f187f5dfc5df`.
+Use the same Mixins commit. All 95 Create injections applied on that engine.
+The combined native client type-checked on macOS ARM64. All 238 Create engine
+unit tests passed, including the six Mechanical Crafter tests. The ATM10 public preview still ships separately from Create.
