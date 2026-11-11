@@ -7,6 +7,16 @@ Zenith is **joy-arz**'s Horizon fork with offline profiles, custom local skins, 
 </p>
 
 <p align="center">
+  <a href="https://www.star-history.com/?repos=joy-arz/zenith&type=date&legend=top-left">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=joy-arz/zenith&type=date&theme=dark&legend=top-left" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=joy-arz/zenith&type=date&legend=top-left" />
+      <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=joy-arz/zenith&type=date&legend=top-left" />
+    </picture>
+  </a>
+</p>
+
+<p align="center">
   <a href="https://playhorizon.dev"><b>Website</b></a> ·
   <a href="#download"><b>Download</b></a> ·
   <a href="https://playhorizon.dev/docs/"><b>Docs</b></a> ·
